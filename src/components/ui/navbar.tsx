@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Hexagon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { NeonButton } from "@/components/ui/neon-button";
 
 export function Navbar() {
   return (
@@ -22,11 +22,9 @@ export function Navbar() {
               Pricing
             </Link>
           </div>
-          <Button 
-            className="rounded-full px-6 font-semibold bg-white/5 text-white border border-white/10 hover:bg-white/10 backdrop-blur-md transition-all"
-          >
+          <NeonButton neon={true}>
             Try Oni
-          </Button>
+          </NeonButton>
         </div>
       </div>
     </nav>
