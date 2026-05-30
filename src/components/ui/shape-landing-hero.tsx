@@ -165,7 +165,7 @@ function HeroGeometric({
                         initial="hidden"
                         animate="visible"
                     >
-                        <h1 className="text-4xl sm:text-6xl md:text-8xl font-bold mb-6 md:mb-8 tracking-tight">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 md:mb-8 tracking-tight">
                             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
                                 {title1}
                             </span>
@@ -186,7 +186,7 @@ function HeroGeometric({
                         initial="hidden"
                         animate="visible"
                     >
-                        <p className="text-base sm:text-lg md:text-xl text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
+                        <p className="text-base sm:text-base md:text-lg text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
                             Turn natural language prompts into fully functional, live, and interactive websites directly in your browser.
                         </p>
                     </motion.div>

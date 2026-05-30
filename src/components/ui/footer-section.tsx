@@ -71,8 +71,8 @@ export function Footer() {
 					{footerLinks.map((section, index) => (
 						<AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
 							<div className="mb-10 md:mb-0">
-								<h3 className="text-xs">{section.label}</h3>
-								<ul className="text-muted-foreground mt-4 space-y-2 text-sm">
+								<h3 className="text-sm font-semibold">{section.label}</h3>
+									<ul className="text-muted-foreground mt-4 space-y-2 text-base">
 									{section.links.map((link) => (
 										<li key={link.title}>
 											<a
@@ -92,10 +92,10 @@ export function Footer() {
 			</div>
 
 			<AnimatedContainer className="w-full mt-16 pt-8 flex flex-col md:flex-row items-center justify-between border-t border-white/10">
-				<p className="text-muted-foreground text-sm">
+				<p className="text-muted-foreground text-base">
 					© {new Date().getFullYear()} Jinnaram Uttej. All rights reserved.
 				</p>
-				<p className="text-muted-foreground text-sm mt-4 md:mt-0">
+				<p className="text-muted-foreground text-base mt-4 md:mt-0">
 					Designed with precision.
 				</p>
 			</AnimatedContainer>

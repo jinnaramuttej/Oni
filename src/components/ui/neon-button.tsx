@@ -8,7 +8,7 @@ const buttonVariants = cva(
         variants: {
             variant: {
                 default: "bg-white/5 hover:bg-white/10 border-white/10 backdrop-blur-md",
-                solid: "bg-orange-500 hover:bg-orange-600 text-white border-transparent transition-all duration-200",
+                solid: "bg-white text-black border-transparent transition-all duration-200",
                 ghost: "border-transparent bg-transparent hover:border-white/10 hover:bg-white/5",
             },
             size: {
@@ -36,9 +36,9 @@ const NeonButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 ref={ref}
                 {...props}
             >
-                <span className={cn("absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 inset-y-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-orange-500 to-transparent hidden", neon && "block")} />
+                <span className={cn("absolute h-px opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out inset-x-0 inset-y-0 bg-gradient-to-r w-3/4 mx-auto from-transparent via-white/60 to-transparent hidden", neon && "block")} />
                 {children}
-                <span className={cn("absolute group-hover:opacity-30 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-orange-500 to-transparent hidden", neon && "block")} />
+                <span className={cn("absolute group-hover:opacity-30 transition-all duration-500 ease-in-out inset-x-0 h-px -bottom-px bg-gradient-to-r w-3/4 mx-auto from-transparent via-white/60 to-transparent hidden", neon && "block")} />
             </button>
         );
     }
