@@ -20,6 +20,9 @@
 # production
 /build
 
+# local auth data
+/.data/
+
 # misc
 .DS_Store
 *.pem
@@ -36,6 +39,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# clerk local cache
+.clerk/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/

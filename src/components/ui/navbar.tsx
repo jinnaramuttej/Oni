@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Hexagon } from "lucide-react";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -22,7 +23,7 @@ export function Navbar() {
               Pricing
             </Link>
           </div>
-          <NeonButton neon={true}>
+          <NeonButton neon={true} onClick={() => (window.location.href = '/signin')}>
             Try Oni
           </NeonButton>
         </div>

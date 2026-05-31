@@ -1,17 +1,12 @@
-import { HeroGeometric } from "@/components/ui/shape-landing-hero";
-import { Footer } from "@/components/ui/footer-section";
-import { Navbar } from "@/components/ui/navbar";
+import { Demo } from "@/app/signin-demo/demo";
+import { DashboardShell } from "@/components/ui/dashboard-shell";
 
 export default function Home() {
   return (
-    <div className="dark bg-background min-h-screen text-foreground">
-      <Navbar />
-      <HeroGeometric
-        badge="Oni Platform"
-        title1="Agentic AI Software"
-        title2="Development Platform"
-      />
-      <Footer />
+    <div className="dark">
+      <DashboardShell>
+        <Demo />
+      </DashboardShell>
     </div>
   );
 }

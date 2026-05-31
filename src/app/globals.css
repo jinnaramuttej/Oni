@@ -129,6 +129,17 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Animations used by SignInPage component */
 @keyframes fadeSlideIn {
   to {
@@ -158,8 +169,10 @@
 .animate-element{opacity:0;filter:blur(6px);transform:translateY(12px);animation-fill-mode:forwards;}
 .animate-delay-100{animation:fadeSlideIn .5s .1s both}
 .animate-delay-200{animation:fadeSlideIn .5s .2s both}
+.animate-delay-250{animation:fadeSlideIn .5s .25s both}
 .animate-delay-300{animation:fadeSlideIn .5s .3s both}
 .animate-delay-400{animation:fadeSlideIn .5s .4s both}
+.animate-delay-450{animation:fadeSlideIn .5s .45s both}
 .animate-delay-500{animation:fadeSlideIn .5s .5s both}
 .animate-delay-600{animation:fadeSlideIn .5s .6s both}
 .animate-delay-700{animation:fadeSlideIn .5s .7s both}

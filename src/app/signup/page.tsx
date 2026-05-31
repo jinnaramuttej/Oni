@@ -3,37 +3,18 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SignInPage, { Testimonial } from '@/components/ui/sign-in';
 
-const sampleTestimonials: Testimonial[] = [
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/women/57.jpg",
-    name: "Sarah Chen",
-    handle: "@sarahdigital",
-    text: "Amazing platform! The user experience is seamless and the features are exactly what I needed."
-  },
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/men/64.jpg",
-    name: "Marcus Johnson",
-    handle: "@marcustech",
-    text: "This service has transformed how I work. Clean design, powerful features, and excellent support."
-  },
-  {
-    avatarSrc: "https://randomuser.me/api/portraits/men/32.jpg",
-    name: "David Martinez",
-    handle: "@davidcreates",
-    text: "I've tried many platforms, but this one stands out. Intuitive, reliable, and genuinely helpful for productivity."
-  },
-];
+const sampleTestimonials: Testimonial[] = [];
 
-const SignInPageRoute = () => {
+const SignUpPageRoute = () => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
-  const handleSignIn = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSignUp = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
-    fetch('/api/auth/signin', {
+    fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -41,7 +22,7 @@ const SignInPageRoute = () => {
       .then(async (response) => {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(result.error || 'Unable to sign in');
+          throw new Error(result.error || 'Unable to create account');
         }
         router.push('/');
       })
@@ -51,17 +32,8 @@ const SignInPageRoute = () => {
   };
 
   const handleGoogleSignIn = () => {
-    console.log("Continue with Google clicked");
-    alert("Continue with Google clicked");
+    alert('Google sign up is not connected yet');
   };
-  
-  const handleResetPassword = () => {
-    alert("Reset Password clicked");
-  }
-
-  const handleCreateAccount = () => {
-    router.push('/signup');
-  }
 
   return (
     <div className="dark bg-background min-h-screen text-foreground">
@@ -70,17 +42,15 @@ const SignInPageRoute = () => {
         {error && <div className="absolute top-20 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-black/80 px-4 py-2 text-sm text-white">{error}</div>}
 
         <SignInPage
-          mode="signin"
+          mode="signup"
           heroImageSrc="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
-          testimonials={[]}
-          onSignIn={handleSignIn}
+          testimonials={sampleTestimonials}
+          onSignIn={handleSignUp}
           onGoogleSignIn={handleGoogleSignIn}
-          onResetPassword={handleResetPassword}
-          onCreateAccount={handleCreateAccount}
         />
       </div>
     </div>
   );
 };
 
-export default SignInPageRoute;
+export default SignUpPageRoute;

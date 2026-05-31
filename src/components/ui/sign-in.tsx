@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, EyeOff, Hexagon } from 'lucide-react';
 
 // --- HELPER COMPONENTS (ICONS) ---
 
@@ -24,6 +25,7 @@ export interface Testimonial {
 }
 
 interface SignInPageProps {
+  mode?: "signin" | "signup";
   title?: React.ReactNode;
   description?: React.ReactNode;
   heroImageSrc?: string;
@@ -56,8 +58,9 @@ const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, del
 // --- MAIN COMPONENT ---
 
 export const SignInPage: React.FC<SignInPageProps> = ({
-  title = <span className="font-light text-foreground tracking-tighter">Welcome</span>,
-  description = "Access your account and continue your journey with us",
+  mode = "signin",
+  title,
+  description,
   heroImageSrc,
   testimonials = [],
   onSignIn,
@@ -66,17 +69,40 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   onCreateAccount,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const isSignup = mode === "signup";
+  const resolvedTitle = title ?? (
+    isSignup ? <span className="font-light text-foreground tracking-tighter">Create account</span> : <span className="font-light text-foreground tracking-tighter">Welcome back</span>
+  );
+  const resolvedDescription = description ?? (
+    isSignup
+        ? "Create your Oni account to start building and collaborating."
+      : "Access your account and continue your journey with us"
+  );
 
   return (
-    <div className="h-[100dvh] flex flex-col md:flex-row font-geist w-[100dvw]">
+    <div className="h-[100dvh] flex flex-col md:flex-row font-geist w-[100dvw] relative">
+      {/* top-left logo for signin/signup pages */}
+      <Link href="/" className="absolute top-4 left-4 z-40 flex items-center gap-2 transition-opacity hover:opacity-80">
+        <Hexagon className="h-6 w-6 text-foreground" />
+        <span className="text-lg font-semibold text-foreground">Oni</span>
+      </Link>
       {/* Left column: sign-in form */}
       <section className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
-            <h1 className="animate-element animate-delay-100 text-4xl md:text-5xl font-semibold leading-tight">{title}</h1>
-            <p className="animate-element animate-delay-200 text-muted-foreground">{description}</p>
+              <h1 className="animate-element animate-delay-100 text-4xl md:text-5xl font-semibold leading-tight">{resolvedTitle}</h1>
+              <p className="animate-element animate-delay-200 text-muted-foreground">{resolvedDescription}</p>
 
             <form className="space-y-5" onSubmit={onSignIn}>
+              {isSignup && (
+                <div className="animate-element animate-delay-250">
+                  <label className="text-sm font-medium text-muted-foreground">Full Name</label>
+                  <GlassInputWrapper>
+                    <input name="name" type="text" placeholder="Enter your full name" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
+                  </GlassInputWrapper>
+                </div>
+              )}
+
               <div className="animate-element animate-delay-300">
                 <label className="text-sm font-medium text-muted-foreground">Email Address</label>
                 <GlassInputWrapper>
@@ -96,16 +122,29 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 </GlassInputWrapper>
               </div>
 
+              {isSignup && (
+                <div className="animate-element animate-delay-450">
+                  <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
+                  <GlassInputWrapper>
+                    <input name="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Confirm your password" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
+                  </GlassInputWrapper>
+                </div>
+              )}
+
               <div className="animate-element animate-delay-500 flex items-center justify-between text-sm">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" name="rememberMe" className="custom-checkbox" />
                   <span className="text-foreground/90">Keep me signed in</span>
                 </label>
-                <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-violet-400 transition-colors">Reset password</a>
+                {!isSignup ? (
+                  <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-violet-400 transition-colors">Reset password</a>
+                ) : (
+                  <span className="text-muted-foreground">All set? Sign up now</span>
+                )}
               </div>
 
               <button type="submit" className="animate-element animate-delay-600 w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                Sign In
+                {isSignup ? "Create Account" : "Sign In"}
               </button>
             </form>
 
@@ -120,7 +159,15 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             </button>
 
             <p className="animate-element animate-delay-900 text-center text-sm text-muted-foreground">
-              New to our platform? <a href="#" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-violet-400 hover:underline transition-colors">Create Account</a>
+              {isSignup ? (
+                <>
+                  Already have an account? <a href="/signin" className="text-violet-400 hover:underline transition-colors">Sign In</a>
+                </>
+              ) : (
+                <>
+                  New to our platform? <a href="/signup" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-violet-400 hover:underline transition-colors">Create Account</a>
+                </>
+              )}
             </p>
           </div>
         </div>
