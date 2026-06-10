@@ -1,19 +1,17 @@
 "use client";
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import SignInPage, { Testimonial } from '@/components/ui/sign-in';
 
 const sampleTestimonials: Testimonial[] = [];
 
 const SignUpPageRoute = () => {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const goHome = () => {
     setIsTransitioning(true);
     window.setTimeout(() => {
-      router.replace('/');
+      window.location.assign('/');
     }, 280);
   };
 
@@ -25,6 +23,7 @@ const SignUpPageRoute = () => {
     fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(payload),
     })
       .then(async (response) => {

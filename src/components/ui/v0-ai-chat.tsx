@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpIcon,
-  CircleUserRound,
   FileUp,
   ImageIcon,
-  MonitorIcon,
   Paperclip,
   Sigma,
   PlusIcon,
@@ -70,13 +68,7 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
 
 export function VercelV0Chat() {
   const [value, setValue] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Ask Oni what to build next, then I’ll draft a response.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 60,
@@ -153,91 +145,115 @@ export function VercelV0Chat() {
     }
   };
 
-  return (
-    <div className="mx-auto flex min-h-[calc(100vh-12rem)] w-full max-w-3xl flex-col justify-center gap-8 p-4">
-      <div className="space-y-3 text-center">
-        <h1 className="text-4xl font-bold text-foreground">Ask Oni what to build next</h1>
-        <p className="text-sm text-muted-foreground">Centered for faster iteration, with replies streamed from Groq.</p>
-      </div>
+  const showEmptyState = messages.length === 0;
 
-      <div className="space-y-4">
-        <div className="max-h-[320px] space-y-3 overflow-y-auto rounded-3xl border border-border bg-card/60 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl">
-          {messages.map((message) => (
-            <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] w-full flex-col">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pb-4 pt-0 md:px-6">
+        <div className={cn("flex flex-1 flex-col", showEmptyState && "justify-center") }>
+          <div
+            className={cn(
+              "overflow-hidden text-center transition-all duration-500 ease-out",
+              showEmptyState ? "max-h-48 pb-8 pt-0 opacity-100" : "max-h-0 pb-0 pt-0 opacity-0"
+            )}
+          >
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">What’s on your mind today?</h1>
+          </div>
+
+          <div className={cn("overflow-y-auto px-1 md:px-2", showEmptyState ? "max-h-0 overflow-hidden p-0 opacity-0" : "flex-1 pb-4 pt-3 opacity-100")}>
+            {messages.map((message) => (
               <div
+                key={message.id}
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6",
-                  message.role === "user"
-                    ? "bg-foreground text-background"
-                    : "border border-border bg-background/80 text-foreground"
+                  "mb-4 flex w-full animate-in fade-in slide-in-from-bottom-2 duration-300",
+                  message.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
-                {message.content}
+                <div
+                  className={cn(
+                    "max-w-[min(780px,85%)] rounded-3xl px-4 py-3 text-sm leading-6 shadow-lg shadow-black/10 md:px-5 md:py-4 md:text-base",
+                    message.role === "user"
+                      ? "bg-white text-black"
+                      : "border border-white/10 bg-white/5 text-foreground backdrop-blur-sm"
+                  )}
+                >
+                  {message.content}
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form onSubmit={handleSubmit} className={cn(
+            "transition-all duration-500 ease-out",
+            showEmptyState ? "mt-0 pb-4 pt-0" : "sticky bottom-0 border-t border-white/10 bg-background/95 pb-0 pt-3 backdrop-blur-xl"
+          )}>
+            <div className="mx-auto rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/20 transition-all duration-300 focus-within:border-white/20">
+              <Textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  adjustHeight();
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask Oni anything"
+                className={cn(
+                  "min-h-[72px] w-full resize-none border-none bg-transparent px-4 py-4 text-sm text-foreground outline-none",
+                  "placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                )}
+                style={{ overflow: "hidden" }}
+              />
+
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="group flex items-center gap-1 rounded-full px-2 py-2 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    <span className="hidden text-xs transition-opacity group-hover:inline">Attach</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-2 text-sm text-muted-foreground transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-foreground"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Project
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!value.trim() || isSubmitting}
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
+                      value.trim() && !isSubmitting
+                        ? "bg-white text-black hover:scale-105"
+                        : "bg-white/10 text-muted-foreground"
+                    )}
+                  >
+                    <ArrowUpIcon className="h-4 w-4" />
+                    <span className="sr-only">Send</span>
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
+          </form>
 
-        <form onSubmit={handleSubmit} className="relative rounded-2xl border border-border bg-card/80 shadow-2xl shadow-black/20 backdrop-blur-xl">
-          <div className="overflow-y-auto">
-            <Textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-                adjustHeight();
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask Oni a question..."
-              className={cn(
-                "w-full resize-none border-none bg-transparent px-4 py-3 text-sm text-foreground",
-                "focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
-                "placeholder:text-sm placeholder:text-muted-foreground",
-                "min-h-[60px]"
-              )}
-              style={{ overflow: "hidden" }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-3">
-            <div className="flex items-center gap-2">
-              <button type="button" className="group flex items-center gap-1 rounded-lg p-2 transition-colors hover:bg-accent/60">
-                <Paperclip className="h-4 w-4 text-muted-foreground" />
-                <span className="hidden text-xs text-muted-foreground transition-opacity group-hover:inline">Attach</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="flex items-center justify-between gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-accent/60 hover:text-foreground"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Project
-              </button>
-              <button
-                type="submit"
-                disabled={!value.trim() || isSubmitting}
-                className={cn(
-                  "flex items-center justify-between gap-1 rounded-lg border border-border px-1.5 py-1.5 text-sm transition-colors hover:border-foreground/30 hover:bg-accent/60",
-                  value.trim() && !isSubmitting ? "bg-foreground text-background" : "text-muted-foreground"
-                )}
-              >
-                <ArrowUpIcon
-                  className={cn("h-4 w-4", value.trim() && !isSubmitting ? "text-background" : "text-muted-foreground")}
-                />
-                <span className="sr-only">Send</span>
-              </button>
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-500 ease-out",
+              showEmptyState ? "max-h-24 pt-4 opacity-100" : "max-h-0 pt-0 opacity-0"
+            )}
+          >
+            <div className="flex flex-wrap items-center justify-center gap-3 px-1">
+              <ActionButton icon={<ImageIcon className="h-4 w-4" />} label="Create an image" />
+              <ActionButton icon={<Sigma className="h-4 w-4" />} label="Write or edit" />
+              <ActionButton icon={<FileUp className="h-4 w-4" />} label="Upload a project" />
             </div>
           </div>
-        </form>
-
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <ActionButton icon={<ImageIcon className="h-4 w-4" />} label="Clone a Screenshot" />
-          <ActionButton icon={<Sigma className="h-4 w-4" />} label="Import from Figma" />
-          <ActionButton icon={<FileUp className="h-4 w-4" />} label="Upload a Project" />
-          <ActionButton href="/" icon={<MonitorIcon className="h-4 w-4" />} label="Dashboard" />
-          <ActionButton href="/signup" icon={<CircleUserRound className="h-4 w-4" />} label="Sign Up Form" />
         </div>
       </div>
     </div>
@@ -252,7 +268,7 @@ interface ActionButtonProps {
 
 function ActionButton({ icon, label, href }: ActionButtonProps) {
   const className =
-    "flex items-center gap-2 rounded-full border border-border bg-card/70 px-4 py-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground";
+    "flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-muted-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:text-foreground";
 
   if (href) {
     return (

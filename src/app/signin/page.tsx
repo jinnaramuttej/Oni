@@ -32,7 +32,7 @@ const SignInPageRoute = () => {
   const goHome = () => {
     setIsTransitioning(true);
     window.setTimeout(() => {
-      router.replace('/');
+      window.location.assign('/');
     }, 280);
   };
 
@@ -44,6 +44,7 @@ const SignInPageRoute = () => {
     fetch('/api/auth/signin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify(payload),
     })
       .then(async (response) => {

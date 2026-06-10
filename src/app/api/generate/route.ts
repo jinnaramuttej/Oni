@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     return new NextResponse("Invalid prompt", { status: 400 });
   }
 
-  const groqApiKey = process.env.GROQ_API_KEY;
+  const groqApiKey = process.env.GROQ_API_KEY?.trim();
 
   if (!groqApiKey) {
     const sanitizedOutput = clean.replace(/<\/?iframe[^>]*>/gi, "");
@@ -52,7 +52,10 @@ export async function POST(req: Request) {
 
   if (!groqResponse.ok) {
     const errorBody = (await groqResponse.json().catch(() => null)) as { error?: { message?: string } } | null;
-    const message = errorBody?.error?.message ?? "Groq request failed";
+    const message =
+      groqResponse.status === 401 || groqResponse.status === 403
+        ? "Groq rejected the API key. Check GROQ_API_KEY in .env.local and restart the dev server."
+        : errorBody?.error?.message ?? "Groq request failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 

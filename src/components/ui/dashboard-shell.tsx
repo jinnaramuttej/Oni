@@ -298,7 +298,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8 lg:px-10">{children}</div>
+            <div className="flex-1 overflow-y-auto px-0 py-0">{children}</div>
           </div>
         </main>
       </div>
