@@ -19,9 +19,52 @@ export async function POST(req: Request) {
     return new NextResponse("Invalid prompt", { status: 400 });
   }
 
-  // Placeholder: call to AI provider should occur server-side here.
-  // For now, return a sanitized echo of the prompt.
-  const sanitizedOutput = clean.replace(/<\/?iframe[^>]*>/gi, "");
+  const groqApiKey = process.env.GROQ_API_KEY;
 
-  return NextResponse.json({ output: sanitizedOutput });
+  if (!groqApiKey) {
+    const sanitizedOutput = clean.replace(/<\/?iframe[^>]*>/gi, "");
+    return NextResponse.json({ output: sanitizedOutput });
+  }
+
+  const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${groqApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Oni, a concise product-building assistant. Keep responses practical, clear, and brief.",
+        },
+        {
+          role: "user",
+          content: clean,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 512,
+    }),
+  });
+
+  if (!groqResponse.ok) {
+    const errorBody = (await groqResponse.json().catch(() => null)) as { error?: { message?: string } } | null;
+    const message = errorBody?.error?.message ?? "Groq request failed";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+
+  const data = (await groqResponse.json()) as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+  };
+
+  const output = data.choices?.[0]?.message?.content?.trim();
+
+  if (!output) {
+    return NextResponse.json({ error: "Empty Groq response" }, { status: 502 });
+  }
+
+  return NextResponse.json({ output });
 }

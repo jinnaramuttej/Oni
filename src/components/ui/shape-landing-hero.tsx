@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 
@@ -72,11 +71,9 @@ function ElegantShape({
 }
 
 function HeroGeometric({
-    badge = "Design Collective",
     title1 = "Elevate Your Digital Vision",
     title2 = "Crafting Exceptional Websites",
 }: {
-    badge?: string;
     title1?: string;
     title2?: string;
 }) {

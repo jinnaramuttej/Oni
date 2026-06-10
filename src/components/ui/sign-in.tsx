@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Eye, EyeOff, Hexagon } from 'lucide-react';
 
@@ -46,7 +47,7 @@ const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
 
 const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, delay: string }) => (
   <div className={`animate-testimonial ${delay} flex items-start gap-3 rounded-3xl bg-card/40 dark:bg-zinc-800/40 backdrop-blur-xl border border-white/10 p-5 w-64`}>
-    <img src={testimonial.avatarSrc} className="h-10 w-10 object-cover rounded-2xl" alt="avatar" />
+    <Image src={testimonial.avatarSrc} width={40} height={40} className="h-10 w-10 rounded-2xl object-cover" alt="avatar" />
     <div className="text-sm leading-snug">
       <p className="flex items-center gap-1 font-medium">{testimonial.name}</p>
       <p className="text-muted-foreground">{testimonial.handle}</p>
@@ -83,55 +84,80 @@ export const SignInPage: React.FC<SignInPageProps> = ({
     <div className="h-[100dvh] flex flex-col md:flex-row font-geist w-[100dvw] relative">
       {/* top-left logo for signin/signup pages */}
       <Link href="/" className="absolute top-4 left-4 z-40 flex items-center gap-2 transition-opacity hover:opacity-80">
-        <Hexagon className="h-6 w-6 text-foreground" />
-        <span className="text-lg font-semibold text-foreground">Oni</span>
+        <Hexagon className="h-5 w-5 text-foreground" />
+        <span className="text-base font-semibold text-foreground">Oni</span>
       </Link>
       {/* Left column: sign-in form */}
-      <section className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col gap-6">
-              <h1 className="animate-element animate-delay-100 text-4xl md:text-5xl font-semibold leading-tight">{resolvedTitle}</h1>
-              <p className="animate-element animate-delay-200 text-muted-foreground">{resolvedDescription}</p>
+      <section className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
+        <div className="w-full max-w-lg rounded-[2rem] border border-border/60 bg-card/35 p-6 shadow-2xl backdrop-blur-xl sm:p-7 lg:p-8">
+          <div className="flex flex-col gap-5">
+              <h1 className="animate-element animate-delay-100 text-3xl md:text-4xl font-semibold leading-tight">{resolvedTitle}</h1>
+              <p className="animate-element animate-delay-200 max-w-md text-sm md:text-base text-muted-foreground">{resolvedDescription}</p>
 
-            <form className="space-y-5" onSubmit={onSignIn}>
+            <form className="space-y-4" onSubmit={onSignIn}>
               {isSignup && (
-                <div className="animate-element animate-delay-250">
-                  <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                  <GlassInputWrapper>
-                    <input name="name" type="text" placeholder="Enter your full name" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
-                  </GlassInputWrapper>
-                </div>
-              )}
-
-              <div className="animate-element animate-delay-300">
-                <label className="text-sm font-medium text-muted-foreground">Email Address</label>
-                <GlassInputWrapper>
-                  <input name="email" type="email" placeholder="Enter your email address" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
-                </GlassInputWrapper>
-              </div>
-
-              <div className="animate-element animate-delay-400">
-                <label className="text-sm font-medium text-muted-foreground">Password</label>
-                <GlassInputWrapper>
-                  <div className="relative">
-                    <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="w-full bg-transparent text-sm p-4 pr-12 rounded-2xl focus:outline-none" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center">
-                      {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /> : <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />}
-                    </button>
+                <div className="animate-element animate-delay-250 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Full Name</label>
+                    <GlassInputWrapper>
+                      <input name="name" type="text" placeholder="Enter your full name" className="w-full bg-transparent text-sm p-3.5 rounded-2xl focus:outline-none" />
+                    </GlassInputWrapper>
                   </div>
-                </GlassInputWrapper>
-              </div>
 
-              {isSignup && (
-                <div className="animate-element animate-delay-450">
-                  <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+                    <GlassInputWrapper>
+                      <input name="email" type="email" placeholder="Enter your email address" className="w-full bg-transparent text-sm p-3.5 rounded-2xl focus:outline-none" />
+                    </GlassInputWrapper>
+                  </div>
+                </div>
+              )}
+
+              {!isSignup && (
+                <div className="animate-element animate-delay-300">
+                  <label className="text-sm font-medium text-muted-foreground">Email Address</label>
                   <GlassInputWrapper>
-                    <input name="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Confirm your password" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
+                    <input name="email" type="email" placeholder="Enter your email address" className="w-full bg-transparent text-sm p-3.5 rounded-2xl focus:outline-none" />
                   </GlassInputWrapper>
                 </div>
               )}
 
-              <div className="animate-element animate-delay-500 flex items-center justify-between text-sm">
+              {isSignup ? (
+                <div className="animate-element animate-delay-400 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Password</label>
+                    <GlassInputWrapper>
+                      <div className="relative">
+                        <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="w-full bg-transparent text-sm p-3.5 pr-12 rounded-2xl focus:outline-none" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center">
+                          {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /> : <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />}
+                        </button>
+                      </div>
+                    </GlassInputWrapper>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Confirm Password</label>
+                    <GlassInputWrapper>
+                      <input name="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Confirm your password" className="w-full bg-transparent text-sm p-3.5 rounded-2xl focus:outline-none" />
+                    </GlassInputWrapper>
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-element animate-delay-400">
+                  <label className="text-sm font-medium text-muted-foreground">Password</label>
+                  <GlassInputWrapper>
+                    <div className="relative">
+                      <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="w-full bg-transparent text-sm p-3.5 pr-12 rounded-2xl focus:outline-none" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center">
+                        {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /> : <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />}
+                      </button>
+                    </div>
+                  </GlassInputWrapper>
+                </div>
+              )}
+
+              <div className="animate-element animate-delay-500 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" name="rememberMe" className="custom-checkbox" />
                   <span className="text-foreground/90">Keep me signed in</span>
@@ -143,14 +169,14 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                 )}
               </div>
 
-              <button type="submit" className="animate-element animate-delay-600 w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <button type="submit" className="animate-element animate-delay-600 w-full rounded-2xl bg-primary py-3.5 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
                 {isSignup ? "Create Account" : "Sign In"}
               </button>
             </form>
 
             <div className="animate-element animate-delay-700 relative flex items-center justify-center">
               <span className="w-full border-t border-border"></span>
-              <span className="px-4 text-sm text-muted-foreground bg-background absolute">Or continue with</span>
+              <span className="px-4 text-sm text-muted-foreground bg-card absolute">Or continue with</span>
             </div>
 
             <button onClick={onGoogleSignIn} className="animate-element animate-delay-800 w-full flex items-center justify-center gap-3 border border-border rounded-2xl py-4 hover:bg-secondary transition-colors">

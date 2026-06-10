@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
-import fs from "node:fs/promises";
+import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
+
+import { createSupabaseAdminClientOrNull } from "@/lib/supabase";
 
 export type AuthUser = {
   id: string;
@@ -15,9 +17,22 @@ type StoredUser = AuthUser & {
   salt: string;
 };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const USERS_FILE = path.join(DATA_DIR, "users.json");
+type ProfileRow = {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  salt: string;
+  created_at: string;
+};
+
+type LocalAuthStore = {
+  profiles: ProfileRow[];
+};
+
 const SESSION_COOKIE = "oni_session";
+const LOCAL_STORE_DIR = path.join(process.cwd(), ".data");
+const LOCAL_STORE_FILE = path.join(LOCAL_STORE_DIR, "users.json");
 
 function getSecret() {
   return process.env.INTERNAL_SECRET || "dev-only-secret-change-me";
@@ -36,23 +51,15 @@ function safeUser(user: StoredUser): AuthUser {
   };
 }
 
-async function ensureDataDir() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-}
-
-async function readUsers(): Promise<StoredUser[]> {
-  try {
-    const raw = await fs.readFile(USERS_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as StoredUser[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function writeUsers(users: StoredUser[]) {
-  await ensureDataDir();
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+function fromProfileRow(row: ProfileRow): StoredUser {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    createdAt: row.created_at,
+    passwordHash: row.password_hash,
+    salt: row.salt,
+  };
 }
 
 function hashPassword(password: string, salt: string) {
@@ -92,17 +99,95 @@ function decodeSession(session: string) {
   }
 }
 
+export async function getUserFromSession(session: string | null | undefined) {
+  if (!session) return null;
+
+  const userId = decodeSession(session);
+  if (!userId) return null;
+
+  return getUserById(userId);
+}
+
 function readCookieValue(cookieHeader: string | null | undefined, name: string) {
   if (!cookieHeader) return null;
   const match = cookieHeader.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
+async function readLocalStore(): Promise<LocalAuthStore> {
+  try {
+    const raw = await fs.readFile(LOCAL_STORE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as Partial<LocalAuthStore>;
+    return { profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [] };
+  } catch (error) {
+    if (error instanceof NodeJS.ErrnoException && error.code === "ENOENT") {
+      return { profiles: [] };
+    }
+
+    throw error;
+  }
+}
+
+async function writeLocalStore(store: LocalAuthStore) {
+  await fs.mkdir(LOCAL_STORE_DIR, { recursive: true });
+  await fs.writeFile(LOCAL_STORE_FILE, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+}
+
+function hasSupabaseConfig() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export async function createUser(input: { name: string; email: string; password: string }) {
-  const users = await readUsers();
   const email = normalizeEmail(input.email);
 
-  if (users.some((user) => normalizeEmail(user.email) === email)) {
+  if (!hasSupabaseConfig()) {
+    const store = await readLocalStore();
+    const existingUser = store.profiles.find((profile) => profile.email === email);
+
+    if (existingUser) {
+      return { error: "Email already in use" as const };
+    }
+
+    const salt = crypto.randomBytes(16).toString("hex");
+    const user: StoredUser = {
+      id: generateId(),
+      name: input.name.trim(),
+      email,
+      salt,
+      passwordHash: hashPassword(input.password, salt),
+      createdAt: new Date().toISOString(),
+    };
+
+    store.profiles.unshift({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password_hash: user.passwordHash,
+      salt: user.salt,
+      created_at: user.createdAt,
+    });
+
+    await writeLocalStore(store);
+    return { user: safeUser(user) };
+  }
+
+  const supabase = createSupabaseAdminClientOrNull();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured" as const };
+  }
+
+  const { data: existingUser, error: lookupError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (lookupError) {
+    return { error: lookupError.message as string };
+  }
+
+  if (existingUser) {
     return { error: "Email already in use" as const };
   }
 
@@ -116,40 +201,92 @@ export async function createUser(input: { name: string; email: string; password:
     createdAt: new Date().toISOString(),
   };
 
-  users.push(user);
-  await writeUsers(users);
+  const { error: insertError } = await supabase.from("profiles").insert({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    password_hash: user.passwordHash,
+    salt: user.salt,
+    created_at: user.createdAt,
+  });
+
+  if (insertError) {
+    return { error: insertError.message as string };
+  }
 
   return { user: safeUser(user) };
 }
 
 export async function authenticateUser(input: { email: string; password: string }) {
-  const users = await readUsers();
   const email = normalizeEmail(input.email);
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+
+  if (!hasSupabaseConfig()) {
+    const store = await readLocalStore();
+    const user = store.profiles.find((profile) => profile.email === email);
+
+    if (!user) return { error: "Invalid email or password" as const };
+
+    const storedUser = fromProfileRow(user);
+    const passwordHash = hashPassword(input.password, storedUser.salt);
+    if (passwordHash !== storedUser.passwordHash) return { error: "Invalid email or password" as const };
+
+    return { user: safeUser(storedUser) };
+  }
+
+  const supabase = createSupabaseAdminClientOrNull();
+
+  if (!supabase) {
+    return { error: "Supabase is not configured" as const };
+  }
+
+  const { data: user, error } = await supabase
+    .from("profiles")
+    .select("id, name, email, created_at, password_hash, salt")
+    .eq("email", email)
+    .maybeSingle<ProfileRow>();
+
+  if (error) {
+    return { error: error.message as string };
+  }
 
   if (!user) return { error: "Invalid email or password" as const };
 
-  const passwordHash = hashPassword(input.password, user.salt);
-  if (passwordHash !== user.passwordHash) return { error: "Invalid email or password" as const };
+  const storedUser = fromProfileRow(user);
+  const passwordHash = hashPassword(input.password, storedUser.salt);
+  if (passwordHash !== storedUser.passwordHash) return { error: "Invalid email or password" as const };
 
-  return { user: safeUser(user) };
+  return { user: safeUser(storedUser) };
 }
 
 export async function getUserById(userId: string) {
-  const users = await readUsers();
-  const user = users.find((entry) => entry.id === userId);
-  return user ? safeUser(user) : null;
+
+  if (!hasSupabaseConfig()) {
+    const store = await readLocalStore();
+    const user = store.profiles.find((profile) => profile.id === userId);
+    return user ? safeUser(fromProfileRow(user)) : null;
+  }
+
+  const supabase = createSupabaseAdminClientOrNull();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data: user, error } = await supabase
+    .from("profiles")
+    .select("id, name, email, created_at, password_hash, salt")
+    .eq("id", userId)
+    .maybeSingle<ProfileRow>();
+
+  if (error || !user) return null;
+
+  return safeUser(fromProfileRow(user));
 }
 
 export async function getUserFromRequest(req: NextRequest | Request) {
   const cookieHeader = req.headers.get("cookie");
   const session = readCookieValue(cookieHeader, SESSION_COOKIE);
-  if (!session) return null;
-
-  const userId = decodeSession(session);
-  if (!userId) return null;
-
-  return getUserById(userId);
+  return getUserFromSession(session);
 }
 
 export function attachSessionCookie(response: NextResponse, userId: string) {

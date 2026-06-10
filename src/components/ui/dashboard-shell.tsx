@@ -1,20 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BookText,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Ellipsis,
+  LogOut,
   FolderPlus,
-  Grid2X2,
   Hexagon,
   MessageSquarePlus,
   Search,
+  Settings,
   User,
 } from "lucide-react";
 
+import type { AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
@@ -26,14 +29,73 @@ const navItems = [
   { label: "Search chats", icon: Search },
   { label: "Library", icon: BookText },
   { label: "Projects", icon: FolderPlus },
-  { label: "Apps", icon: Grid2X2 },
-  { label: "More", icon: Ellipsis },
 ];
 
 const recents: string[] = [];
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/auth/me")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json().catch(() => null)) as { user?: AuthUser | null } | null;
+        return data?.user ?? null;
+      })
+      .then((nextUser) => {
+        if (active) setUser(nextUser);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/signin");
+  };
+
+  const initials =
+    user?.name
+      ?.split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "ON";
 
   return (
     <div className="dark min-h-screen bg-background text-foreground">
@@ -49,21 +111,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
                 <Hexagon className="h-5 w-5 text-white" />
               </div>
-              {!collapsed && (
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/50">Oni</p>
-                  <p className="text-lg font-semibold text-white">Workspace</p>
-                </div>
-              )}
+              {!collapsed && <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/50">Oni</p>}
             </div>
-            {!collapsed && (
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
-            )}
+
+            {/* removed duplicate chevron button to avoid confusion */}
           </div>
 
           <div className="scrollbar-hidden flex-1 overflow-y-auto px-3 pb-4">
@@ -89,6 +140,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
               })}
             </nav>
 
+            {!collapsed && (
+              <div className="mt-4 px-1">
+                <Link
+                  href="/"
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm text-white/80 transition-colors hover:bg-white/8 hover:text-white"
+                >
+                  <ChevronDown className="h-5 w-5 shrink-0 rotate-[-90deg] text-white/80" />
+                  <span className="font-medium">Dashboard</span>
+                </Link>
+              </div>
+            )}
+
             {!collapsed && recents.length > 0 && (
               <>
                 <div className="mt-5 px-3 pb-2">
@@ -112,24 +175,107 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
           <div className="border-t border-white/10 p-3">
             {!collapsed ? (
-              <div className="flex items-center justify-between rounded-2xl px-2 py-2 hover:bg-white/8">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">
-                    JU
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((current) => !current)}
+                  className="flex w-full items-center justify-between rounded-2xl px-2 py-2 text-left transition-colors hover:bg-white/8"
+                  aria-haspopup="menu"
+                  aria-expanded={profileOpen}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{user?.name ?? "Signed in user"}</p>
+                      {user?.email && <p className="text-xs text-white/50">{user.email}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Jinnaram Uttej</p>
-                  </div>
-                </div>
-                <button type="button" className="rounded-full p-2 text-white/55 transition-colors hover:bg-white/10 hover:text-white">
-                  <User className="h-4 w-4" />
+                  <ChevronDown className="h-4 w-4 text-white/55" />
                 </button>
+
+                {profileOpen && (
+                  <div
+                    className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
+                    role="menu"
+                  >
+                    <Link
+                      href="/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                    <Link
+                      href="/"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <User className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="flex justify-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">
-                  JU
-                </div>
+              <div className="relative flex justify-center" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((current) => !current)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white transition-transform hover:scale-105"
+                  aria-haspopup="menu"
+                  aria-expanded={profileOpen}
+                >
+                  {initials}
+                </button>
+
+                {profileOpen && (
+                  <div
+                    className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
+                    role="menu"
+                  >
+                    <Link
+                      href="/settings"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
+                    <Link
+                      href="/"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <User className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
+                      role="menuitem"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

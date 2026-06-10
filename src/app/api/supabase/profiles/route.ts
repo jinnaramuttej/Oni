@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient, createSupabaseBrowserClient } from "@/lib/supabase";
+import { createSupabaseAdminClientOrNull, createSupabaseBrowserClientOrNull } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createSupabaseAdminClient() : createSupabaseBrowserClient();
+    const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+      ? createSupabaseAdminClientOrNull()
+      : createSupabaseBrowserClientOrNull();
+
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase is not configured" }, { status: 503 });
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("id, name, email, created_at")
