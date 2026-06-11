@@ -143,7 +143,9 @@ function HeroGeometric({
 
             <div className="relative z-10 container mx-auto px-4 md:px-6">
                 <div className="max-w-3xl mx-auto text-center">
-                    {/* badge removed per user request */}
+                    <div className="mb-4 inline-flex items-center rounded-full bg-white/4 px-3 py-1 text-sm font-medium text-white/80">
+                        Oni Platform
+                    </div>
 
                     <motion.div
                         custom={1}

@@ -19,6 +19,9 @@ import {
 
 import type { AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+
+const SettingsModal = dynamic(() => import("./settings-modal").then((m) => m.SettingsModal), { ssr: false });
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -37,6 +40,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -98,23 +102,22 @@ export function DashboardShell({ children }: DashboardShellProps) {
       .join("") || "ON";
 
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
+    <div className="dark h-screen overflow-hidden bg-[#0a0a0a] text-foreground">
+      <div className="flex h-screen min-h-0">
         <aside
           className={cn(
             "relative flex h-screen flex-col border-r border-white/10 bg-black text-white transition-all duration-300 ease-out",
             collapsed ? "w-[84px]" : "w-[320px]"
           )}
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-                <Hexagon className="h-5 w-5 text-white" />
-              </div>
-              {!collapsed && <p className="text-sm font-semibold uppercase tracking-[0.24em] text-white/50">Oni</p>}
-            </div>
-
-            {/* removed duplicate chevron button to avoid confusion */}
+          <div className="px-4 py-4">
+            <Link
+              href="/"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+              aria-label="Dashboard"
+            >
+              <Hexagon className="h-5 w-5 text-white" />
+            </Link>
           </div>
 
           <div className="scrollbar-hidden flex-1 overflow-y-auto px-3 pb-4">
@@ -140,18 +143,6 @@ export function DashboardShell({ children }: DashboardShellProps) {
               })}
             </nav>
 
-            {!collapsed && (
-              <div className="mt-4 px-1">
-                <Link
-                  href="/"
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm text-white/80 transition-colors hover:bg-white/8 hover:text-white"
-                >
-                  <ChevronDown className="h-5 w-5 shrink-0 rotate-[-90deg] text-white/80" />
-                  <span className="font-medium">Dashboard</span>
-                </Link>
-              </div>
-            )}
-
             {!collapsed && recents.length > 0 && (
               <>
                 <div className="mt-5 px-3 pb-2">
@@ -175,7 +166,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
           <div className="border-t border-white/10 p-3">
             {!collapsed ? (
-              <div className="relative" ref={profileMenuRef}>
+              <>
+                <div className="relative" ref={profileMenuRef}>
                 <button
                   type="button"
                   onClick={() => setProfileOpen((current) => !current)}
@@ -200,15 +192,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
                     role="menu"
                   >
-                    <Link
-                      href="/settings"
-                      onClick={() => setProfileOpen(false)}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setShowSettingsModal(true);
+                      }}
                       className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
                       role="menuitem"
                     >
                       <Settings className="h-4 w-4" />
                       Settings
-                    </Link>
+                    </button>
                     <Link
                       href="/"
                       onClick={() => setProfileOpen(false)}
@@ -229,7 +224,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     </button>
                   </div>
                 )}
-              </div>
+                </div>
+
+                {showSettingsModal && (
+                  <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} user={user} />
+                )}
+              </>
             ) : (
               <div className="relative flex justify-center" ref={profileMenuRef}>
                 <button
@@ -247,15 +247,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
                     role="menu"
                   >
-                    <Link
-                      href="/settings"
-                      onClick={() => setProfileOpen(false)}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setShowSettingsModal(true);
+                      }}
                       className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/85 transition-colors hover:bg-white/8 hover:text-white"
                       role="menuitem"
                     >
                       <Settings className="h-4 w-4" />
                       Settings
-                    </Link>
+                    </button>
                     <Link
                       href="/"
                       onClick={() => setProfileOpen(false)}
@@ -290,15 +293,17 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </button>
         </aside>
 
-        <main className="flex-1 overflow-hidden bg-background">
-          <div className="flex h-full flex-col">
-            <header className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-8">
+        <main className="min-w-0 flex-1 overflow-hidden bg-[#0a0a0a]">
+          <div className="flex h-full min-h-0 flex-col">
+            <header className="flex items-center justify-between px-4 py-4 md:px-8">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold text-foreground">Oni</h1>
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-0 py-0">{children}</div>
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              {children}
+            </div>
           </div>
         </main>
       </div>

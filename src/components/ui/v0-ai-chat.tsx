@@ -1,29 +1,33 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import {
-  ArrowUpIcon,
-  FileUp,
-  ImageIcon,
-  Paperclip,
-  Sigma,
-  PlusIcon,
-} from "lucide-react";
+import { ArrowUpIcon, Paperclip } from "lucide-react";
 
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type SuggestionChip = {
+  label: string;
+  value: string;
+};
+
+const suggestionChips: SuggestionChip[] = [
+  { label: "Build me a portfolio site", value: "Build me a portfolio site" },
+  { label: "Create a landing page for my startup", value: "Create a landing page for my startup" },
+  { label: "Make a restaurant website", value: "Make a restaurant website" },
+  { label: "Generate a SaaS pricing page", value: "Generate a SaaS pricing page" },
+];
 
 interface UseAutoResizeTextareaProps {
   minHeight: number;
   maxHeight?: number;
 }
-
-type ChatMessage = {
-  id: string;
-  role: "assistant" | "user";
-  content: string;
-};
 
 function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -39,13 +43,11 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
       }
 
       textarea.style.height = `${minHeight}px`;
-
-      const newHeight = Math.max(
+      const nextHeight = Math.max(
         minHeight,
         Math.min(textarea.scrollHeight, maxHeight ?? Number.POSITIVE_INFINITY)
       );
-
-      textarea.style.height = `${newHeight}px`;
+      textarea.style.height = `${nextHeight}px`;
     },
     [minHeight, maxHeight]
   );
@@ -66,37 +68,54 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
   return { textareaRef, adjustHeight };
 }
 
-export function VercelV0Chat() {
+export function OniChat() {
   const [value, setValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 60,
-    maxHeight: 200,
-  });
+  const [isSending, setIsSending] = useState(false);
+  const [displayName, setDisplayName] = useState("Uttej");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { textareaRef, adjustHeight } = useAutoResizeTextarea({
+    minHeight: 56,
+    maxHeight: 180,
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/auth/me")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json().catch(() => null)) as { user?: { name?: string | null } | null } | null;
+        return data?.user ?? null;
+      })
+      .then((user) => {
+        if (!active || !user?.name) return;
+        const firstName = user.name.trim().split(/\s+/)[0];
+        if (firstName) setDisplayName(firstName);
+      })
+      .catch(() => {
+        // Keep fallback name.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+  }, [messages, isSending]);
 
   const handleSubmit = useCallback(
-    async (event?: React.FormEvent<HTMLFormElement>) => {
-      event?.preventDefault();
+    async (promptOverride?: string) => {
+      const prompt = (promptOverride ?? value).trim();
+      if (!prompt || isSending) return;
 
-      const prompt = value.trim();
-      if (!prompt || isSubmitting) return;
-
-      const userMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: prompt,
-      };
-
-      setMessages((current) => [...current, userMessage]);
+      setMessages((current) => [...current, { role: "user", content: prompt }]);
       setValue("");
       adjustHeight(true);
-      setIsSubmitting(true);
+      setIsSending(true);
 
       try {
         const response = await fetch("/api/generate", {
@@ -110,179 +129,264 @@ export function VercelV0Chat() {
         const data = (await response.json().catch(() => null)) as { output?: string; error?: string } | null;
 
         if (!response.ok) {
-          throw new Error(data?.error ?? "Unable to generate a response");
+          setMessages((current) => [
+            ...current,
+            {
+              role: "assistant",
+              content: data?.error ?? "Something went wrong while generating a reply.",
+            },
+          ]);
+          return;
         }
 
         setMessages((current) => [
           ...current,
           {
-            id: crypto.randomUUID(),
             role: "assistant",
             content: data?.output ?? "No response returned.",
           },
         ]);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to generate a response";
+      } catch {
         setMessages((current) => [
           ...current,
           {
-            id: crypto.randomUUID(),
             role: "assistant",
-            content: message,
+            content: "Network error. Check your connection and try again.",
           },
         ]);
       } finally {
-        setIsSubmitting(false);
+        setIsSending(false);
       }
     },
-    [adjustHeight, isSubmitting, value]
+    [adjustHeight, isSending, value]
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       void handleSubmit();
     }
   };
 
-  const showEmptyState = messages.length === 0;
+  const fillSuggestion = (text: string) => {
+    setValue(text);
+    adjustHeight();
+    textareaRef.current?.focus();
+  };
+
+  const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] w-full flex-col">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pb-4 pt-0 md:px-6">
-        <div className={cn("flex flex-1 flex-col", showEmptyState && "justify-center") }>
-          <div
-            className={cn(
-              "overflow-hidden text-center transition-all duration-500 ease-out",
-              showEmptyState ? "max-h-48 pb-8 pt-0 opacity-100" : "max-h-0 pb-0 pt-0 opacity-0"
-            )}
-          >
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">What’s on your mind today?</h1>
-          </div>
+    <div className="flex h-full min-h-0 w-full text-white">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl transition-all duration-300 ease-in-out">
+        <AnimatePresence mode="wait">
+          {!hasMessages ? (
+            <motion.div
+              key="landing-state"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex min-h-0 w-full items-center justify-center px-4 py-8"
+            >
+              <div className="w-full max-w-4xl">
+                <div className="flex flex-col items-center text-center">
+                  <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                    Hello, {displayName} <span aria-hidden="true">{"\uD83D\uDC4B"}</span>
+                  </h1>
+                  <p className="mt-4 text-base text-white/45 sm:text-lg">What can I help you ship?</p>
+                </div>
 
-          <div className={cn("overflow-y-auto px-1 md:px-2", showEmptyState ? "max-h-0 overflow-hidden p-0 opacity-0" : "flex-1 pb-4 pt-3 opacity-100")}>
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "mb-4 flex w-full animate-in fade-in slide-in-from-bottom-2 duration-300",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[min(780px,85%)] rounded-3xl px-4 py-3 text-sm leading-6 shadow-lg shadow-black/10 md:px-5 md:py-4 md:text-base",
-                    message.role === "user"
-                      ? "bg-white text-black"
-                      : "border border-white/10 bg-white/5 text-foreground backdrop-blur-sm"
-                  )}
+                <motion.div
+                  layout
+                  className="mx-auto mt-10 w-full"
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                 >
-                  {message.content}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+                  <ChatComposer
+                    value={value}
+                    onChange={(nextValue) => {
+                      setValue(nextValue);
+                      adjustHeight();
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onSend={() => {
+                      void handleSubmit();
+                    }}
+                    textareaRef={textareaRef}
+                    isSending={isSending}
+                    centered
+                  />
 
-          <form onSubmit={handleSubmit} className={cn(
-            "transition-all duration-500 ease-out",
-            showEmptyState ? "mt-0 pb-4 pt-0" : "sticky bottom-0 border-t border-white/10 bg-background/95 pb-0 pt-3 backdrop-blur-xl"
-          )}>
-            <div className="mx-auto rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/20 transition-all duration-300 focus-within:border-white/20">
-              <Textarea
-                ref={textareaRef}
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  adjustHeight();
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask Oni anything"
-                className={cn(
-                  "min-h-[72px] w-full resize-none border-none bg-transparent px-4 py-4 text-sm text-foreground outline-none",
-                  "placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  <div className="mt-4 flex flex-wrap justify-center gap-3">
+                    {suggestionChips.map((chip) => (
+                      <button
+                        key={chip.label}
+                        type="button"
+                        onClick={() => fillSuggestion(chip.value)}
+                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition-colors duration-300 ease-in-out hover:bg-white/10"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat-state"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex h-full min-h-0 w-full flex-col px-4"
+            >
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pb-6 pt-2 scrollbar-hidden">
+                {messages.map((message, index) =>
+                  message.role === "user" ? (
+                    <motion.div
+                      key={`user-${index}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="flex justify-end"
+                    >
+                      <div className="max-w-[80%] rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm leading-6 text-white">
+                        {message.content}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={`assistant-${index}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="flex max-w-4xl flex-col gap-1 text-left"
+                    >
+                      <span className="text-xs text-white/35">Oni</span>
+                      <AnimatedAssistantText key={message.content} content={message.content} />
+                    </motion.div>
+                  )
                 )}
-                style={{ overflow: "hidden" }}
-              />
-
-              <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3 py-3">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="group flex items-center gap-1 rounded-full px-2 py-2 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    <span className="hidden text-xs transition-opacity group-hover:inline">Attach</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-2 text-sm text-muted-foreground transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-foreground"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Project
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!value.trim() || isSubmitting}
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
-                      value.trim() && !isSubmitting
-                        ? "bg-white text-black hover:scale-105"
-                        : "bg-white/10 text-muted-foreground"
-                    )}
-                  >
-                    <ArrowUpIcon className="h-4 w-4" />
-                    <span className="sr-only">Send</span>
-                  </button>
-                </div>
+                {isSending && <p className="text-xs text-white/35">Oni is thinking...</p>}
+                <div ref={messagesEndRef} />
               </div>
-            </div>
-          </form>
 
-          <div
-            className={cn(
-              "overflow-hidden transition-all duration-500 ease-out",
-              showEmptyState ? "max-h-24 pt-4 opacity-100" : "max-h-0 pt-0 opacity-0"
-            )}
-          >
-            <div className="flex flex-wrap items-center justify-center gap-3 px-1">
-              <ActionButton icon={<ImageIcon className="h-4 w-4" />} label="Create an image" />
-              <ActionButton icon={<Sigma className="h-4 w-4" />} label="Write or edit" />
-              <ActionButton icon={<FileUp className="h-4 w-4" />} label="Upload a project" />
-            </div>
-          </div>
-        </div>
+              <motion.div
+                layout
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="z-20 shrink-0 bg-[#0a0a0a]/95 pb-4 pt-4 backdrop-blur-md"
+              >
+                <ChatComposer
+                  value={value}
+                  onChange={(nextValue) => {
+                    setValue(nextValue);
+                    adjustHeight();
+                  }}
+                  onKeyDown={handleKeyDown}
+                  onSend={() => {
+                    void handleSubmit();
+                  }}
+                  textareaRef={textareaRef}
+                  isSending={isSending}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
-interface ActionButtonProps {
-  icon: React.ReactNode;
-  label: string;
-  href?: string;
-}
+function AnimatedAssistantText({ content }: { content: string }) {
+  const [visibleText, setVisibleText] = useState("");
 
-function ActionButton({ icon, label, href }: ActionButtonProps) {
-  const className =
-    "flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-muted-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:text-foreground";
+  useEffect(() => {
+    const tokens = content.match(/\S+\s*/g) ?? [content];
+    let index = 0;
 
-  if (href) {
-    return (
-      <Link href={href} className={className}>
-        {icon}
-        <span className="text-xs">{label}</span>
-      </Link>
-    );
-  }
+    const interval = window.setInterval(() => {
+      index += 1;
+      setVisibleText(tokens.slice(0, index).join(""));
+
+      if (index >= tokens.length) {
+        window.clearInterval(interval);
+      }
+    }, 55);
+
+    return () => window.clearInterval(interval);
+  }, [content]);
 
   return (
-    <button type="button" className={className}>
-      {icon}
-      <span className="text-xs">{label}</span>
-    </button>
+    <p className="max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
+      {visibleText}
+      {visibleText.length < content.length && <span className="text-white/45">|</span>}
+    </p>
+  );
+}
+
+type ChatComposerProps = {
+  value: string;
+  onChange: (nextValue: string) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSend: () => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  isSending: boolean;
+  centered?: boolean;
+};
+
+function ChatComposer({
+  value,
+  onChange,
+  onKeyDown,
+  onSend,
+  textareaRef,
+  isSending,
+  centered = false,
+}: ChatComposerProps) {
+  return (
+    <div className={cn("w-full", centered && "mx-auto max-w-4xl")}>
+      <div className="rounded-2xl border border-white/10 bg-white/5 transition-all duration-300 ease-in-out">
+        <div className="flex items-end gap-3 px-4 py-3">
+          <button
+            type="button"
+            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/75 transition-colors duration-300 ease-in-out hover:bg-white/10 hover:text-white"
+            aria-label="Attach file"
+          >
+            <Paperclip className="h-4 w-4" />
+          </button>
+
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Ask Oni anything..."
+            className={cn(
+              "min-h-[56px] flex-1 resize-none border-0 bg-transparent px-0 py-2 text-sm leading-6 text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            )}
+            style={{ overflow: "hidden" }}
+          />
+
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={!value.trim() || isSending}
+            className={cn(
+              "mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ease-in-out",
+              value.trim() && !isSending
+                ? "bg-white text-black hover:bg-white/90"
+                : "cursor-not-allowed bg-white/10 text-white/35"
+            )}
+            aria-label="Send message"
+          >
+            <ArrowUpIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
