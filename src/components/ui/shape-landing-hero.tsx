@@ -71,9 +71,11 @@ function ElegantShape({
 }
 
 function HeroGeometric({
+    badge = "Oni Platform",
     title1 = "Elevate Your Digital Vision",
     title2 = "Crafting Exceptional Websites",
 }: {
+    badge?: string;
     title1?: string;
     title2?: string;
 }) {
@@ -144,7 +146,7 @@ function HeroGeometric({
             <div className="relative z-10 container mx-auto px-4 md:px-6">
                 <div className="max-w-3xl mx-auto text-center">
                     <div className="mb-4 inline-flex items-center rounded-full bg-white/4 px-3 py-1 text-sm font-medium text-white/80">
-                        Oni Platform
+                        {badge}
                     </div>
 
                     <motion.div

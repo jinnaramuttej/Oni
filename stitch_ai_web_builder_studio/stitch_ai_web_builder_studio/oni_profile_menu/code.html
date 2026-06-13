@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Oni - Profile Popup</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Playfair+Display:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#c4c7c8",
+                        "background": "#121317",
+                        "surface-variant": "#343439",
+                        "surface-container-low": "#1a1b20",
+                        "primary-fixed": "#e2e2e2",
+                        "on-primary": "#2f3131",
+                        "surface-container-lowest": "#0d0e12",
+                        "surface-container-high": "#292a2e",
+                        "outline-variant": "#444748",
+                        "error-container": "#93000a",
+                        "text-primary": "#e3e2e6",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "inverse-surface": "#e3e2e7",
+                        "tertiary-container": "#62fae3",
+                        "surface-container": "#1e1f24",
+                        "tertiary-fixed-dim": "#3cddc7",
+                        "tertiary-fixed": "#62fae3",
+                        "on-primary-fixed": "#1a1c1c",
+                        "surface": "#121317",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-error": "#690005",
+                        "surface-bright": "#38393d",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-tint": "#c6c6c7",
+                        "on-surface": "#e3e2e7",
+                        "secondary-fixed-dim": "#c6c6c6",
+                        "surface-container-highest": "#343439",
+                        "primary-container": "#e2e2e2",
+                        "on-secondary": "#2f3131",
+                        "inverse-on-surface": "#2f3035",
+                        "on-background": "#e3e2e7",
+                        "on-tertiary": "#003731",
+                        "on-error-container": "#ffdad6",
+                        "inverse-primary": "#5d5f5f",
+                        "secondary-container": "#454747",
+                        "surface-dim": "#121317",
+                        "outline": "#44474e",
+                        "tertiary": "#ffffff",
+                        "error": "#ffb4ab",
+                        "primary": "#ffffff",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "on-secondary-container": "#b5b5b5",
+                        "on-tertiary-fixed": "#00201c",
+                        "text-tertiary": "#8e9099",
+                        "on-tertiary-fixed-variant": "#005047",
+                        "on-primary-container": "#636565",
+                        "on-secondary-fixed-variant": "#454747",
+                        "text-secondary": "#c4c6d0",
+                        "secondary": "#c6c6c6",
+                        "on-tertiary-container": "#007165"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "gutter-base": "1rem",
+                        "section-gap": "2.5rem",
+                        "input-padding": "1rem",
+                        "container-max-width": "896px"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Playfair Display"],
+                        "label-xs": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Playfair Display"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["32px", {"lineHeight": "1.2", "fontWeight": "400"}],
+                        "label-xs": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.text-primary');
+        }
+        /* Thin stroke icons */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 20;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-end justify-start p-6 bg-background relative overflow-hidden">
+<!-- Mock Sidebar structure to ground the popup position -->
+<div class="fixed left-0 top-0 h-screen w-sidebar-width border-r border-surface-container-high bg-surface-container-lowest flex flex-col justify-between py-6 px-4 hidden md:flex z-0">
+<div>
+<!-- Top section of sidebar -->
+<div class="mb-8 px-2 flex items-center justify-between">
+<span class="text-headline-md font-headline-md font-bold text-primary tracking-tight">Oni</span>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center space-x-3 px-3 py-2 text-text-secondary hover:bg-surface-container transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">add_box</span>
+<span class="text-body-md font-body-md">New chat</span>
+</a>
+</nav>
+</div>
+<!-- Profile Trigger / Anchor for Popup -->
+<div class="relative w-full" id="profile-container">
+<!-- The Popup -->
+<div class="absolute bottom-full left-0 mb-2 w-64 bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden shadow-none transition-all duration-200 ease-in-out opacity-100 translate-y-0 z-50" id="profile-popup">
+<!-- Header / User Info in Popup -->
+<div class="px-4 py-3 border-b border-surface-container-high bg-surface-container-low">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden shrink-0">
+<img alt="User avatar" class="w-full h-full object-cover" data-alt="A close-up, black and white portrait of a person with a serene expression, looking slightly off-camera. The lighting is soft and moody, emphasizing a sophisticated, minimalist aesthetic. The background is pure black, contrasting sharply with the subject's subtly lit features." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDvcODvZcgyksRuzWZ3Hf425fyFmnMOWh4CN5eHvrCZO9Dvcnbc3-Ah2XSHAvit8UAt_UYlSzZyJPWyCLxeKlSRSi-3gjQ7i0quSANVGYFGh5MEss0ORPCoe1-wvD6fBtm_4yR1y_8XpUP211hh-x4MdLUSGiExbVteCx4aHE0m-3L4HvxIrqXxXV90To53zc-OYxjMC8Jitobt6LTsPQlb7fc1IbAzKSP8MLyqa68wIF_e50BnGu-1gkobnah_n6X9fNGdUuCuJC1"/>
+</div>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-primary">Oni User</span>
+<span class="text-label-xs font-label-xs text-text-tertiary">Pro Plan</span>
+</div>
+</div>
+</div>
+<!-- Menu Items -->
+<div class="py-1">
+<button class="w-full flex items-center px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">settings</span>
+<span class="text-body-md font-body-md text-sm">Settings</span>
+</button>
+<button class="w-full flex items-center px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">language</span>
+<span class="text-body-md font-body-md text-sm">Language</span>
+</button>
+<button class="w-full flex items-center px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">help</span>
+<span class="text-body-md font-body-md text-sm">Get help</span>
+</button>
+</div>
+<div class="py-1 border-t border-surface-container-high">
+<button class="w-full flex items-center justify-between px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<div class="flex items-center">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">bolt</span>
+<span class="text-body-md font-body-md text-sm">Upgrade plan</span>
+</div>
+<span class="text-label-xs font-label-xs text-text-tertiary">Pro</span>
+</button>
+<button class="w-full flex items-center px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">info</span>
+<span class="text-body-md font-body-md text-sm">Learn more</span>
+</button>
+</div>
+<div class="py-1 border-t border-surface-container-high">
+<button class="w-full flex items-center px-4 py-2.5 text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined mr-3 text-[18px] group-hover:text-primary transition-colors">logout</span>
+<span class="text-body-md font-body-md text-sm">Log out</span>
+</button>
+</div>
+</div>
+<!-- Profile Trigger Button (Active State simulated) -->
+<button class="w-full flex items-center justify-between px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg transition-colors z-10 relative">
+<div class="flex items-center space-x-3">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest overflow-hidden shrink-0">
+<img alt="User avatar" class="w-full h-full object-cover" data-alt="A close-up, black and white portrait of a person with a serene expression, looking slightly off-camera. The lighting is soft and moody, emphasizing a sophisticated, minimalist aesthetic. The background is pure black, contrasting sharply with the subject's subtly lit features." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDllb45E6486lJhFbA2c7dKKCAHsnr_5XOG8aCXKkqZaWytk3hTkBtDFzMUW-L56pXDwc2-fb_ZC2GUA-a-HpsQ6RVQw209Azn-FD4vjgDywSBldqwJyOy7YUS3hyXNrV4S8Vxpq_lBxDdNNiOyRQ0vHPtyvHiUgHRhhJnLRC4q4lRNbr6MQTE7JxOZXFClTGwslaBQa3fVZ8Fh20pAAe7dSK_tnRfzjm0Z-AVsBWgJAALePCosCLQY1ET4sAKZoENWEjREljp-omBw"/>
+</div>
+<span class="text-body-md font-body-md text-sm font-medium text-primary">Oni</span>
+</div>
+<span class="material-symbols-outlined text-text-tertiary text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- For demonstration purposes when sidebar is hidden on small screens -->
+<div class="md:hidden flex items-center justify-center w-full h-full text-text-tertiary font-body-md text-body-md">
+        Please view on desktop to see the profile popup positioned over the sidebar.
+    </div>
+<script>
+        // Simple toggle logic for demonstration (though the prompt asks for it to be visible)
+        document.addEventListener('DOMContentLoaded', () => {
+            const trigger = document.querySelector('#profile-container > button');
+            const popup = document.getElementById('profile-popup');
+            
+            trigger.addEventListener('click', () => {
+                const isVisible = !popup.classList.contains('opacity-0');
+                if (isVisible) {
+                    popup.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+                    popup.classList.remove('opacity-100', 'translate-y-0');
+                    trigger.classList.remove('bg-surface-container-high', 'border-outline-variant');
+                    trigger.classList.add('hover:bg-surface-container', 'border-transparent');
+                } else {
+                    popup.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+                    popup.classList.add('opacity-100', 'translate-y-0');
+                    trigger.classList.add('bg-surface-container-high', 'border-outline-variant');
+                    trigger.classList.remove('hover:bg-surface-container', 'border-transparent');
+                }
+            });
+        });
+    </script>
+</body></html>

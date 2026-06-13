@@ -1,8 +1,7 @@
 import { cookies } from "next/headers";
 
-import { Demo } from "@/app/signin-demo/demo";
+import { HomePage } from "@/components/ui/home-page";
 import { LandingPage } from "@/components/ui/landing-page";
-import { DashboardShell } from "@/components/ui/dashboard-shell";
 import { getUserFromSession } from "@/lib/auth";
 
 export default async function Home() {
@@ -14,11 +13,5 @@ export default async function Home() {
     return <LandingPage />;
   }
 
-  return (
-    <div className="dark">
-      <DashboardShell>
-        <Demo />
-      </DashboardShell>
-    </div>
-  );
+  return <HomePage />;
 }

@@ -114,13 +114,17 @@ function readCookieValue(cookieHeader: string | null | undefined, name: string) 
   return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === "object" && error !== null && "code" in error;
+}
+
 async function readLocalStore(): Promise<LocalAuthStore> {
   try {
     const raw = await fs.readFile(LOCAL_STORE_FILE, "utf8");
     const parsed = JSON.parse(raw) as Partial<LocalAuthStore>;
     return { profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [] };
   } catch (error) {
-    if (error instanceof NodeJS.ErrnoException && error.code === "ENOENT") {
+    if (isErrnoException(error) && error.code === "ENOENT") {
       return { profiles: [] };
     }
 
