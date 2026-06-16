@@ -12,6 +12,19 @@ export function HomePage() {
   const [promptText, setPromptText] = useState("");
   const router = useRouter();
 
+  const handleSend = () => {
+    const text = promptText.trim();
+    if (!text) return;
+    router.push(`/chat?prompt=${encodeURIComponent(text)}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -104,16 +117,31 @@ export function HomePage() {
 
         {/* Input Area */}
         <div className="w-full bg-surface-container-low rounded-2xl border border-surface-container-high p-4 flex flex-col gap-3 shadow-sm input-focus-ring transition-all">
-          <div className="relative">
+          <div className="relative pr-12">
             <textarea
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-full bg-transparent border-none text-primary placeholder-text-tertiary resize-none focus:ring-0 focus:outline-none p-0 text-base"
               placeholder="How can I help you today?"
               rows={1}
               style={{ minHeight: "24px" }}
             />
-            <div className="absolute right-0 top-1 w-2 h-2 rounded-full bg-teal-500"></div>
+            <button
+              onClick={handleSend}
+              disabled={!promptText.trim()}
+              aria-label="Send message"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              style={{
+                background: promptText.trim() ? "white" : "rgba(255,255,255,0.1)",
+                color: promptText.trim() ? "black" : "rgba(255,255,255,0.3)",
+                cursor: promptText.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
           </div>
           <div className="flex items-center justify-between mt-8">
             <button

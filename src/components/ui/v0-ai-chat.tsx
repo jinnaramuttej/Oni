@@ -17,6 +17,7 @@ import {
   ImageIcon,
   Laptop,
   MessageSquare,
+  Mic,
   Monitor,
   Paperclip,
   RefreshCw,
@@ -139,11 +140,12 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
   return { textareaRef, adjustHeight };
 }
 
-export function OniChat() {
-  const [value, setValue] = useState("");
+export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>("preview");
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
@@ -152,6 +154,7 @@ export function OniChat() {
   const [activeFilePath, setActiveFilePath] = useState("index.html");
   const [generatedHtml, setGeneratedHtml] = useState(buildInitialPreviewHtml);
   const [toast, setToast] = useState<string | null>(null);
+  const [hasStarted, setHasStarted] = useState(false); // existing state unchanged
   const imageInputRef = useRef<HTMLInputElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,7 +193,8 @@ export function OniChat() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, isGenerating]);
+  }, [messages, generating]);
+
 
   const setImageFromFile = useCallback(
     (file: File) => {
@@ -221,35 +225,9 @@ export function OniChat() {
     setAttachedImage(null);
   }, [attachedImage]);
 
-  const requestAssistantResponse = useCallback(async (prompt: string, hasImage: boolean, currentHtml: string) => {
-    const apiPrompt = hasImage
-      ? `${prompt || "Create a website from this reference image."}\n\nThe user included an image reference. Respond as if you analyzed the screenshot and converted it into a web build plan.`
-      : prompt;
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt: apiPrompt, currentHtml }),
-      });
-
-      const data = (await response.json().catch(() => null)) as { output?: string; error?: string } | null;
-
-      if (!response.ok) {
-        return buildFallbackResponse(prompt, hasImage, data?.error);
-      }
-
-      return data?.output ?? buildFallbackResponse(prompt, hasImage);
-    } catch {
-      return buildFallbackResponse(prompt, hasImage);
-    }
-  }, []);
-
-  const handleSend = useCallback(async () => {
-    const prompt = value.trim();
-    if ((!prompt && !attachedImage) || isGenerating) return;
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const prompt = (overrideText ?? input).trim();
+    if ((!prompt && !attachedImage) || generating || isLoading) return;
 
     const imageForMessage = attachedImage ?? undefined;
     const nextBrief = prompt || "Screenshot-based website build";
@@ -261,65 +239,198 @@ export function OniChat() {
     };
 
     setMessages((current) => [...current, userMessage]);
-    setValue("");
+    setInput("");
     setAttachedImage(null);
     setEditorTab("preview");
     setMobilePanel("preview");
     adjustHeight(true);
-    setIsGenerating(true);
 
-    const assistantContent = await requestAssistantResponse(prompt, Boolean(imageForMessage), generatedHtml);
-    const parsedResponse = parseOniResponse(assistantContent);
+    setIsLoading(true);
+    setGenerating(true);
 
-    if (parsedResponse.websiteHTML) {
-      setGeneratedHtml(parsedResponse.websiteHTML);
-      setActiveFilePath("index.html");
+    if (!hasStarted) setHasStarted(true);
+
+    const assistantId = createId();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt,
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          currentHtml: generatedHtml
+        }),
+      });
+
+      if (!response.body) {
+        setIsLoading(false);
+        setGenerating(false);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        for (const line of lines) {
+          const json = line.replace('data: ', '').trim()
+          if (json === '[DONE]') break
+          try {
+            const parsed = JSON.parse(json)
+            const token = parsed.choices?.[0]?.delta?.content || ''
+            fullText += token
+            setMessages(prev => {
+              const updated = [...prev]
+              updated[updated.length - 1] = {
+                id: assistantId,
+                role: 'assistant',
+                content: fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+              }
+              return updated
+            })
+          } catch { }
+        }
+      }
+
+      setIsLoading(false);
+
+      const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
+      if (match && match[1]) {
+        const extractedHtml = match[1].trim();
+        setGeneratedHtml(extractedHtml);
+        setActiveFilePath("index.html");
+      }
+
+      const cleanContent = fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim();
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          id: assistantId,
+          role: 'assistant',
+          content: cleanContent,
+          thought: buildThoughtProcess(nextBrief, Boolean(imageForMessage))
+        };
+        return updated;
+      });
+
+      setPreviewRefreshKey((current) => current + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setGenerating(false);
     }
+  }, [adjustHeight, attachedImage, generatedHtml, hasStarted, generating, isLoading, input]);
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: createId(),
-        role: "assistant",
-        content: parsedResponse.chatMessage,
-        thought: buildThoughtProcess(nextBrief, Boolean(imageForMessage)),
-      },
-    ]);
-    setPreviewRefreshKey((current) => current + 1);
-    setIsGenerating(false);
-  }, [adjustHeight, attachedImage, generatedHtml, isGenerating, requestAssistantResponse, value]);
+  // Auto-send the prompt that came from the home page (must be after handleSend is declared)
+  const didAutoSend = useRef(false);
+  useEffect(() => {
+    if (initialPrompt && !didAutoSend.current) {
+      didAutoSend.current = true;
+      void handleSend(initialPrompt);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
+
 
   const handleRegenerate = useCallback(async () => {
-    if (isGenerating) return;
+    if (generating || isLoading) return;
 
     const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
     if (!lastUserMessage) return;
 
-    const prompt = lastUserMessage.content || "Regenerate the screenshot-based website.";
-    setIsGenerating(true);
+    const prompt = lastUserMessage.content || "Regenerate the website.";
+    setIsLoading(true);
+    setGenerating(true);
     setEditorTab("preview");
     setMobilePanel("preview");
 
-    const assistantContent = await requestAssistantResponse(prompt, Boolean(lastUserMessage.image), generatedHtml);
-    const parsedResponse = parseOniResponse(assistantContent);
+    const assistantId = createId();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
-    if (parsedResponse.websiteHTML) {
-      setGeneratedHtml(parsedResponse.websiteHTML);
-      setActiveFilePath("index.html");
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, currentHtml: generatedHtml }),
+      });
+
+      if (!response.body) {
+        setIsLoading(false);
+        setGenerating(false);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        for (const line of lines) {
+          const json = line.replace('data: ', '').trim()
+          if (json === '[DONE]') break
+          try {
+            const parsed = JSON.parse(json)
+            const token = parsed.choices?.[0]?.delta?.content || ''
+            fullText += token
+            setMessages(prev => {
+              const updated = [...prev]
+              updated[updated.length - 1] = {
+                id: assistantId,
+                role: 'assistant',
+                content: fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+              }
+              return updated
+            })
+          } catch { }
+        }
+      }
+
+      setIsLoading(false);
+
+      const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
+      if (match && match[1]) {
+        const extractedHtml = match[1].trim();
+        setGeneratedHtml(extractedHtml);
+        setActiveFilePath("index.html");
+      }
+
+      const cleanContent = fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim();
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          id: assistantId,
+          role: 'assistant',
+          content: cleanContent,
+          thought: buildThoughtProcess(prompt, Boolean(lastUserMessage.image))
+        };
+        return updated;
+      });
+
+      setPreviewRefreshKey((current) => current + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setGenerating(false);
     }
-
-    setMessages((current) => [
-      ...current,
-      {
-        id: createId(),
-        role: "assistant",
-        content: parsedResponse.chatMessage,
-        thought: buildThoughtProcess(prompt, Boolean(lastUserMessage.image)),
-      },
-    ]);
-    setPreviewRefreshKey((current) => current + 1);
-    setIsGenerating(false);
-  }, [generatedHtml, isGenerating, messages, requestAssistantResponse]);
+  }, [generating, isLoading, messages, generatedHtml]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -391,6 +502,7 @@ export function OniChat() {
     window.setTimeout(() => showToast("Preview published"), 700);
   };
 
+  // Wrapper layout with transition based on hasStarted
   return (
     <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white">
       <div className="flex h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
@@ -401,15 +513,16 @@ export function OniChat() {
           )}
         >
           <ChatPanel
-            value={value}
+            value={input}
             messages={messages}
             attachedImage={attachedImage}
-            isGenerating={isGenerating}
+            isGenerating={generating}
+            isLoading={isLoading}
             isDragging={isDragging}
             textareaRef={textareaRef}
             imageInputRef={imageInputRef}
             onValueChange={(nextValue) => {
-              setValue(nextValue);
+              setInput(nextValue);
               adjustHeight();
             }}
             onKeyDown={handleKeyDown}
@@ -445,7 +558,7 @@ export function OniChat() {
             previewSize={previewSize}
             previewHtml={previewHtml}
             previewRefreshKey={previewRefreshKey}
-            isGenerating={isGenerating}
+            isGenerating={generating}
             projectFiles={projectFiles}
             activeFile={activeFile}
             activeFilePath={activeFilePath}
@@ -478,8 +591,9 @@ export function OniChat() {
         }}
       />
 
+      {/* Toast */}
       {toast && (
-        <div className="fixed right-4 top-4 z-50 rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white shadow-2xl shadow-black/40">
+        <div className="fixed right-4 bottom-4 z-50 rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white shadow-2xl shadow-black/40">
           {toast}
         </div>
       )}
@@ -487,11 +601,14 @@ export function OniChat() {
   );
 }
 
-type ChatPanelProps = {
+
+
+interface ChatPanelProps {
   value: string;
   messages: ChatMessage[];
   attachedImage: ImageAttachment | null;
   isGenerating: boolean;
+  isLoading: boolean;
   isDragging: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   imageInputRef: RefObject<HTMLInputElement | null>;
@@ -506,15 +623,16 @@ type ChatPanelProps = {
   onImageInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImageButtonClick: () => void;
   onRemoveImage: () => void;
-  onCopy: (text: string) => Promise<void>;
+  onCopy: (text: string) => void;
   onRegenerate: () => void;
-};
+}
 
 function ChatPanel({
   value,
   messages,
   attachedImage,
   isGenerating,
+  isLoading,
   isDragging,
   textareaRef,
   imageInputRef,
@@ -546,7 +664,7 @@ function ChatPanel({
         </span>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 scrollbar-hidden">
+      <div className="min-h-0 flex-1 flex flex-col justify-end space-y-6 overflow-y-auto px-5 py-5 scrollbar-hidden">
         {messages.map((message) =>
           message.role === "user" ? (
             <UserMessage key={message.id} message={message} />
@@ -559,7 +677,7 @@ function ChatPanel({
             />
           )
         )}
-        {isGenerating && <AssistantThinking />}
+        
         <div ref={messagesEndRef} />
       </div>
 
@@ -626,8 +744,10 @@ function AssistantMessage({
 
   return (
     <div className="animate-[fadeSlideUp_200ms_ease-out]">
-      <span className="text-xs text-white/35">Oni</span>
-      <AnimatedAssistantText key={message.id} content={message.content} />
+      <span className="text-xs text-white/35 font-medium">Oni</span>
+      <p className="mt-1 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
+        {message.content}
+      </p>
 
       <div className="mt-3 flex flex-col gap-3">
         {message.thought && (
@@ -654,33 +774,6 @@ function AssistantMessage({
         </div>
       </div>
     </div>
-  );
-}
-
-function AnimatedAssistantText({ content }: { content: string }) {
-  const [visibleText, setVisibleText] = useState("");
-
-  useEffect(() => {
-    const tokens = content.match(/\S+\s*/g) ?? [content];
-    let index = 0;
-
-    const interval = window.setInterval(() => {
-      index += 1;
-      setVisibleText(tokens.slice(0, index).join(""));
-
-      if (index >= tokens.length) {
-        window.clearInterval(interval);
-      }
-    }, 38);
-
-    return () => window.clearInterval(interval);
-  }, [content]);
-
-  return (
-    <p className="mt-1 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
-      {visibleText}
-      {visibleText.length < content.length && <span className="text-white/45">|</span>}
-    </p>
   );
 }
 
@@ -805,18 +898,27 @@ function ChatComposer({
           style={{ overflow: "hidden" }}
         />
 
-        <button
-          type="button"
-          onClick={onSend}
-          disabled={!canSend}
-          className={cn(
-            "mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
-            canSend ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/35"
-          )}
-          aria-label="Send message"
-        >
-          <ArrowUpIcon className="h-4 w-4" />
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={!canSend}
+            className={cn(
+              "mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
+              canSend ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/35"
+            )}
+            aria-label="Send message"
+          >
+            <ArrowUpIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            aria-label="Voice input"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1353,6 +1455,10 @@ body {
 `,
     },
   ];
+}
+
+function buildInitialPreviewHtml() {
+  return buildPreviewHtml("A polished launch page for an AI website builder");
 }
 
 function buildPreviewHtml(brief: string) {
