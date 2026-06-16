@@ -502,14 +502,17 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     window.setTimeout(() => showToast("Preview published"), 700);
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   // Wrapper layout with transition based on hasStarted
   return (
-    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white">
+    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_350ms_ease-out]">
       <div className="flex h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
-            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:basis-[40%] lg:border-r",
-            mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex"
+            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[360px] lg:shrink-0 lg:border-r transition-all duration-300",
+            mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
+            !sidebarOpen && "lg:!w-0 lg:!overflow-hidden lg:!border-0"
           )}
         >
           <ChatPanel
@@ -544,12 +547,13 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
               void handleRegenerate();
             }}
             messagesEndRef={messagesEndRef}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
           />
         </section>
 
         <section
           className={cn(
-            "min-h-0 flex-col bg-[#0a0a0a] lg:flex lg:basis-[60%]",
+            "min-h-0 flex-1 flex-col bg-[#0a0a0a] lg:flex",
             mobilePanel === "preview" || mobilePanel === "code" ? "flex flex-1" : "hidden lg:flex"
           )}
         >
@@ -625,6 +629,7 @@ interface ChatPanelProps {
   onRemoveImage: () => void;
   onCopy: (text: string) => void;
   onRegenerate: () => void;
+  onToggleSidebar: () => void;
 }
 
 function ChatPanel({
@@ -649,19 +654,28 @@ function ChatPanel({
   onRemoveImage,
   onCopy,
   onRegenerate,
+  onToggleSidebar,
 }: ChatPanelProps) {
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-            <Laptop className="h-4 w-4 text-white" />
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+            <Laptop className="h-3.5 w-3.5 text-white" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Oni</span>
+          <span className="text-base font-semibold tracking-tight">Oni</span>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/65">
-          Llama 3.3 70B
-        </span>
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label="Collapse sidebar"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/8 hover:text-white transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
+        </button>
       </header>
 
       <div className="min-h-0 flex-1 flex flex-col justify-end space-y-6 overflow-y-auto px-5 py-5 scrollbar-hidden">
