@@ -143,7 +143,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("chat");
   const [activeFilePath, setActiveFilePath] = useState("index.html");
-  const [generatedHtml, setGeneratedHtml] = useState(buildInitialPreviewHtml);
+  const [generatedHtml, setGeneratedHtml] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false); // existing state unchanged
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -152,8 +152,8 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const toastTimerRef = useRef<number | null>(null);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 64,
-    maxHeight: 180,
+    minHeight: 96,
+    maxHeight: 220,
   });
 
   const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
@@ -233,7 +233,6 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     setInput("");
     setAttachedImage(null);
     setEditorTab("preview");
-    setMobilePanel("preview");
     adjustHeight(true);
 
     setIsLoading(true);
@@ -281,12 +280,17 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             const parsed = JSON.parse(json)
             const token = parsed.choices?.[0]?.delta?.content || ''
             fullText += token
+            // Show text live — strip ONI_CODE block only if it is complete
+            const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(fullText);
+            const displayContent = hasCompleteBlock
+              ? fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+              : fullText.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
             setMessages(prev => {
               const updated = [...prev]
               updated[updated.length - 1] = {
                 id: assistantId,
                 role: 'assistant',
-                content: fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+                content: displayContent
               }
               return updated
             })
@@ -310,7 +314,6 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
-          thought: buildThoughtProcess(nextBrief, Boolean(imageForMessage))
         };
         return updated;
       });
@@ -345,7 +348,6 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     setIsLoading(true);
     setGenerating(true);
     setEditorTab("preview");
-    setMobilePanel("preview");
 
     const assistantId = createId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
@@ -501,7 +503,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       <div className="flex h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
-            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[420px] lg:shrink-0 lg:border-r transition-all duration-300",
+            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[500px] lg:shrink-0 lg:border-r transition-all duration-300",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
             !sidebarOpen && "lg:!w-0 lg:!overflow-hidden lg:!border-0"
           )}
@@ -539,6 +541,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             }}
             messagesEndRef={messagesEndRef}
             onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            sidebarOpen={sidebarOpen}
           />
         </section>
 
@@ -623,6 +626,7 @@ interface ChatPanelProps {
   onCopy: (text: string) => void;
   onRegenerate: () => void;
   onToggleSidebar: () => void;
+  sidebarOpen: boolean;
 }
 
 function ChatPanel({
@@ -648,6 +652,7 @@ function ChatPanel({
   onCopy,
   onRegenerate,
   onToggleSidebar,
+  sidebarOpen,
 }: ChatPanelProps) {
   return (
     <>
@@ -661,8 +666,9 @@ function ChatPanel({
         <button
           type="button"
           onClick={onToggleSidebar}
-          aria-label="Collapse sidebar"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/8 hover:text-white transition-colors"
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/8 hover:text-white transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -671,20 +677,42 @@ function ChatPanel({
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 flex flex-col justify-end space-y-6 overflow-y-auto px-5 py-5 scrollbar-hidden">
-        {messages.map((message) =>
-          message.role === "user" ? (
-            <UserMessage key={message.id} message={message} />
-          ) : (
-            <AssistantMessage
-              key={message.id}
-              message={message}
-              onCopy={() => onCopy(message.content)}
-              onRegenerate={onRegenerate}
-            />
-          )
+      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden">
+        {messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-start justify-end gap-6 pb-2">
+            <div>
+              <p className="text-lg font-semibold tracking-tight text-white">What are we building today?</p>
+              <p className="mt-1 text-sm text-white/40">Describe a site, paste a screenshot, or pick a suggestion below.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {["Portfolio site", "Restaurant landing page", "SaaS dashboard", "Personal blog"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onValueChange(s)}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/60 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col justify-end space-y-8">
+            {messages.map((message) =>
+              message.role === "user" ? (
+                <UserMessage key={message.id} message={message} />
+              ) : (
+                <AssistantMessage
+                  key={message.id}
+                  message={message}
+                  onCopy={() => onCopy(message.content)}
+                  onRegenerate={onRegenerate}
+                />
+              )
+            )}
+          </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
 
@@ -714,7 +742,7 @@ function ChatPanel({
 
 function UserMessage({ message }: { message: ChatMessage }) {
   return (
-    <div className="flex animate-[fadeSlideUp_200ms_ease-out] justify-end">
+    <div className="flex animate-[fadeSlideUp_400ms_ease-out] justify-end">
       <div className="flex max-w-[82%] flex-col items-end gap-2">
         {message.image && (
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/10 p-1">
@@ -750,11 +778,23 @@ function AssistantMessage({
   const [thoughtOpen, setThoughtOpen] = useState(false);
 
   return (
-    <div className="animate-[fadeSlideUp_200ms_ease-out]">
+    <div className="animate-[fadeSlideUp_400ms_ease-out]">
       <span className="text-xs text-white/35 font-medium">Oni</span>
-      <p className="mt-1 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
-        {message.content}
-      </p>
+      {message.content ? (
+        <p className="mt-1 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
+          {message.content}
+        </p>
+      ) : (
+        <div className="mt-2 flex items-center gap-1.5">
+          {[0, 1, 2].map((dot) => (
+            <span
+              key={dot}
+              className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse"
+              style={{ animationDelay: `${dot * 150}ms` }}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="mt-3 flex flex-col gap-3">
         {message.thought && (
@@ -1123,7 +1163,7 @@ function PreviewTab({
       <div className="min-h-0 flex-1 overflow-hidden pt-4">
         {isGenerating ? (
           <PreviewSkeleton />
-        ) : (
+        ) : previewHtml ? (
           <div className="flex h-full justify-center overflow-hidden">
             <iframe
               key={`${previewRefreshKey}-${previewSize}`}
@@ -1134,6 +1174,20 @@ function PreviewTab({
                 previewSizeClasses[previewSize]
               )}
             />
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-4 text-center px-8">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/30">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M9 21V9" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white/50">No preview yet</p>
+              <p className="mt-1 text-xs text-white/25">Describe a website in the chat to get started</p>
+            </div>
           </div>
         )}
       </div>

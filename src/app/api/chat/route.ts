@@ -68,12 +68,32 @@ export async function POST(req: Request) {
 
   // ----- Mock SSE stream (when no API key) ----------------------------------
   if (!groqApiKey) {
-    const html = clean?.toLowerCase().includes("restaurant") ||
-      clean?.toLowerCase().includes("cafe")
-      ? buildRestaurantHtml()
-      : buildGenericHtml(clean ?? "");
+    const userText = (clean ?? groqMessages.at(-1)?.content ?? "").toLowerCase();
 
-    const mockResponse = `Here's your website — I've created a responsive page layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
+    // Only generate HTML when user explicitly asks to build something
+    const isBuildRequest = /\b(build|create|make|design|generate|code)\b/.test(userText);
+
+    let mockResponse: string;
+    if (!isBuildRequest) {
+      // Conversational reply — no HTML
+      const conversational: Record<string, string> = {
+        hi: "Hey! I'm Oni 👋 — ask me to build you a website and I'll get right on it.",
+        hello: "Hello! Ready to build something great? Just describe the site you want.",
+        hey: "Hey there! Describe a website and I'll generate it for you instantly.",
+        thanks: "Happy to help! Let me know if you need any changes.",
+        "what can you do": "I can build full websites from a description — try: \"make me a portfolio site\" or \"create a restaurant landing page\".",
+      };
+      const reply =
+        Object.entries(conversational).find(([k]) => userText.includes(k))?.[1] ??
+        "I'm Oni, your AI website builder. Describe a site you'd like me to build!";
+      mockResponse = reply;
+    } else {
+      const html =
+        userText.includes("restaurant") || userText.includes("cafe")
+          ? buildRestaurantHtml()
+          : buildGenericHtml(clean ?? "");
+      mockResponse = `Here's your website — a responsive layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
+    }
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
