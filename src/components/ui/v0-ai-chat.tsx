@@ -67,16 +67,7 @@ type ProjectFile = {
   content: string;
 };
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "assistant-welcome",
-    role: "assistant",
-    content:
-      "Describe the site you want to build, paste a screenshot, or upload a reference image. I will turn it into a preview and editable project files.",
-    thought:
-      "Project setup is ready. The workspace is waiting for a brief, brand direction, or visual reference before updating the preview.",
-  },
-];
+const initialMessages: ChatMessage[] = [];
 
 const previewSizeClasses: Record<PreviewSize, string> = {
   desktop: "w-full",
@@ -506,11 +497,11 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
 
   // Wrapper layout with transition based on hasStarted
   return (
-    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_350ms_ease-out]">
+    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out]">
       <div className="flex h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
-            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[360px] lg:shrink-0 lg:border-r transition-all duration-300",
+            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[420px] lg:shrink-0 lg:border-r transition-all duration-300",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
             !sidebarOpen && "lg:!w-0 lg:!overflow-hidden lg:!border-0"
           )}
@@ -566,6 +557,8 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             projectFiles={projectFiles}
             activeFile={activeFile}
             activeFilePath={activeFilePath}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
             onEditorTabChange={(tab) => {
               setEditorTab(tab);
               setMobilePanel(tab);
@@ -955,6 +948,8 @@ type WorkspacePanelProps = {
   onOpenPreview: () => void;
   onFileSelect: (path: string) => void;
   onCopyCode: () => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 };
 
 function WorkspacePanel({
@@ -974,11 +969,27 @@ function WorkspacePanel({
   onOpenPreview,
   onFileSelect,
   onCopyCode,
+  sidebarOpen,
+  onToggleSidebar,
 }: WorkspacePanelProps) {
   return (
     <>
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
-        <div className="flex h-full items-center gap-5">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+        <div className="flex h-full items-center gap-1">
+          {/* Open sidebar button — only shows when sidebar is collapsed */}
+          {!sidebarOpen && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              aria-label="Open sidebar"
+              className="mr-2 flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/8 hover:text-white transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 3v18" />
+              </svg>
+            </button>
+          )}
           <TabButton active={editorTab === "preview"} onClick={() => onEditorTabChange("preview")}>
             <Eye className="h-4 w-4" />
             Preview
