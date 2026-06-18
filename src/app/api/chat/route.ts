@@ -14,6 +14,20 @@ Describe your reasoning, design choices, and plan in 1-2 concise sentences.
 2. Output the COMPLETE website inside <ONI_CODE>...</ONI_CODE>
 
 Build mode design rules — READ CAREFULLY:
+- Every website MUST have minimum 6 sections:
+  1. Sticky navbar with logo + links + CTA button
+  2. Hero — full viewport, dramatic headline, subtitle, 2 CTA buttons
+  3. Features/About — 3 cards in a grid with icons (use unicode/emoji as icons)
+  4. Services or Menu or Portfolio — detailed, real content, minimum 6 items
+  5. Testimonials — 3 fake but realistic customer reviews with names
+  6. Footer — logo, links, contact info, copyright
+- Hero headline must be specific to the business — not generic
+- Every section needs real detailed copy — minimum 3 sentences per section
+- Cards must have titles, descriptions, and styled borders or shadows
+- Color scheme must be consistent across all sections
+- Add subtle CSS animations: fade-in on scroll using Intersection Observer
+- Buttons must have gradient backgrounds and box shadows
+- Never output a website with less than 200 lines of HTML
 - Use rich color palettes — for a restaurant use warm golds, 
   deep burgundy, rich browns, cream. Match colors to the vibe.
 - Hero must have a real gradient background with multiple colors,
@@ -200,7 +214,7 @@ export async function POST(req: Request) {
         model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages],
         temperature: 0.9,
-        max_tokens: 8192,
+        max_tokens: 16000,
         stream: true,
       }),
     }
