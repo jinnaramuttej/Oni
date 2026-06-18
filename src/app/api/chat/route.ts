@@ -60,10 +60,105 @@ Build mode design rules — READ CAREFULLY:
 
 If unsure whether user wants a website built, ask to clarify.`;
 
+function createMockStream(clean: string | undefined, groqMessages: { role: string; content: string }[]) {
+  const userText = (clean ?? groqMessages.at(-1)?.content ?? "").toLowerCase();
+
+  // Only generate HTML when user explicitly asks to build something
+  const isBuildRequest = /\b(build|create|make|design|generate|code)\b/.test(userText);
+
+  let mockResponse: string;
+  if (!isBuildRequest) {
+    // Conversational reply — no HTML
+    const conversational: Record<string, string> = {
+      hi: "Hey! I'm Oni 👋 — ask me to build you a website and I'll get right on it.",
+      hello: "Hello! Ready to build something great? Just describe the site you want.",
+      hey: "Hey there! Describe a website and I'll generate it for you instantly.",
+      thanks: "Happy to help! Let me know if you need any changes.",
+      "what can you do": "I can build full websites from a description — try: \"make me a portfolio site\" or \"create a restaurant landing page\".",
+    };
+    const reply =
+      Object.entries(conversational).find(([k]) => userText.includes(k))?.[1] ??
+      "I'm Oni, your AI website builder. Describe a site you'd like me to build!";
+    mockResponse = `<ONI_THOUGHT>Analyzing conversational request and introducing capabilities.</ONI_THOUGHT>${reply}`;
+  } else {
+    const html =
+      userText.includes("restaurant") || userText.includes("cafe")
+        ? buildRestaurantHtml()
+        : buildGenericHtml(clean ?? "");
+    mockResponse = `<ONI_THOUGHT>Planning the layout, custom CSS style structure, and content organization for the requested site. Setting up a self-contained HTML document.</ONI_THOUGHT>Here's your website — a responsive layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendChunk = async (text: string) => {
+        const chunk = `data: ${JSON.stringify({
+          choices: [{ delta: { content: text } }],
+        })}\n\n`;
+        controller.enqueue(encoder.encode(chunk));
+      };
+
+      const thoughtMatch = mockResponse.match(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/);
+      const thoughtPart = thoughtMatch ? thoughtMatch[0] : "";
+      const remainingAfterThought = mockResponse.replace(thoughtPart, "");
+
+      const codeMatch = remainingAfterThought.match(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/);
+      const descriptionPart = codeMatch ? remainingAfterThought.replace(codeMatch[0], "") : remainingAfterThought;
+      const codePart = codeMatch ? codeMatch[0] : "";
+
+      // 1. Stream thoughtPart
+      if (thoughtPart) {
+        const words = thoughtPart.split(/(\s+)/);
+        for (const word of words) {
+          if (word) {
+            await sendChunk(word);
+            await new Promise((resolve) => setTimeout(resolve, 25));
+          }
+        }
+      }
+
+      // 2. Stream descriptionPart
+      if (descriptionPart) {
+        const words = descriptionPart.split(/(\s+)/);
+        for (const word of words) {
+          if (word) {
+            await sendChunk(word);
+            await new Promise((resolve) => setTimeout(resolve, 35));
+          }
+        }
+      }
+
+      // 3. Stream codePart
+      if (codePart) {
+        const chunkSize = 40;
+        for (let i = 0; i < codePart.length; i += chunkSize) {
+          const chunkText = codePart.slice(i, i + chunkSize);
+          await sendChunk(chunkText);
+          await new Promise((resolve) => setTimeout(resolve, 15));
+        }
+      }
+
+      controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 export async function POST(req: Request) {
+  console.log('GROQ_API_KEY exists:', !!process.env.GROQ_API_KEY);
+  console.log('GROQ_API_KEY first 8 chars:', process.env.GROQ_API_KEY?.slice(0, 8));
+
   // ----- Parse request body -------------------------------------------------
   const body = await req.json().catch(() => null);
-  if (!body || (!body.prompt && !Array.isArray(body.messages))) {
+  if (!body) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
@@ -103,142 +198,65 @@ export async function POST(req: Request) {
       : clean;
 
     groqMessages = [{ role: "user", content: userContent }];
+  } else {
+    return new NextResponse("Bad request", { status: 400 });
   }
 
   // ----- Groq API key -------------------------------------------------------
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
 
-  // ----- Mock SSE stream (when no API key) ----------------------------------
+  // ----- Mock SSE stream (ONLY when no API key) -----------------------------
   if (!groqApiKey) {
-    const userText = (clean ?? groqMessages.at(-1)?.content ?? "").toLowerCase();
-
-    // Only generate HTML when user explicitly asks to build something
-    const isBuildRequest = /\b(build|create|make|design|generate|code)\b/.test(userText);
-
-    let mockResponse: string;
-    if (!isBuildRequest) {
-      // Conversational reply — no HTML
-      const conversational: Record<string, string> = {
-        hi: "Hey! I'm Oni 👋 — ask me to build you a website and I'll get right on it.",
-        hello: "Hello! Ready to build something great? Just describe the site you want.",
-        hey: "Hey there! Describe a website and I'll generate it for you instantly.",
-        thanks: "Happy to help! Let me know if you need any changes.",
-        "what can you do": "I can build full websites from a description — try: \"make me a portfolio site\" or \"create a restaurant landing page\".",
-      };
-      const reply =
-        Object.entries(conversational).find(([k]) => userText.includes(k))?.[1] ??
-        "I'm Oni, your AI website builder. Describe a site you'd like me to build!";
-      mockResponse = `<ONI_THOUGHT>Analyzing conversational request and introducing capabilities.</ONI_THOUGHT>${reply}`;
-    } else {
-      const html =
-        userText.includes("restaurant") || userText.includes("cafe")
-          ? buildRestaurantHtml()
-          : buildGenericHtml(clean ?? "");
-      mockResponse = `<ONI_THOUGHT>Planning the layout, custom CSS style structure, and content organization for the requested site. Setting up a self-contained HTML document.</ONI_THOUGHT>Here's your website — a responsive layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
-    }
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const sendChunk = async (text: string) => {
-          const chunk = `data: ${JSON.stringify({
-            choices: [{ delta: { content: text } }],
-          })}\n\n`;
-          controller.enqueue(encoder.encode(chunk));
-        };
-
-        const thoughtMatch = mockResponse.match(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/);
-        const thoughtPart = thoughtMatch ? thoughtMatch[0] : "";
-        const remainingAfterThought = mockResponse.replace(thoughtPart, "");
-
-        const codeMatch = remainingAfterThought.match(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/);
-        const descriptionPart = codeMatch ? remainingAfterThought.replace(codeMatch[0], "") : remainingAfterThought;
-        const codePart = codeMatch ? codeMatch[0] : "";
-
-        // 1. Stream thoughtPart
-        if (thoughtPart) {
-          const words = thoughtPart.split(/(\s+)/);
-          for (const word of words) {
-            if (word) {
-              await sendChunk(word);
-              await new Promise((resolve) => setTimeout(resolve, 25));
-            }
-          }
-        }
-
-        // 2. Stream descriptionPart
-        if (descriptionPart) {
-          const words = descriptionPart.split(/(\s+)/);
-          for (const word of words) {
-            if (word) {
-              await sendChunk(word);
-              await new Promise((resolve) => setTimeout(resolve, 35));
-            }
-          }
-        }
-
-        // 3. Stream codePart
-        if (codePart) {
-          const chunkSize = 40;
-          for (let i = 0; i < codePart.length; i += chunkSize) {
-            const chunkText = codePart.slice(i, i + chunkSize);
-            await sendChunk(chunkText);
-            await new Promise((resolve) => setTimeout(resolve, 15));
-          }
-        }
-
-        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
+    return createMockStream(clean, groqMessages);
   }
 
   // ----- Real Groq request --------------------------------------------------
-  const groqResponse = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages],
-        temperature: 0.9,
-        max_tokens: 16000,
-        stream: true,
-      }),
+  try {
+    const groqResponse = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${groqApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages],
+          temperature: 0.9,
+          max_tokens: 16000,
+          stream: true,
+        }),
+      }
+    );
+
+    if (groqResponse.ok) {
+      // Forward the streaming response to the client
+      return new Response(groqResponse.body, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
     }
-  );
 
-  if (!groqResponse.ok) {
-    const errorBody = (await groqResponse
-      .json()
-      .catch(() => null)) as { error?: { message?: string } } | null;
-    const message =
-      groqResponse.status === 401 || groqResponse.status === 403
-        ? "Groq rejected the API key. Check GROQ_API_KEY in .env.local and restart the dev server."
-        : errorBody?.error?.message ?? "Groq request failed";
-    return new NextResponse(message, { status: 502 });
+    // If response not ok, log error and return it
+    const errorBody = await groqResponse.text();
+    console.error('Groq error:', {
+      status: groqResponse.status,
+      statusText: groqResponse.statusText,
+      body: errorBody
+    });
+
+    return new NextResponse(errorBody, { 
+      status: groqResponse.status, 
+      headers: { "Content-Type": "text/plain" } 
+    });
+  } catch (err) {
+    console.error('Groq error:', err);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
-
-  // Forward the streaming response to the client
-  return new Response(groqResponse.body, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
 }
 
 /* -------------------------------------------------------------------------

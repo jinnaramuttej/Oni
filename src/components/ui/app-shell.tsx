@@ -26,6 +26,9 @@ export function AppShell({ children, activePage }: AppShellProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const router = useRouter();
   const pathname = usePathname();
 
@@ -78,6 +81,34 @@ export function AppShell({ children, activePage }: AppShellProps) {
       clearInterval(interval);
     };
   }, []);
+
+  const handleDeleteChat = (chatId: string) => {
+    try {
+      const updated = recentChats.filter((c) => c.id !== chatId);
+      setRecentChats(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.removeItem(`oni_chat_${chatId}`);
+      if (chatId === activeSessionId) {
+        sessionStorage.removeItem(SESSION_KEY);
+        window.location.href = "/";
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleRenameChat = (chatId: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    try {
+      const updated = recentChats.map((c) => {
+        if (c.id === chatId) {
+          return { ...c, title: newTitle.trim() };
+        }
+        return c;
+      });
+      setRecentChats(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      setRenamingId(null);
+    } catch { /* ignore */ }
+  };
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -243,34 +274,109 @@ export function AppShell({ children, activePage }: AppShellProps) {
               recentChats.map((chat) => {
                 const isActive = chat.id === activeSessionId;
                 return (
-                  <button
+                  <div
                     key={chat.id}
-                    type="button"
-                    onClick={() => {
-                      // Load this session
-                      try {
-                        const rawChat = localStorage.getItem(`oni_chat_${chat.id}`);
-                        if (rawChat) {
-                          sessionStorage.setItem("oni_session", rawChat);
-                        } else {
-                          sessionStorage.setItem("oni_session", JSON.stringify({ id: chat.id, messages: [] }));
-                        }
-                      } catch { /* ignore */ }
-                      router.push(`/chat?id=${chat.id}`);
-                    }}
                     className={cn(
-                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-left text-xs transition-colors",
+                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left text-xs transition-colors cursor-pointer",
                       isActive
-                        ? "bg-surface-container-high text-primary"
+                        ? "bg-surface-container-high text-primary font-medium"
                         : "text-text-secondary hover:bg-surface-container-low hover:text-primary"
                     )}
                   >
-                    <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <span className="truncate flex-1">{chat.title}</span>
-                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />}
-                  </button>
+                    <div
+                      onClick={() => {
+                        if (renamingId === chat.id) return;
+                        try {
+                          const rawChat = localStorage.getItem(`oni_chat_${chat.id}`);
+                          if (rawChat) {
+                            sessionStorage.setItem("oni_session", rawChat);
+                          } else {
+                            sessionStorage.setItem("oni_session", JSON.stringify({ id: chat.id, messages: [] }));
+                          }
+                        } catch { /* ignore */ }
+                        router.push(`/chat?id=${chat.id}`);
+                      }}
+                      className="flex-1 min-w-0 flex items-center gap-2"
+                    >
+                      <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14" className="shrink-0 text-text-secondary group-hover:text-primary">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      {renamingId === chat.id ? (
+                        <input
+                          type="text"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleRenameChat(chat.id, renameValue);
+                            } else if (e.key === "Escape") {
+                              setRenamingId(null);
+                            }
+                          }}
+                          onBlur={() => handleRenameChat(chat.id, renameValue)}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                          className="flex-1 bg-surface-container border border-primary text-primary px-1 py-0.5 rounded text-[11px] focus:outline-none"
+                        />
+                      ) : (
+                        <span className="truncate flex-1">{chat.title}</span>
+                      )}
+                    </div>
+
+                    {renamingId !== chat.id && (
+                      <div className="relative shrink-0 flex items-center gap-1">
+                        {isActive && !openMenuId && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === chat.id ? null : chat.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-0.5 rounded hover:bg-surface-container-highest transition-opacity transition-colors cursor-pointer text-text-tertiary hover:text-primary flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">more_horiz</span>
+                        </button>
+                        {openMenuId === chat.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-40 cursor-default"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                              }}
+                            />
+                            <div className="absolute right-0 top-full mt-1 w-28 bg-surface-container-high border border-surface-container-highest rounded-md shadow-lg py-1 z-50 flex flex-col text-left">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenamingId(chat.id);
+                                  setRenameValue(chat.title);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-surface-container-highest flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">edit</span>
+                                Rename
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteChat(chat.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs text-error hover:bg-surface-container-highest flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[14px] text-error">delete</span>
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })
             )}
