@@ -14,6 +14,18 @@ Describe your reasoning, design choices, and plan in 1-2 concise sentences.
 2. Output the COMPLETE website inside <ONI_CODE>...</ONI_CODE>
 
 Build mode design rules — READ CAREFULLY:
+- Use rich color palettes — for a restaurant use warm golds, 
+  deep burgundy, rich browns, cream. Match colors to the vibe.
+- Hero must have a real gradient background with multiple colors,
+  NOT just a dark overlay on a broken image URL
+- Use CSS only backgrounds — gradients, patterns, shapes
+  DO NOT use unsplash URLs or any external image URLs
+  they will break. Use CSS gradients instead.
+- Add decorative elements — lines, shapes, borders using CSS
+- Sections must have alternating backgrounds, not all white
+- Add at least 3 CSS animations
+- Typography must be dramatic — hero h1 minimum 80px
+- Add a sticky navbar that changes on scroll using JS
 - Single HTML file, all CSS in <style>, all JS in <script>
 - Import beautiful Google Fonts at top of <style>:
   @import url('https://fonts.googleapis.com/css2?family=...')

@@ -21,6 +21,7 @@ import {
   Mic,
   Monitor,
   Paperclip,
+  PlusCircle,
   RefreshCw,
   RotateCcw,
   Smartphone,
@@ -56,6 +57,14 @@ type ChatMessage = {
   image?: ImageAttachment;
   thought?: string;
 };
+
+type StoredConversation = {
+  id: string;
+  title: string;
+  updatedAt: number;
+};
+
+const STORAGE_KEY = "oni_conversations";
 
 type EditorTab = "preview" | "code";
 type PreviewSize = "desktop" | "tablet" | "mobile";
@@ -146,7 +155,12 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [activeFilePath, setActiveFilePath] = useState("index.html");
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [hasStarted, setHasStarted] = useState(false); // existing state unchanged
+  const [hasStarted, setHasStarted] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  // conversation tracking
+  const [conversationId] = useState<string>(() => createId());
+  const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,6 +170,46 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     minHeight: 150,
     maxHeight: 300,
   });
+
+  // Load recent conversations from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as StoredConversation[];
+        setRecentChats(parsed);
+      }
+    } catch { /* ignore parse errors */ }
+  }, []);
+
+  // Derive conversation title from first user message
+  const conversationTitle = useMemo(() => {
+    const firstUser = messages.find((m) => m.role === "user");
+    if (!firstUser?.content) return null;
+    return firstUser.content.length > 40
+      ? firstUser.content.slice(0, 40).trimEnd() + "…"
+      : firstUser.content;
+  }, [messages]);
+
+  // Save/update current conversation in localStorage whenever title changes
+  useEffect(() => {
+    if (!conversationTitle) return;
+    setRecentChats((prev) => {
+      const existing = prev.find((c) => c.id === conversationId);
+      const entry: StoredConversation = {
+        id: conversationId,
+        title: conversationTitle,
+        updatedAt: Date.now(),
+      };
+      const next = existing
+        ? prev.map((c) => (c.id === conversationId ? entry : c))
+        : [entry, ...prev];
+      // keep most-recent 20
+      const trimmed = next.slice(0, 20);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed)); } catch { /* ignore */ }
+      return trimmed;
+    });
+  }, [conversationTitle, conversationId]);
 
   const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
   const activeFile = projectFiles.find((file) => file.path === activeFilePath) ?? projectFiles[0];
@@ -628,17 +682,104 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     window.setTimeout(() => showToast("Preview published"), 700);
   };
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Wrapper layout with transition based on hasStarted
+  // Wrapper layout
   return (
-    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out]">
-      <div className="flex h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
+    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out] flex">
+
+      {/* ── Inline Push Navigation Sidebar ── */}
+      <aside
+        className={cn(
+          "h-full shrink-0 flex flex-col bg-[#0f0f0f] border-r border-white/10 transition-all duration-300 overflow-hidden",
+          navOpen ? "w-[240px]" : "w-0"
+        )}
+      >
+        {/* Sidebar Header */}
+        <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-white/10">
+          <span className="text-base font-semibold tracking-tight text-white whitespace-nowrap">Oni</span>
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close sidebar"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-white/40 hover:bg-white/8 hover:text-white transition-colors shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Sidebar Body */}
+        <div className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5">
+          {/* New Chat */}
+          <a
+            href="/"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white hover:bg-white/8 transition-colors group whitespace-nowrap"
+          >
+            <PlusCircle className="h-4 w-4 text-white/50 group-hover:text-white transition-colors shrink-0" />
+            New Chat
+          </a>
+
+          {/* Nav items */}
+          {[
+            { label: "Chats", href: "/", icon: <MessageSquare className="h-4 w-4" /> },
+            { label: "Projects", href: "#", icon: <Folder className="h-4 w-4" /> },
+          ].map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/8 transition-colors group whitespace-nowrap"
+            >
+              <span className="text-white/35 group-hover:text-white/70 transition-colors shrink-0">{item.icon}</span>
+              {item.label}
+            </a>
+          ))}
+
+          {/* Recents */}
+          <div className="mt-5 mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/30 whitespace-nowrap">Recents</div>
+          {recentChats.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-white/25 italic whitespace-nowrap">No recent chats</div>
+          ) : (
+            recentChats.map((chat) => {
+              const isActive = chat.id === conversationId;
+              return (
+                <button
+                  key={chat.id}
+                  type="button"
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left group",
+                    isActive
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:bg-white/6 hover:text-white/80"
+                  )}
+                >
+                  <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white/70" : "text-white/30 group-hover:text-white/50")} />
+                  <span className="truncate text-xs leading-snug">{chat.title}</span>
+                  {isActive && (
+                    <span className="ml-auto shrink-0 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-white/10 shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/8 transition-colors cursor-pointer">
+            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/70 shrink-0">OU</div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-medium text-white/80 leading-tight truncate">Oni User</span>
+              <span className="text-xs text-white/30">Free plan</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main content (chat + workspace) ── */}
+      <div className="flex flex-1 min-w-0 h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
             "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[500px] lg:shrink-0 lg:border-r transition-all duration-300",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
-            !sidebarOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
+            !chatPanelOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
           )}
         >
           <ChatPanel
@@ -656,9 +797,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             }}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            onSend={() => {
-              void handleSend();
-            }}
+            onSend={() => { void handleSend(); }}
             onDrop={handleDrop}
             onDragOver={(event) => {
               event.preventDefault();
@@ -669,12 +808,10 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             onImageButtonClick={() => imageInputRef.current?.click()}
             onRemoveImage={removeAttachedImage}
             onCopy={handleCopyText}
-            onRegenerate={() => {
-              void handleRegenerate();
-            }}
+            onRegenerate={() => { void handleRegenerate(); }}
             messagesEndRef={messagesEndRef}
-            onToggleSidebar={() => setSidebarOpen((v) => !v)}
-            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setNavOpen((v) => !v)}
+            sidebarOpen={navOpen}
           />
         </section>
 
@@ -693,8 +830,8 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             projectFiles={projectFiles}
             activeFile={activeFile}
             activeFilePath={activeFilePath}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            sidebarOpen={chatPanelOpen}
+            onToggleSidebar={() => setChatPanelOpen((v) => !v)}
             onEditorTabChange={(tab) => {
               setEditorTab(tab);
               setMobilePanel(tab);
@@ -702,14 +839,10 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             onPreviewSizeChange={setPreviewSize}
             onRefreshPreview={() => setPreviewRefreshKey((current) => current + 1)}
             onPublish={handlePublish}
-            onDownloadZip={() => {
-              void handleDownloadZip();
-            }}
+            onDownloadZip={() => { void handleDownloadZip(); }}
             onOpenPreview={handleOpenPreview}
             onFileSelect={setActiveFilePath}
-            onCopyCode={() => {
-              void handleCopyText(activeFile.content);
-            }}
+            onCopyCode={() => { void handleCopyText(activeFile.content); }}
           />
         </section>
       </div>
