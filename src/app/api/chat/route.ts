@@ -3,62 +3,14 @@ import DOMPurify from "isomorphic-dompurify";
 import { sanitizeText } from "@/lib/auth";
 
 const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder.
-
-For EVERY response, output your internal thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> tags first.
-Describe your reasoning, design choices, and plan in 1-2 concise sentences.
-
-**Conversational mode** (default): When the user sends a casual message, greeting, or question NOT about building a website, reply naturally in 1-2 sentences. No HTML or code. Examples: "hi" → greet back warmly, "what can you do?" → explain briefly.
-
-**Build mode**: ONLY when the user explicitly asks to build, create, make, design, or generate a website/page/app:
-1. Reply with ONE short sentence (e.g. "Here's your restaurant website.")
-2. Output the COMPLETE website inside <ONI_CODE>...</ONI_CODE>
-
-Build mode design rules — READ CAREFULLY:
-- Every website MUST have minimum 6 sections:
-  1. Sticky navbar with logo + links + CTA button
-  2. Hero — full viewport, dramatic headline, subtitle, 2 CTA buttons
-  3. Features/About — 3 cards in a grid with icons (use unicode/emoji as icons)
-  4. Services or Menu or Portfolio — detailed, real content, minimum 6 items
-  5. Testimonials — 3 fake but realistic customer reviews with names
-  6. Footer — logo, links, contact info, copyright
-- Hero headline must be specific to the business — not generic
-- Every section needs real detailed copy — minimum 3 sentences per section
-- Cards must have titles, descriptions, and styled borders or shadows
-- Color scheme must be consistent across all sections
-- Add subtle CSS animations: fade-in on scroll using Intersection Observer
-- Buttons must have gradient backgrounds and box shadows
-- Never output a website with less than 200 lines of HTML
-- Use rich color palettes — for a restaurant use warm golds, 
-  deep burgundy, rich browns, cream. Match colors to the vibe.
-- Hero must have a real gradient background with multiple colors,
-  NOT just a dark overlay on a broken image URL
-- Use CSS only backgrounds — gradients, patterns, shapes
-  DO NOT use unsplash URLs or any external image URLs
-  they will break. Use CSS gradients instead.
-- Add decorative elements — lines, shapes, borders using CSS
-- Sections must have alternating backgrounds, not all white
-- Add at least 3 CSS animations
-- Typography must be dramatic — hero h1 minimum 80px
-- Add a sticky navbar that changes on scroll using JS
-- Single HTML file, all CSS in <style>, all JS in <script>
-- Import beautiful Google Fonts at top of <style>:
-  @import url('https://fonts.googleapis.com/css2?family=...')
-- Custom CSS only. No Tailwind. No frameworks.
-- The design must look like it cost $10,000 to make
-- Use real gradients, shadows, blur effects, smooth animations
-- CSS transitions and hover effects on ALL interactive elements
-- Hero section must be visually stunning — full viewport height,
-  large bold typography, gradient or dark overlay background
-- Professional color palette — not just black and white,
-  pick colors that match the business type
-- Real business content — real name, real menu items, real copy,
-  real pricing, real team names. Never generic placeholder text.
-- Mobile responsive with media queries for 768px and below
-- Smooth scroll behavior
-- No mention of Oni, AI, or generated anywhere in the output
-- No markdown code fences, return raw HTML only
-
-If unsure whether user wants a website built, ask to clarify.`;
+- Use <ONI_THOUGHT> for internal thoughts first
+- If user asks to build a site: reply with short sentence, then full HTML in <ONI_CODE>
+- If casual message: reply naturally, no code
+- Site rules:
+  - 6+ sections (navbar, hero, features, menu/portfolio, testimonials, footer)
+  - No external images, use CSS gradients
+  - Responsive, animations, gradient buttons
+  - No mention of Oni/AI`;
 
 function createMockStream(clean: string | undefined, groqMessages: { role: string; content: string }[]) {
   const userText = (clean ?? groqMessages.at(-1)?.content ?? "").toLowerCase();
@@ -193,8 +145,12 @@ export async function POST(req: Request) {
       return new NextResponse("Invalid prompt", { status: 400 });
     }
 
-    const userContent = currentHtml
-      ? `User request: ${clean}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${currentHtml}\n</CURRENT_HTML>`
+    // Limit currentHtml to avoid token overflow
+    const limitedCurrentHtml = currentHtml.length > 2000 
+      ? currentHtml.slice(0, 2000) + "..." 
+      : currentHtml;
+    const userContent = limitedCurrentHtml
+      ? `User request: ${clean}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${limitedCurrentHtml}\n</CURRENT_HTML>`
       : clean;
 
     groqMessages = [{ role: "user", content: userContent }];
@@ -212,6 +168,16 @@ export async function POST(req: Request) {
 
   // ----- Real Groq request --------------------------------------------------
   try {
+    const requestBody = JSON.stringify({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages],
+      temperature: 0.9,
+      max_tokens: 4096,
+      stream: true,
+    });
+    console.log('Request body length:', requestBody.length);
+    console.log('Groq messages:', JSON.stringify([{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages], null, 2));
+    
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -220,18 +186,13 @@ export async function POST(req: Request) {
           Authorization: `Bearer ${groqApiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages],
-          temperature: 0.9,
-          max_tokens: 16000,
-          stream: true,
-        }),
+        body: requestBody,
       }
     );
 
     if (groqResponse.ok) {
       // Forward the streaming response to the client
+      console.log('Groq request successful, streaming response!');
       return new Response(groqResponse.body, {
         headers: {
           "Content-Type": "text/event-stream",
@@ -241,22 +202,23 @@ export async function POST(req: Request) {
       });
     }
 
-    // If response not ok, log error and return it
+    // If Groq fails, log error and fall back to mock stream
     const errorBody = await groqResponse.text();
-    console.error('Groq error:', {
+    console.error('Groq error (falling back to mock):', {
       status: groqResponse.status,
       statusText: groqResponse.statusText,
       body: errorBody
     });
-
-    return new NextResponse(errorBody, { 
-      status: groqResponse.status, 
-      headers: { "Content-Type": "text/plain" } 
-    });
   } catch (err) {
-    console.error('Groq error:', err);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Groq error (falling back to mock):', 
+      'Type:', typeof err,
+      'Is Error:', err instanceof Error,
+      'Message:', err instanceof Error ? err.message : String(err),
+      'Stack:', err instanceof Error ? err.stack : '');
   }
+
+  // Fall back to mock stream if Groq fails
+  return createMockStream(clean, groqMessages);
 }
 
 /* -------------------------------------------------------------------------

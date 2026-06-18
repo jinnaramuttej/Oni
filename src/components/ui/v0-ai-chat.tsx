@@ -431,6 +431,23 @@ export function OniChat({
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error:', errorText);
+        setIsLoading(false);
+        setGenerating(false);
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            id: assistantId,
+            role: 'assistant',
+            content: `Sorry, there was an error: ${response.statusText}`,
+          };
+          return updated;
+        });
+        return;
+      }
+
       if (!response.body) {
         setIsLoading(false);
         setGenerating(false);
