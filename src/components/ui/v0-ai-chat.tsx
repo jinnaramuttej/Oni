@@ -5,6 +5,7 @@ import {
   ArrowUpIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Code2,
   Copy,
   Download,
@@ -637,7 +638,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
           className={cn(
             "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[500px] lg:shrink-0 lg:border-r transition-all duration-300",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
-            !sidebarOpen && "lg:!w-0 lg:!overflow-hidden lg:!border-0"
+            !sidebarOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
           )}
         >
           <ChatPanel
@@ -789,12 +790,6 @@ function ChatPanel({
   return (
     <>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
-            <Laptop className="h-3.5 w-3.5 text-white" />
-          </div>
-          <span className="text-base font-semibold tracking-tight">Oni</span>
-        </div>
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -802,19 +797,15 @@ function ChatPanel({
           title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/8 hover:text-white transition-colors"
         >
-          {isLoading ? (
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
-              <path d="M12 2 a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="4" />
-            </svg>
-          ) : (
-            sidebarOpen ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )
-          )}
+          {/* sidebar panel icon */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
         </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold tracking-tight text-white/70">Oni</span>
+        </div>
       </header>
 
         <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-[#0a0a0a]/30 backdrop-blur-xl">
