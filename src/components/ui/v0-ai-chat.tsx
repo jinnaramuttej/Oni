@@ -65,6 +65,7 @@ type StoredConversation = {
 };
 
 const STORAGE_KEY = "oni_conversations";
+const SESSION_KEY = "oni_session";
 
 type EditorTab = "preview" | "code";
 type PreviewSize = "desktop" | "tablet" | "mobile";
@@ -143,7 +144,31 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
 
 export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  // Restore messages and conversationId from sessionStorage so refresh stays in same chat
+  const [conversationId] = useState<string>(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { id?: string };
+        if (parsed?.id) return parsed.id;
+      }
+    } catch { /* ignore */ }
+    const newId = createId();
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ id: newId, messages: [] })); } catch { /* ignore */ }
+    return newId;
+  });
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { messages?: ChatMessage[] };
+        if (Array.isArray(parsed?.messages) && parsed.messages.length > 0) {
+          return parsed.messages;
+        }
+      }
+    } catch { /* ignore */ }
+    return initialMessages;
+  });
   const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -155,11 +180,19 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [activeFilePath, setActiveFilePath] = useState("index.html");
   const [generatedHtml, setGeneratedHtml] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [hasStarted, setHasStarted] = useState(() => {
+    // If messages were restored from session, we've already started
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { messages?: ChatMessage[] };
+        return Array.isArray(parsed?.messages) && parsed.messages.length > 0;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
   const [navOpen, setNavOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
-  // conversation tracking
-  const [conversationId] = useState<string>(() => createId());
   const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -181,6 +214,13 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       }
     } catch { /* ignore parse errors */ }
   }, []);
+
+  // Persist messages + id to sessionStorage on every change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ id: conversationId, messages }));
+    } catch { /* ignore */ }
+  }, [messages, conversationId]);
 
   // Derive conversation title from first user message
   const conversationTitle = useMemo(() => {
@@ -445,11 +485,15 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   }, [adjustHeight, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages]);
 
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
+  // Guard: don't re-fire on refresh if session already has messages
   const didAutoSend = useRef(false);
   useEffect(() => {
-    if (initialPrompt && !didAutoSend.current) {
+    if (initialPrompt && !didAutoSend.current && messages.length === 0) {
       didAutoSend.current = true;
       void handleSend(initialPrompt);
+    } else if (initialPrompt) {
+      // Mark as sent so it doesn't trigger later
+      didAutoSend.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);
