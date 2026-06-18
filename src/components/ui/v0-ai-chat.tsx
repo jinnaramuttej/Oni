@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {
   ArrowUpIcon,
-  ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Code2,
   Copy,
@@ -152,8 +152,8 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const toastTimerRef = useRef<number | null>(null);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 96,
-    maxHeight: 220,
+    minHeight: 150,
+    maxHeight: 300,
   });
 
   const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
@@ -221,7 +221,6 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     if ((!prompt && !attachedImage) || generating || isLoading) return;
 
     const imageForMessage = attachedImage ?? undefined;
-    const nextBrief = prompt || "Screenshot-based website build";
     const userMessage: ChatMessage = {
       id: createId(),
       role: "user",
@@ -244,12 +243,13 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
+      const messagesForApi = [...messages, userMessage];
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: prompt,
-          messages: [...messages, userMessage].map(m => ({
+          messages: messagesForApi.map(m => ({
             role: m.role,
             content: m.content
           })),
@@ -266,39 +266,96 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || "";
 
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
         for (const line of lines) {
-          const json = line.replace('data: ', '').trim()
-          if (json === '[DONE]') break
-          try {
-            const parsed = JSON.parse(json)
-            const token = parsed.choices?.[0]?.delta?.content || ''
-            fullText += token
-            // Show text live — strip ONI_CODE block only if it is complete
-            const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(fullText);
-            const displayContent = hasCompleteBlock
-              ? fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
-              : fullText.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
-            setMessages(prev => {
-              const updated = [...prev]
-              updated[updated.length - 1] = {
-                id: assistantId,
-                role: 'assistant',
-                content: displayContent
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          if (trimmed === 'data: [DONE]') break;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = trimmed.slice(6).trim();
+              const parsed = JSON.parse(json);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              fullText += token;
+
+              // Extract thought block
+              let currentThought = "";
+              if (fullText.includes("<ONI_THOUGHT>")) {
+                const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
+                const endIndex = fullText.indexOf("</ONI_THOUGHT>");
+                if (endIndex !== -1) {
+                  currentThought = fullText.slice(startIndex, endIndex).trim();
+                } else {
+                  currentThought = fullText.slice(startIndex).trim();
+                }
               }
-              return updated
-            })
-          } catch { }
+
+              // Strip completed/partial ONI_THOUGHT from displayContent
+              let displayContent = fullText;
+              if (displayContent.includes("</ONI_THOUGHT>")) {
+                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
+              } else {
+                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
+              }
+
+              // Extract partial code block in real-time
+              let partialHtml = "";
+              if (displayContent.includes("<ONI_CODE>")) {
+                const startIndex = displayContent.indexOf("<ONI_CODE>") + 10;
+                const endIndex = displayContent.indexOf("</ONI_CODE>");
+                if (endIndex !== -1) {
+                  partialHtml = displayContent.slice(startIndex, endIndex).trim();
+                } else {
+                  partialHtml = displayContent.slice(startIndex).trim();
+                }
+              }
+
+              // Strip completed/partial ONI_CODE from displayContent
+              const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(displayContent);
+              const cleanDisplay = hasCompleteBlock
+                ? displayContent.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+                : displayContent.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
+
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  id: assistantId,
+                  role: 'assistant',
+                  content: cleanDisplay,
+                  thought: currentThought || undefined,
+                };
+                return updated;
+              });
+
+              // Stream partial code block into files in real-time
+              if (partialHtml) {
+                setGeneratedHtml(partialHtml);
+              }
+            } catch { }
+          }
         }
       }
 
       setIsLoading(false);
+
+      let finalThought = "";
+      if (fullText.includes("<ONI_THOUGHT>")) {
+        const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
+        const endIndex = fullText.indexOf("</ONI_THOUGHT>");
+        if (endIndex !== -1) {
+          finalThought = fullText.slice(startIndex, endIndex).trim();
+        } else {
+          finalThought = fullText.slice(startIndex).trim();
+        }
+      }
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
@@ -307,13 +364,18 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
         setActiveFilePath("index.html");
       }
 
-      const cleanContent = fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim();
+      const cleanContent = fullText
+        .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+        .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+        .trim();
+
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
+          thought: finalThought || undefined
         };
         return updated;
       });
@@ -325,7 +387,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       setIsLoading(false);
       setGenerating(false);
     }
-  }, [adjustHeight, attachedImage, generatedHtml, hasStarted, generating, isLoading, input]);
+  }, [adjustHeight, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages]);
 
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
   const didAutoSend = useRef(false);
@@ -356,7 +418,11 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, currentHtml: generatedHtml }),
+        body: JSON.stringify({
+          prompt: prompt,
+          messages: [{ role: "user", content: prompt }],
+          currentHtml: generatedHtml
+        }),
       });
 
       if (!response.body) {
@@ -368,34 +434,96 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || "";
 
-        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
         for (const line of lines) {
-          const json = line.replace('data: ', '').trim()
-          if (json === '[DONE]') break
-          try {
-            const parsed = JSON.parse(json)
-            const token = parsed.choices?.[0]?.delta?.content || ''
-            fullText += token
-            setMessages(prev => {
-              const updated = [...prev]
-              updated[updated.length - 1] = {
-                id: assistantId,
-                role: 'assistant',
-                content: fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          if (trimmed === 'data: [DONE]') break;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = trimmed.slice(6).trim();
+              const parsed = JSON.parse(json);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              fullText += token;
+
+              // Extract thought block
+              let currentThought = "";
+              if (fullText.includes("<ONI_THOUGHT>")) {
+                const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
+                const endIndex = fullText.indexOf("</ONI_THOUGHT>");
+                if (endIndex !== -1) {
+                  currentThought = fullText.slice(startIndex, endIndex).trim();
+                } else {
+                  currentThought = fullText.slice(startIndex).trim();
+                }
               }
-              return updated
-            })
-          } catch { }
+
+              // Strip completed/partial ONI_THOUGHT from displayContent
+              let displayContent = fullText;
+              if (displayContent.includes("</ONI_THOUGHT>")) {
+                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
+              } else {
+                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
+              }
+
+              // Extract partial code block in real-time
+              let partialHtml = "";
+              if (displayContent.includes("<ONI_CODE>")) {
+                const startIndex = displayContent.indexOf("<ONI_CODE>") + 10;
+                const endIndex = displayContent.indexOf("</ONI_CODE>");
+                if (endIndex !== -1) {
+                  partialHtml = displayContent.slice(startIndex, endIndex).trim();
+                } else {
+                  partialHtml = displayContent.slice(startIndex).trim();
+                }
+              }
+
+              // Strip completed/partial ONI_CODE from displayContent
+              const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(displayContent);
+              const cleanDisplay = hasCompleteBlock
+                ? displayContent.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
+                : displayContent.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
+
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  id: assistantId,
+                  role: 'assistant',
+                  content: cleanDisplay,
+                  thought: currentThought || undefined,
+                };
+                return updated;
+              });
+
+              // Stream partial code block into files in real-time
+              if (partialHtml) {
+                setGeneratedHtml(partialHtml);
+              }
+            } catch { }
+          }
         }
       }
 
       setIsLoading(false);
+
+      let finalThought = "";
+      if (fullText.includes("<ONI_THOUGHT>")) {
+        const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
+        const endIndex = fullText.indexOf("</ONI_THOUGHT>");
+        if (endIndex !== -1) {
+          finalThought = fullText.slice(startIndex, endIndex).trim();
+        } else {
+          finalThought = fullText.slice(startIndex).trim();
+        }
+      }
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
@@ -404,14 +532,18 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
         setActiveFilePath("index.html");
       }
 
-      const cleanContent = fullText.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim();
+      const cleanContent = fullText
+        .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+        .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+        .trim();
+
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
-          thought: buildThoughtProcess(prompt, Boolean(lastUserMessage.image))
+          thought: finalThought || undefined
         };
         return updated;
       });
@@ -593,7 +725,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed right-4 bottom-4 z-50 rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-sm text-white shadow-2xl shadow-black/40">
+        <div className="fixed right-4 bottom-4 z-50 rounded-xl border border-white/10 bg-zinc-950 bg-opacity-70 backdrop-blur-md px-4 py-3 text-sm text-white shadow-2xl shadow-black/40 toast-glass">
           {toast}
         </div>
       )}
@@ -670,27 +802,41 @@ function ChatPanel({
           title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/8 hover:text-white transition-colors"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M9 3v18" />
-          </svg>
+          {isLoading ? (
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+              <path d="M12 2 a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="4" />
+            </svg>
+          ) : (
+            sidebarOpen ? (
+              <ChevronLeft className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )
+          )}
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden">
+        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-[#0a0a0a]/30 backdrop-blur-xl">
         {messages.length === 0 ? (
-          <div className="flex flex-1 flex-col items-start justify-end gap-6 pb-2">
-            <div>
-              <p className="text-lg font-semibold tracking-tight text-white">What are we building today?</p>
-              <p className="mt-1 text-sm text-white/40">Describe a site, paste a screenshot, or pick a suggestion below.</p>
+          <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-inner shadow-white/5">
+              <Laptop className="h-6 w-6 text-white/70" />
+              <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-70 blur" />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2 max-w-sm">
+              <h2 className="text-2xl font-semibold tracking-tight text-white">What are we building today?</h2>
+              <p className="text-sm text-white/45 leading-relaxed">
+                Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
               {["Portfolio site", "Restaurant landing page", "SaaS dashboard", "Personal blog"].map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => onValueChange(s)}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/60 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-2 text-xs text-white/60 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                 >
                   {s}
                 </button>
@@ -757,7 +903,7 @@ function UserMessage({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.content && (
-          <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-6 text-white">
+          <div className="rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors px-4 py-2.5 text-sm leading-6 text-zinc-100 shadow-sm">
             {message.content}
           </div>
         )}
@@ -778,45 +924,60 @@ function AssistantMessage({
   const [thoughtOpen, setThoughtOpen] = useState(false);
 
   return (
-    <div className="animate-[fadeSlideUp_400ms_ease-out]">
-      <span className="text-xs text-white/35 font-medium">Oni</span>
-      {message.content ? (
-        <p className="mt-1 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-white">
-          {message.content}
-        </p>
-      ) : (
-        <div className="mt-2 flex items-center gap-1.5">
-          {[0, 1, 2].map((dot) => (
-            <span
-              key={dot}
-              className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse"
-              style={{ animationDelay: `${dot * 150}ms` }}
-            />
-          ))}
+    <div className="animate-[fadeSlideUp_400ms_ease-out] space-y-2.5">
+      <div className="flex items-center gap-2">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black font-bold text-[10px] select-none">
+          O
         </div>
-      )}
+        <span className="text-xs text-white/45 font-semibold tracking-wide uppercase select-none">Oni</span>
+      </div>
 
-      <div className="mt-3 flex flex-col gap-3">
-        {message.thought && (
-          <div className="max-w-3xl rounded-xl border border-white/10 bg-white/[0.03]">
-            <button
-              type="button"
-              onClick={() => setThoughtOpen((current) => !current)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-white/55 transition-colors duration-200 ease-in-out hover:text-white/80"
-            >
-              {thoughtOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              Thought Process
-            </button>
-            {thoughtOpen && <p className="px-3 pb-3 text-xs leading-6 text-white/45">{message.thought}</p>}
+          <div className="space-y-2 pl-7 bg-white/8 backdrop-blur-md rounded-xl p-4">
+        {message.content ? (
+          <p className="max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-100 description-fade">
+            {message.content}
+          </p>
+        ) : (
+          <div className="flex items-center gap-1.5 py-2">
+            {[0, 1, 2].map((dot) => (
+              <span
+                key={dot}
+                className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse"
+                style={{ animationDelay: `${dot * 150}ms` }}
+              />
+            ))}
           </div>
         )}
 
-        <div className="flex items-center gap-1.5">
+        {message.thought && (
+          <div className="max-w-3xl rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setThoughtOpen((current) => !current)}
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-white/55 transition-colors duration-200 ease-in-out hover:text-white/80"
+            >
+              <div className="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40">
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                </svg>
+                <span>Thought Process</span>
+              </div>
+              {thoughtOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+            {thoughtOpen && (
+              <div className="px-3 pb-3 pt-1 border-t border-white/5 text-xs leading-6 text-white/45 whitespace-pre-wrap">
+                {message.thought}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-1">
           <IconButton label="Copy response" onClick={onCopy}>
-            <Copy className="h-4 w-4" />
+            <Copy className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton label="Regenerate response" onClick={onRegenerate}>
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5" />
           </IconButton>
         </div>
       </div>
@@ -946,18 +1107,25 @@ function ChatComposer({
         />
 
         <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={!canSend}
-            className={cn(
-              "mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
-              canSend ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/35"
-            )}
-            aria-label="Send message"
-          >
-            <ArrowUpIcon className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={!canSend}
+              className={cn(
+                "mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
+                canSend ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/35"
+              )}
+              aria-label="Send message"
+            >
+              {isGenerating ? (
+              <svg className="spinner h-4 w-4" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+                <path d="M12 2 a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="4" />
+              </svg>
+            ) : (
+              <ArrowUpIcon className="h-4 w-4" />
+              )}
+            </button>
           <button
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
@@ -1392,149 +1560,28 @@ function buildThoughtProcess(prompt: string, hasImage: boolean) {
   return `${reference} The page is split into reusable sections, then mirrored into preview markup and editable source files so the design can be iterated quickly. Brief: ${prompt}`;
 }
 
-function buildProjectFiles(brief: string): ProjectFile[] {
-  const cleanBrief = brief.replace(/\s+/g, " ").trim() || "AI generated website";
-  const briefLiteral = JSON.stringify(cleanBrief);
+function buildProjectFiles(html: string): ProjectFile[] {
+  if (!html) {
+    return [
+      {
+        path: "index.html",
+        label: "index.html",
+        language: "html",
+        content: "<!-- No website generated yet. Describe one in the chat! -->",
+      },
+    ];
+  }
 
   return [
     {
-      path: "src/app/page.tsx",
-      label: "app/page.tsx",
-      language: "tsx",
-      content: `import { CTA } from "@/components/CTA";
-import { Hero } from "@/components/Hero";
-import { Pricing } from "@/components/Pricing";
-
-const projectBrief = ${briefLiteral};
-
-export default function Page() {
-  return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <Hero brief={projectBrief} />
-      <Pricing />
-      <CTA />
-    </main>
-  );
-}
-`,
-    },
-    {
-      path: "src/components/Hero.tsx",
-      label: "components/Hero.tsx",
-      language: "tsx",
-      content: `type HeroProps = {
-  brief: string;
-};
-
-export function Hero({ brief }: HeroProps) {
-  return (
-    <section className="mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-center px-6 py-24">
-      <p className="mb-4 text-sm uppercase tracking-[0.28em] text-cyan-300">Built with Oni</p>
-      <h1 className="max-w-4xl text-5xl font-semibold tracking-tight md:text-7xl">
-        {brief}
-      </h1>
-      <p className="mt-6 max-w-2xl text-lg leading-8 text-white/60">
-        A production-ready website generated from a simple prompt, ready to refine and publish.
-      </p>
-      <div className="mt-10 flex flex-wrap gap-3">
-        <a className="rounded-full bg-white px-5 py-3 text-sm font-medium text-black" href="#pricing">
-          View pricing
-        </a>
-        <a className="rounded-full border border-white/15 px-5 py-3 text-sm text-white" href="#demo">
-          See demo
-        </a>
-      </div>
-    </section>
-  );
-}
-`,
-    },
-    {
-      path: "src/components/Pricing.tsx",
-      label: "components/Pricing.tsx",
-      language: "tsx",
-      content: `const plans = ["Starter", "Growth", "Scale"];
-
-export function Pricing() {
-  return (
-    <section id="pricing" className="mx-auto grid max-w-6xl gap-4 px-6 py-16 md:grid-cols-3">
-      {plans.map((plan) => (
-        <article key={plan} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-xl font-semibold">{plan}</h2>
-          <p className="mt-3 text-sm leading-6 text-white/55">
-            Launch fast with clean sections, responsive styling, and publish-ready code.
-          </p>
-          <p className="mt-6 text-3xl font-semibold">$29</p>
-        </article>
-      ))}
-    </section>
-  );
-}
-`,
-    },
-    {
-      path: "src/components/CTA.tsx",
-      label: "components/CTA.tsx",
-      language: "tsx",
-      content: `export function CTA() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 pb-24">
-      <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-8 md:p-12">
-        <h2 className="max-w-2xl text-3xl font-semibold md:text-5xl">Ready to ship the first version?</h2>
-        <p className="mt-4 max-w-xl text-white/55">Edit the code, preview every breakpoint, and publish when it feels right.</p>
-      </div>
-    </section>
-  );
-}
-`,
-    },
-    {
-      path: "src/app/globals.css",
-      label: "app/globals.css",
-      language: "css",
-      content: `@import "tailwindcss";
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  background: #0a0a0a;
-  font-family: Inter, system-ui, sans-serif;
-}
-`,
-    },
-    {
-      path: "public/favicon.svg",
-      label: "favicon.svg",
+      path: "index.html",
+      label: "index.html",
       language: "html",
-      content: `<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="18" fill="#0A0A0A"/>
-  <path d="M18 32C18 24.268 24.268 18 32 18C39.732 18 46 24.268 46 32C46 39.732 39.732 46 32 46C24.268 46 18 39.732 18 32Z" stroke="white" stroke-width="4"/>
-</svg>
-`,
-    },
-    {
-      path: "package.json",
-      label: "package.json",
-      language: "json",
-      content: `{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  },
-  "dependencies": {
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest"
-  }
-}
-`,
+      content: html,
     },
   ];
 }
+
 
 function buildInitialPreviewHtml() {
   return buildPreviewHtml("A polished launch page for an AI website builder");

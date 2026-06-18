@@ -211,6 +211,19 @@
   }
 }
 
+@keyframes slowFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.description-fade {
+  animation: slowFadeIn 0.8s ease-out forwards;
+}
+
 @keyframes slideRightIn {
   to {
     opacity: 1;
@@ -245,3 +258,17 @@
 .animate-delay-1000{animation:testimonialIn .6s 1s both}
 .animate-delay-1200{animation:testimonialIn .6s 1.2s both}
 .animate-delay-1400{animation:testimonialIn .6s 1.4s both}
+
+/* Toast glass and spinner */
+.toast-glass {
+  backdrop-filter: blur(12px);
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

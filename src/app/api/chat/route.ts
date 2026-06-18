@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import DOMPurify from "isomorphic-dompurify";
 import { sanitizeText } from "@/lib/auth";
 
-const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website builder assistant. You have two modes:
+const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website builder assistant.
+
+For EVERY response, you MUST first output your internal thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> tags.
+Describe your reasoning, design choices, and plan of action in 1-2 concise sentences.
+
+After the thought block, follow the appropriate mode:
 
 **Conversational mode** (default): When the user sends a casual message, greeting, or question NOT about building a website, reply naturally and conversationally in 1-2 sentences. Do NOT output any HTML or code. Examples: "hi" → greet back, "what can you do?" → explain briefly.
 
@@ -37,7 +42,7 @@ export async function POST(req: Request) {
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
     // Client already supplied a sanitized history
-    groqMessages = body.messages.map((m) => ({
+    groqMessages = body.messages.map((m: { role: string; content: string }) => ({
       role: m.role,
       content: m.content,
     }));
@@ -52,7 +57,7 @@ export async function POST(req: Request) {
 
     // Basic banned token checks
     const banned = ["ignore previous", "system:", "you are now", "jailbreak"];
-    if (banned.some((b) => clean.toLowerCase().includes(b))) {
+    if (banned.some((b) => clean!.toLowerCase().includes(b))) {
       return new NextResponse("Invalid prompt", { status: 400 });
     }
 
@@ -86,27 +91,65 @@ export async function POST(req: Request) {
       const reply =
         Object.entries(conversational).find(([k]) => userText.includes(k))?.[1] ??
         "I'm Oni, your AI website builder. Describe a site you'd like me to build!";
-      mockResponse = reply;
+      mockResponse = `<ONI_THOUGHT>Analyzing conversational request and introducing capabilities.</ONI_THOUGHT>${reply}`;
     } else {
       const html =
         userText.includes("restaurant") || userText.includes("cafe")
           ? buildRestaurantHtml()
           : buildGenericHtml(clean ?? "");
-      mockResponse = `Here's your website — a responsive layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
+      mockResponse = `<ONI_THOUGHT>Planning the layout, custom CSS style structure, and content organization for the requested site. Setting up a self-contained HTML document.</ONI_THOUGHT>Here's your website — a responsive layout with custom CSS.\n\n<ONI_CODE>\n${html}\n</ONI_CODE>`;
     }
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const tokens = mockResponse.split(" ");
-        for (const token of tokens) {
-          const content = token + " ";
+        const sendChunk = async (text: string) => {
           const chunk = `data: ${JSON.stringify({
-            choices: [{ delta: { content } }],
+            choices: [{ delta: { content: text } }],
           })}\n\n`;
           controller.enqueue(encoder.encode(chunk));
-          await new Promise((resolve) => setTimeout(resolve, 30));
+        };
+
+        const thoughtMatch = mockResponse.match(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/);
+        const thoughtPart = thoughtMatch ? thoughtMatch[0] : "";
+        const remainingAfterThought = mockResponse.replace(thoughtPart, "");
+
+        const codeMatch = remainingAfterThought.match(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/);
+        const descriptionPart = codeMatch ? remainingAfterThought.replace(codeMatch[0], "") : remainingAfterThought;
+        const codePart = codeMatch ? codeMatch[0] : "";
+
+        // 1. Stream thoughtPart
+        if (thoughtPart) {
+          const words = thoughtPart.split(/(\s+)/);
+          for (const word of words) {
+            if (word) {
+              await sendChunk(word);
+              await new Promise((resolve) => setTimeout(resolve, 25));
+            }
+          }
         }
+
+        // 2. Stream descriptionPart
+        if (descriptionPart) {
+          const words = descriptionPart.split(/(\s+)/);
+          for (const word of words) {
+            if (word) {
+              await sendChunk(word);
+              await new Promise((resolve) => setTimeout(resolve, 35));
+            }
+          }
+        }
+
+        // 3. Stream codePart
+        if (codePart) {
+          const chunkSize = 40;
+          for (let i = 0; i < codePart.length; i += chunkSize) {
+            const chunkText = codePart.slice(i, i + chunkSize);
+            await sendChunk(chunkText);
+            await new Promise((resolve) => setTimeout(resolve, 15));
+          }
+        }
+
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
         controller.close();
       },
