@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AppShell } from "./app-shell";
+import { OniChat } from "./v0-ai-chat";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 
@@ -10,12 +10,29 @@ export function HomePage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [promptText, setPromptText] = useState("");
-  const router = useRouter();
+  // When chatStarted, show OniChat inline instead of navigating away
+  const [chatStarted, setChatStarted] = useState(false);
+  const [chatPrompt, setChatPrompt] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("oni_session");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.id && Array.isArray(parsed?.messages) && parsed.messages.length > 0) {
+          setChatStarted(true);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const handleSend = () => {
     const text = promptText.trim();
     if (!text) return;
-    router.push(`/chat?prompt=${encodeURIComponent(text)}`);
+    // Clear sessionStorage so OniChat starts a fresh session for this prompt
+    try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
+    setChatPrompt(text);
+    setChatStarted(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -49,7 +66,7 @@ export function HomePage() {
   const handleLogout = async () => {
     setProfileOpen(false);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/signin");
+    window.location.href = "/signin";
   };
 
   const getGreeting = () => {
@@ -58,6 +75,15 @@ export function HomePage() {
     if (hr < 17) return "Afternoon";
     return "Evening";
   };
+
+  // When chat is started inline, show OniChat inside AppShell (sidebar stays put)
+  if (chatStarted) {
+    return (
+      <AppShell activePage="chats">
+        <OniChat initialPrompt={chatPrompt} hideSidebar />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell activePage="chats">
@@ -202,7 +228,7 @@ export function HomePage() {
                 </svg>
               </button>
               <button
-                onClick={() => router.push("/settings")}
+                onClick={() => { window.location.href = "/settings"; }}
                 aria-label="Settings"
                 className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
               >

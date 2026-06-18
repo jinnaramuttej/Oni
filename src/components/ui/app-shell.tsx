@@ -6,6 +6,15 @@ import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 import { cn } from "@/lib/utils";
 
+type StoredConversation = {
+  id: string;
+  title: string;
+  updatedAt: number;
+};
+
+const STORAGE_KEY = "oni_conversations";
+const SESSION_KEY = "oni_session";
+
 type AppShellProps = {
   children: React.ReactNode;
   activePage?: string;
@@ -15,6 +24,8 @@ export function AppShell({ children, activePage }: AppShellProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -36,6 +47,35 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
     return () => {
       active = false;
+    };
+  }, []);
+
+  // Load recent chats from localStorage
+  useEffect(() => {
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) setRecentChats(JSON.parse(raw) as StoredConversation[]);
+      } catch { /* ignore */ }
+      // Get active session id
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { id?: string };
+          if (parsed?.id) setActiveSessionId(parsed.id);
+        }
+      } catch { /* ignore */ }
+    };
+    load();
+    // Re-check on focus and storage events so sidebar stays in sync
+    window.addEventListener("focus", load);
+    window.addEventListener("storage", load);
+    // Also poll every 2s while the page is active (catches same-tab writes)
+    const interval = setInterval(load, 2000);
+    return () => {
+      window.removeEventListener("focus", load);
+      window.removeEventListener("storage", load);
+      clearInterval(interval);
     };
   }, []);
 
@@ -127,7 +167,12 @@ export function AppShell({ children, activePage }: AppShellProps) {
           {/* Primary Actions */}
           <div className="flex flex-col gap-0.5">
             <button
-              onClick={() => router.push("/")}
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem("oni_session");
+                } catch { /* ignore */ }
+                window.location.href = "/";
+              }}
               className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-surface-container text-primary transition-colors group w-full text-left cursor-pointer"
             >
               <span className="material-symbols-outlined text-primary text-[20px]">add</span>
@@ -135,7 +180,8 @@ export function AppShell({ children, activePage }: AppShellProps) {
             </button>
 
             {navItems.map((item) => {
-              const isActive = activePage === item.id || (item.id === "chats" && pathname === "/");
+              const isActive = activePage === item.id ||
+                (item.id === "chats" && (pathname === "/" || pathname === "/chat" || pathname?.startsWith("/chat")));
               return (
                 <button
                   key={item.id}
@@ -189,9 +235,45 @@ export function AppShell({ children, activePage }: AppShellProps) {
                 </svg>
               </button>
             </div>
-            <div className="text-xs text-text-tertiary px-2.5 py-2 italic">
-              No recent chats
-            </div>
+            {recentChats.length === 0 ? (
+              <div className="text-xs text-text-tertiary px-2.5 py-2 italic">
+                No recent chats
+              </div>
+            ) : (
+              recentChats.map((chat) => {
+                const isActive = chat.id === activeSessionId;
+                return (
+                  <button
+                    key={chat.id}
+                    type="button"
+                    onClick={() => {
+                      // Load this session
+                      try {
+                        const rawChat = localStorage.getItem(`oni_chat_${chat.id}`);
+                        if (rawChat) {
+                          sessionStorage.setItem("oni_session", rawChat);
+                        } else {
+                          sessionStorage.setItem("oni_session", JSON.stringify({ id: chat.id, messages: [] }));
+                        }
+                      } catch { /* ignore */ }
+                      router.push(`/chat?id=${chat.id}`);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-left text-xs transition-colors",
+                      isActive
+                        ? "bg-surface-container-high text-primary"
+                        : "text-text-secondary hover:bg-surface-container-low hover:text-primary"
+                    )}
+                  >
+                    <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span className="truncate flex-1">{chat.title}</span>
+                    {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -244,7 +326,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
       </aside>
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col h-full relative overflow-y-auto bg-surface">
+      <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-surface">
         {/* Toggle Sidebar Button when collapsed */}
         {!sidebarOpen && (
           <div className="absolute top-4 left-4 z-20 pointer-events-auto">

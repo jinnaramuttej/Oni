@@ -142,10 +142,28 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
   return { textareaRef, adjustHeight };
 }
 
-export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
+export function OniChat({
+  initialPrompt = "",
+  chatId,
+  hideSidebar = false,
+}: {
+  initialPrompt?: string;
+  chatId?: string;
+  hideSidebar?: boolean;
+}) {
   const [input, setInput] = useState("");
-  // Restore messages and conversationId from sessionStorage so refresh stays in same chat
-  const [conversationId] = useState<string>(() => {
+  // Restore messages and conversationId from sessionStorage or localStorage so refresh/navigation stays in same chat
+  const [conversationId, setConversationId] = useState<string>(() => {
+    if (chatId) {
+      try {
+        const raw = localStorage.getItem(`oni_chat_${chatId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { id?: string };
+          if (parsed?.id) return parsed.id;
+        }
+      } catch { /* ignore */ }
+      return chatId;
+    }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
@@ -158,6 +176,16 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     return newId;
   });
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (chatId) {
+      try {
+        const raw = localStorage.getItem(`oni_chat_${chatId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { messages?: ChatMessage[] };
+          if (Array.isArray(parsed?.messages)) return parsed.messages;
+        }
+      } catch { /* ignore */ }
+      return [];
+    }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (raw) {
@@ -178,9 +206,38 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("chat");
   const [activeFilePath, setActiveFilePath] = useState("index.html");
-  const [generatedHtml, setGeneratedHtml] = useState("");
+  const [generatedHtml, setGeneratedHtml] = useState<string>(() => {
+    if (chatId) {
+      try {
+        const raw = localStorage.getItem(`oni_chat_${chatId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { generatedHtml?: string };
+          if (parsed?.generatedHtml) return parsed.generatedHtml;
+        }
+      } catch { /* ignore */ }
+      return "";
+    }
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { generatedHtml?: string };
+        if (parsed?.generatedHtml) return parsed.generatedHtml;
+      }
+    } catch { /* ignore */ }
+    return "";
+  });
   const [toast, setToast] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(() => {
+    if (chatId) {
+      try {
+        const raw = localStorage.getItem(`oni_chat_${chatId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { messages?: ChatMessage[] };
+          return Array.isArray(parsed?.messages) && parsed.messages.length > 0;
+        }
+      } catch { /* ignore */ }
+      return false;
+    }
     // If messages were restored from session, we've already started
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -215,12 +272,34 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
     } catch { /* ignore parse errors */ }
   }, []);
 
-  // Persist messages + id to sessionStorage on every change
+  // Listen to chatId updates (e.g. clicking different recent chats)
+  useEffect(() => {
+    if (!chatId) return;
+    try {
+      const raw = localStorage.getItem(`oni_chat_${chatId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { id?: string; messages?: ChatMessage[]; generatedHtml?: string };
+        setConversationId(parsed.id || chatId);
+        setMessages(parsed.messages || []);
+        setGeneratedHtml(parsed.generatedHtml || "");
+        setHasStarted(Array.isArray(parsed.messages) && parsed.messages.length > 0);
+      } else {
+        setConversationId(chatId);
+        setMessages([]);
+        setGeneratedHtml("");
+        setHasStarted(false);
+      }
+    } catch { /* ignore */ }
+  }, [chatId]);
+
+  // Persist messages + id + generatedHtml to sessionStorage and localStorage on every change
   useEffect(() => {
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ id: conversationId, messages }));
+      const data = { id: conversationId, messages, generatedHtml };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+      localStorage.setItem(`oni_chat_${conversationId}`, JSON.stringify(data));
     } catch { /* ignore */ }
-  }, [messages, conversationId]);
+  }, [messages, conversationId, generatedHtml]);
 
   // Derive conversation title from first user message
   const conversationTitle = useMemo(() => {
@@ -728,9 +807,10 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
 
   // Wrapper layout
   return (
-    <div className="h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out] flex">
+    <div className={hideSidebar ? "h-full overflow-hidden bg-[#0a0a0a] font-sans text-white flex" : "h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out] flex"}>
 
       {/* ── Inline Push Navigation Sidebar ── */}
+      {!hideSidebar && (
       <aside
         className={cn(
           "h-full shrink-0 flex flex-col bg-[#0f0f0f] border-r border-white/10 transition-all duration-300 overflow-hidden",
@@ -816,6 +896,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
           </div>
         </div>
       </aside>
+      )}
 
       {/* ── Main content (chat + workspace) ── */}
       <div className="flex flex-1 min-w-0 h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
@@ -856,6 +937,7 @@ export function OniChat({ initialPrompt = "" }: { initialPrompt?: string }) {
             messagesEndRef={messagesEndRef}
             onToggleSidebar={() => setNavOpen((v) => !v)}
             sidebarOpen={navOpen}
+            hideSidebar={hideSidebar}
           />
         </section>
 
@@ -937,6 +1019,7 @@ interface ChatPanelProps {
   onRegenerate: () => void;
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
+  hideSidebar?: boolean;
 }
 
 function ChatPanel({
@@ -963,10 +1046,12 @@ function ChatPanel({
   onRegenerate,
   onToggleSidebar,
   sidebarOpen,
+  hideSidebar,
 }: ChatPanelProps) {
   return (
     <>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+        {!hideSidebar && (
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -980,6 +1065,7 @@ function ChatPanel({
             <path d="M9 3v18" />
           </svg>
         </button>
+        )}
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold tracking-tight text-white/70">Oni</span>
         </div>
