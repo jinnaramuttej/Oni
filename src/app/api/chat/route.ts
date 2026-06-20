@@ -24,6 +24,54 @@ RULES:
 - Real content: Detailed copy, realistic names/prices, no lorem ipsum
 - Minimum 600 lines of clean, well-structured HTML/CSS/JS`;
 
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MAX_TOKENS = 8000;
+const GROQ_MAX_HISTORY_MESSAGES = 6;
+const GROQ_MAX_MESSAGE_CHARS = 4000;
+
+type GroqMessage = { role: string; content: string };
+
+function stripOniBlocks(content: string) {
+  return content
+    .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, "[Website HTML omitted]")
+    .replace(/<ONI_CODE>[\s\S]*/g, "[Website HTML omitted]")
+    .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, "")
+    .replace(/<ONI_THOUGHT>[\s\S]*/g, "")
+    .trim();
+}
+
+function truncateContent(content: string, maxChars = GROQ_MAX_MESSAGE_CHARS) {
+  if (content.length <= maxChars) return content;
+  return `${content.slice(0, maxChars)}\n...[truncated]`;
+}
+
+function prepareMessagesForGroq(messages: GroqMessage[], currentHtml: string): GroqMessage[] {
+  const trimmed = messages
+    .slice(-GROQ_MAX_HISTORY_MESSAGES)
+    .map((message) => ({
+      role: message.role,
+      content:
+        message.role === "assistant"
+          ? truncateContent(stripOniBlocks(message.content) || "[Generated website]")
+          : truncateContent(message.content),
+    }));
+
+  if (!currentHtml || trimmed.length === 0) return trimmed;
+
+  const last = trimmed[trimmed.length - 1];
+  if (last.role !== "user") return trimmed;
+
+  trimmed[trimmed.length - 1] = {
+    role: "user",
+    content: truncateContent(
+      `User request: ${last.content}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${currentHtml}\n</CURRENT_HTML>`,
+      GROQ_MAX_MESSAGE_CHARS + 2000
+    ),
+  };
+
+  return trimmed;
+}
+
 function createMockStream(clean: string, messages: { role: string; content: string }[]) {
   const mockRestaurant = `Here's your beautiful restaurant website!
 <ONI_CODE>
@@ -1736,10 +1784,13 @@ export async function POST(req: Request) {
   let clean: string | undefined;
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
-    groqMessages = body.messages.map((m: { role: string; content: string }) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    groqMessages = prepareMessagesForGroq(
+      body.messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      currentHtml
+    );
   } else if (body.prompt) {
     clean = sanitizeText(
       DOMPurify.sanitize(body.prompt, { ALLOWED_TAGS: [] })
@@ -1770,10 +1821,10 @@ export async function POST(req: Request) {
   try {
     const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
     const requestBody = JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model: GROQ_MODEL,
       messages: messagesToSend,
       temperature: 0.9,
-      max_tokens: 4000,
+      max_tokens: GROQ_MAX_TOKENS,
       stream: true,
     });
     console.log('Request body length:', requestBody.length);
