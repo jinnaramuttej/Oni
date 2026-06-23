@@ -208,6 +208,20 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
   return { textareaRef, adjustHeight };
 }
 
+const VISITOR_ID_KEY = "oni_visitor_id";
+
+function getOrCreateVisitorId() {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id = typeof window.crypto?.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem(VISITOR_ID_KEY, id);
+  }
+  return id;
+}
+
 export function OniChat({
   initialPrompt = "",
   chatId,
@@ -331,45 +345,130 @@ export function OniChat({
     maxHeight: 300,
   });
 
-  // Load recent conversations from localStorage on mount
+  // Load recent conversations from Supabase/server history on mount
   useEffect(() => {
+    // 1. Try local storage first for immediate UI display
+    let localRecent: StoredConversation[] = [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as StoredConversation[];
-        setRecentChats(parsed);
+        localRecent = JSON.parse(raw) as StoredConversation[];
+        setRecentChats(localRecent);
       }
-    } catch { /* ignore parse errors */ }
+    } catch { /* ignore */ }
+
+    // 2. Fetch from server and sync
+    const visitorId = getOrCreateVisitorId();
+    if (!visitorId) return;
+
+    fetch("/api/chat/history", {
+      headers: { "x-visitor-id": visitorId }
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch recent chats");
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data.conversations)) {
+          setRecentChats(data.conversations);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data.conversations));
+          } catch { }
+
+          // Sync any local chats that are missing from the server
+          localRecent.forEach((localChat) => {
+            const exists = data.conversations.some((c: any) => c.id === localChat.id);
+            if (!exists) {
+              try {
+                const chatRaw = localStorage.getItem(`oni_chat_${localChat.id}`);
+                if (chatRaw) {
+                  const parsed = JSON.parse(chatRaw);
+                  fetch("/api/chat/history", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-visitor-id": visitorId,
+                    },
+                    body: JSON.stringify({
+                      id: localChat.id,
+                      title: localChat.title,
+                      messages: parsed.messages,
+                      generatedHtml: parsed.generatedHtml,
+                    }),
+                  }).catch(console.error);
+                }
+              } catch { }
+            }
+          });
+        }
+      })
+      .catch((err) => console.error("Error syncing recent chats:", err));
   }, []);
 
   // Listen to chatId updates (e.g. clicking different recent chats)
   useEffect(() => {
     if (!chatId) return;
+    
+    // 1. Try local storage first (instant UI transition)
+    let localData: any = null;
     try {
       const raw = localStorage.getItem(`oni_chat_${chatId}`);
       if (raw) {
-        const parsed = JSON.parse(raw) as { id?: string; messages?: ChatMessage[]; generatedHtml?: string };
-        setConversationId(parsed.id || chatId);
-        setMessages(parsed.messages || []);
-        setGeneratedHtml(parsed.generatedHtml || "");
-        setHasStarted(Array.isArray(parsed.messages) && parsed.messages.length > 0);
-      } else {
-        setConversationId(chatId);
-        setMessages([]);
-        setGeneratedHtml("");
-        setHasStarted(false);
+        localData = JSON.parse(raw);
+        setConversationId(localData.id || chatId);
+        setMessages(localData.messages || []);
+        setGeneratedHtml(localData.generatedHtml || "");
+        setHasStarted(Array.isArray(localData.messages) && localData.messages.length > 0);
       }
     } catch { /* ignore */ }
-  }, [chatId]);
 
-  // Persist messages + id + generatedHtml to sessionStorage and localStorage on every change
-  useEffect(() => {
-    try {
-      const data = { id: conversationId, messages, generatedHtml };
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
-      localStorage.setItem(`oni_chat_${conversationId}`, JSON.stringify(data));
-    } catch { /* ignore */ }
-  }, [messages, conversationId, generatedHtml]);
+    // 2. Fetch from server to sync/verify
+    const visitorId = getOrCreateVisitorId();
+    if (!visitorId) return;
+
+    fetch(`/api/chat/history?id=${chatId}`, {
+      headers: { "x-visitor-id": visitorId }
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch conversation");
+        return res.json();
+      })
+      .then((data) => {
+        setConversationId(data.id || chatId);
+        setMessages(data.messages || []);
+        setGeneratedHtml(data.generatedHtml || "");
+        setHasStarted(Array.isArray(data.messages) && data.messages.length > 0);
+        
+        try {
+          localStorage.setItem(`oni_chat_${chatId}`, JSON.stringify(data));
+        } catch { }
+      })
+      .catch((err) => {
+        console.error("Error loading chat from server:", err);
+        // If server failed or chat doesn't exist on server but we have local, push it to server
+        if (localData) {
+          fetch("/api/chat/history", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-visitor-id": visitorId
+            },
+            body: JSON.stringify({
+              id: chatId,
+              title: localData.title || "Restored Chat",
+              messages: localData.messages,
+              generatedHtml: localData.generatedHtml
+            })
+          }).catch(console.error);
+        } else {
+          // No local data and failed to load, initialize empty
+          setConversationId(chatId);
+          setMessages([]);
+          setGeneratedHtml("");
+          setHasStarted(false);
+        }
+      });
+  }, [chatId]);
 
   // Derive conversation title from first user message
   const conversationTitle = useMemo(() => {
@@ -379,6 +478,40 @@ export function OniChat({
       ? firstUser.content.slice(0, 40).trimEnd() + "…"
       : firstUser.content;
   }, [messages]);
+
+  // Persist messages + id + generatedHtml to sessionStorage, localStorage, and Supabase server
+  useEffect(() => {
+    // 1. Instant local save
+    try {
+      const data = { id: conversationId, messages, generatedHtml };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+      localStorage.setItem(`oni_chat_${conversationId}`, JSON.stringify(data));
+    } catch { /* ignore */ }
+
+    // 2. Debounced server save
+    if (!conversationId || messages.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const visitorId = getOrCreateVisitorId();
+      if (!visitorId) return;
+
+      fetch("/api/chat/history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-visitor-id": visitorId,
+        },
+        body: JSON.stringify({
+          id: conversationId,
+          title: conversationTitle || "New Chat",
+          messages,
+          generatedHtml,
+        }),
+      }).catch((err) => console.error("Failed to sync to server:", err));
+    }, 1500); // 1.5 seconds debounce
+
+    return () => clearTimeout(timer);
+  }, [messages, conversationId, generatedHtml, conversationTitle]);
 
   // Save/update current conversation in localStorage whenever title changes
   useEffect(() => {
