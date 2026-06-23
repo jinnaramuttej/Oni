@@ -394,7 +394,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                 aria-label="Filter Recents"
                 className="hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-0.5 rounded hover:bg-surface-container text-text-secondary hover:text-primary"
               >
-                <span className="material-symbols-outlined text-[13px] leading-none select-none">
+                <span className="material-symbols-outlined text-[12px] leading-none select-none">
                   tune
                 </span>
               </button>

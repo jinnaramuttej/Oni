@@ -1332,7 +1332,7 @@ export function OniChat({
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="text-white/40 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
             >
-              <span className="material-symbols-outlined text-[13px] leading-none select-none">tune</span>
+              <span className="material-symbols-outlined text-[12px] leading-none select-none">tune</span>
             </button>
             {showSortMenu && (
               <>
