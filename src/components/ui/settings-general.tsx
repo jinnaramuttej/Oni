@@ -1,12 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function SettingsGeneral() {
   const [displayName, setDisplayName] = useState("Oni User");
   const [theme, setTheme] = useState("dark");
   const [chatFont, setChatFont] = useState("inter");
   const [compactMode, setCompactMode] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("oni_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.displayName) setDisplayName(parsed.displayName);
+        if (parsed.theme) setTheme(parsed.theme);
+        if (parsed.chatFont) setChatFont(parsed.chatFont);
+        if (parsed.compactMode !== undefined) setCompactMode(!!parsed.compactMode);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const updateSetting = (key: string, value: any, successMessage?: string) => {
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed[key] = value;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      
+      // Dispatch changes so other components (like app shell or chat) pick it up instantly
+      window.dispatchEvent(new Event("oni_settings_change"));
+      
+      if (successMessage) {
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: successMessage }));
+      }
+    } catch (e) {
+      console.error("Failed to update setting:", e);
+    }
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    updateSetting("theme", newTheme, `Theme changed to ${newTheme}`);
+  };
 
   return (
     <div className="w-full max-w-[896px]">
@@ -27,6 +65,13 @@ export function SettingsGeneral() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
+                onBlur={() => updateSetting("displayName", displayName, "Display name updated")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    updateSetting("displayName", displayName, "Display name updated");
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
                 className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-xl px-4 py-3 text-base placeholder:text-text-tertiary outline-none transition-colors"
                 placeholder="Enter your display name"
               />
@@ -47,7 +92,7 @@ export function SettingsGeneral() {
               {/* System */}
               <label className="cursor-pointer group flex flex-col gap-3">
                 <div
-                  onClick={() => setTheme("system")}
+                  onClick={() => handleThemeChange("system")}
                   className={`w-24 h-16 rounded-xl border-2 bg-surface relative overflow-hidden transition-colors ${
                     theme === "system" ? "border-primary" : "border-outline-variant hover:border-text-secondary"
                   }`}
@@ -61,7 +106,7 @@ export function SettingsGeneral() {
                     type="radio"
                     name="theme"
                     checked={theme === "system"}
-                    onChange={() => setTheme("system")}
+                    onChange={() => handleThemeChange("system")}
                     className="w-4 h-4 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
                   />
                   <span
@@ -77,7 +122,7 @@ export function SettingsGeneral() {
               {/* Light */}
               <label className="cursor-pointer group flex flex-col gap-3">
                 <div
-                  onClick={() => setTheme("light")}
+                  onClick={() => handleThemeChange("light")}
                   className={`w-24 h-16 rounded-xl border bg-[#e3e2e6] relative overflow-hidden transition-colors ${
                     theme === "light" ? "border-2 border-primary" : "border-surface-container-high hover:border-outline-variant"
                   }`}
@@ -91,7 +136,7 @@ export function SettingsGeneral() {
                     type="radio"
                     name="theme"
                     checked={theme === "light"}
-                    onChange={() => setTheme("light")}
+                    onChange={() => handleThemeChange("light")}
                     className="w-4 h-4 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
                   />
                   <span
@@ -107,7 +152,7 @@ export function SettingsGeneral() {
               {/* Dark */}
               <label className="cursor-pointer group flex flex-col gap-3">
                 <div
-                  onClick={() => setTheme("dark")}
+                  onClick={() => handleThemeChange("dark")}
                   className={`w-24 h-16 rounded-xl border-2 bg-background relative overflow-hidden transition-colors ${
                     theme === "dark" ? "border-primary" : "border-surface-container-high hover:border-outline-variant"
                   }`}
@@ -121,7 +166,7 @@ export function SettingsGeneral() {
                     type="radio"
                     name="theme"
                     checked={theme === "dark"}
-                    onChange={() => setTheme("dark")}
+                    onChange={() => handleThemeChange("dark")}
                     className="w-4 h-4 text-primary bg-surface border-surface-container-high focus:ring-primary focus:ring-offset-background cursor-pointer"
                   />
                   <span
@@ -142,7 +187,10 @@ export function SettingsGeneral() {
             <div className="max-w-md w-full relative">
               <select
                 value={chatFont}
-                onChange={(e) => setChatFont(e.target.value)}
+                onChange={(e) => {
+                  setChatFont(e.target.value);
+                  updateSetting("chatFont", e.target.value, "Chat font updated");
+                }}
                 className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-xl px-4 py-3 text-base appearance-none outline-none transition-colors cursor-pointer"
               >
                 <option value="inter">Inter (System Default)</option>
@@ -166,7 +214,10 @@ export function SettingsGeneral() {
                 <input
                   type="checkbox"
                   checked={compactMode}
-                  onChange={(e) => setCompactMode(e.target.checked)}
+                  onChange={(e) => {
+                    setCompactMode(e.target.checked);
+                    updateSetting("compactMode", e.target.checked, e.target.checked ? "Compact mode enabled" : "Compact mode disabled");
+                  }}
                   className="sr-only peer cursor-pointer"
                 />
                 <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-text-secondary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-outline-variant peer-checked:after:bg-primary"></div>

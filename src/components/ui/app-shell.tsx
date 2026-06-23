@@ -22,6 +22,7 @@ type AppShellProps = {
 
 export function AppShell({ children, activePage }: AppShellProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [customDisplayName, setCustomDisplayName] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
@@ -50,6 +51,52 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
     return () => {
       active = false;
+    };
+  }, []);
+
+  // Sync theme and custom display name from settings
+  useEffect(() => {
+    const applyTheme = (theme: string | null) => {
+      if (typeof window === "undefined") return;
+      const root = document.documentElement;
+      root.classList.remove("light", "dark");
+      
+      let target = theme || "dark";
+      if (target === "system") {
+        target = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      
+      root.classList.add(target);
+    };
+
+    const loadSettings = () => {
+      try {
+        const saved = localStorage.getItem("oni_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          applyTheme(parsed.theme);
+          if (parsed.displayName) {
+            setCustomDisplayName(parsed.displayName);
+          } else {
+            setCustomDisplayName(null);
+          }
+        } else {
+          applyTheme("dark");
+          setCustomDisplayName(null);
+        }
+      } catch {
+        applyTheme("dark");
+        setCustomDisplayName(null);
+      }
+    };
+
+    loadSettings();
+    window.addEventListener("storage", loadSettings);
+    window.addEventListener("oni_settings_change", loadSettings);
+    
+    return () => {
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("oni_settings_change", loadSettings);
     };
   }, []);
 
@@ -116,8 +163,9 @@ export function AppShell({ children, activePage }: AppShellProps) {
     router.replace("/signin");
   };
 
+  const displayNameToUse = customDisplayName || user?.name || "Oni User";
   const initials =
-    user?.name
+    displayNameToUse
       ?.split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
@@ -405,7 +453,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
               </div>
               <div className="flex flex-col items-start text-left">
                 <span className="font-medium text-primary text-sm leading-tight">
-                  {user?.name || "Oni User"}
+                  {customDisplayName || user?.name || "Oni User"}
                 </span>
                 <span className="text-xs text-text-tertiary">Free plan</span>
               </div>

@@ -49,21 +49,34 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   /* Stitch Design System Custom Colors */
-  --color-surface: #121317;
-  --color-surface-dim: #121317;
-  --color-surface-bright: #38393d;
-  --color-surface-container-lowest: #0d0e12;
-  --color-surface-container-low: #1a1b1f;
-  --color-surface-container: #1e1f23;
-  --color-surface-container-high: #2b2c31;
-  --color-surface-container-highest: #36373c;
-  --color-outline-variant: #44474e;
-  --color-text-primary: #e3e2e6;
-  --color-text-secondary: #c4c6d0;
-  --color-text-tertiary: #8e9099;
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-outline-variant: var(--outline-variant);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
 }
 
 :root {
+  --surface: #ffffff;
+  --surface-dim: #f1f5f9;
+  --surface-bright: #ffffff;
+  --surface-container-lowest: #f8fafc;
+  --surface-container-low: #f1f5f9;
+  --surface-container: #e2e8f0;
+  --surface-container-high: #cbd5e1;
+  --surface-container-highest: #94a3b8;
+  --outline-variant: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #64748b;
+
   --font-sans: "Inter", sans-serif;
   --font-serif: "Playfair Display", serif;
   --font-geist-mono: "Geist Mono", monospace;
@@ -102,6 +115,19 @@
 }
 
 .dark {
+  --surface: #121317;
+  --surface-dim: #121317;
+  --surface-bright: #38393d;
+  --surface-container-lowest: #0d0e12;
+  --surface-container-low: #1a1b1f;
+  --surface-container: #1e1f23;
+  --surface-container-high: #2b2c31;
+  --surface-container-highest: #36373c;
+  --outline-variant: #44474e;
+  --text-primary: #e3e2e6;
+  --text-secondary: #c4c6d0;
+  --text-tertiary: #8e9099;
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

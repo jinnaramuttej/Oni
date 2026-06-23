@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -36,6 +37,22 @@ export function SettingsPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const handleToast = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setToast(customEvent.detail);
+    };
+    window.addEventListener("oni_toast", handleToast);
+    return () => window.removeEventListener("oni_toast", handleToast);
+  }, []);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const tabs = [
     { id: "general", label: "General" },
@@ -109,6 +126,14 @@ export function SettingsPage() {
         </div>
         {renderActiveTab()}
       </main>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed right-6 bottom-6 z-50 rounded-2xl border border-white/10 bg-zinc-950 bg-opacity-80 backdrop-blur-md px-5 py-3 text-sm text-white shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="material-symbols-outlined text-primary text-[20px]">check_circle</span>
+          <span className="font-medium">{toast}</span>
+        </div>
+      )}
     </AppShell>
   );
 }
