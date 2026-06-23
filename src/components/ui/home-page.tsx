@@ -8,6 +8,7 @@ import { AppShell } from "./app-shell";
 import { OniChat } from "./v0-ai-chat";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
+import { motion } from "framer-motion";
 
 const MAX_FILE_TEXT_CHARS = 24000;
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
@@ -88,7 +89,6 @@ function createId() {
 
 export function HomePage() {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [promptText, setPromptText] = useState("");
   // When chatStarted, show OniChat inline instead of navigating away
   const [chatStarted, setChatStarted] = useState(false);
@@ -326,12 +326,6 @@ export function HomePage() {
     };
   }, []);
 
-  const handleLogout = async () => {
-    setProfileOpen(false);
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/signin";
-  };
-
   const getGreeting = () => {
     const hr = new Date().getHours();
     if (hr < 12) return "Morning";
@@ -339,218 +333,112 @@ export function HomePage() {
     return "Evening";
   };
 
-  // When chat is started inline, show OniChat inside AppShell (sidebar stays put)
-  if (chatStarted) {
-    return (
-      <AppShell activePage="chats">
+  return (
+    <AppShell activePage="chats">
+      {chatStarted ? (
         <OniChat
           initialPrompt={chatPrompt}
           initialImage={initialImage}
           initialFiles={initialFiles}
           hideSidebar
         />
-      </AppShell>
-    );
-  }
-
-  return (
-    <AppShell activePage="chats">
-      {/* Top Header Bar */}
-      <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
-        <div className="pointer-events-auto">
-          {/* Optional left aligned elements */}
-        </div>
-        <div className="flex items-center gap-4 pointer-events-auto relative">
-          <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            aria-label="Profile Settings"
-            className="w-8 h-8 rounded-full border border-surface-container-highest flex items-center justify-center text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="16"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="16"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </button>
-          {profileOpen && (
-            <ProfileMenu
-              user={user}
-              onClose={() => setProfileOpen(false)}
-              onLogout={handleLogout}
-              className="top-full right-0 mt-1"
-            />
-          )}
-        </div>
-      </header>
-
-      {/* Center Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 max-w-4xl mx-auto w-full mt-[-10vh]">
-        {/* Greeting */}
-        <div className="flex items-center gap-3 mb-8">
-          <h1 className="text-2xl md:text-3xl font-sans font-semibold text-primary tracking-wide">
-            {getGreeting()}, {user?.name || "User"}
-          </h1>
-        </div>
-
-        {/* Input Area */}
-        <div className="w-full bg-surface-container-low rounded-2xl border border-surface-container-high p-4 flex flex-col gap-3 shadow-sm input-focus-ring transition-all">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={`${ACCEPTED_DOCUMENT_TYPES},${ACCEPTED_IMAGE_TYPES}`}
-            multiple
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
-          
-          {(attachedImage || attachedFiles.length > 0) && (
-            <div className="border-b border-surface-container-high pb-3">
-              <div className="flex flex-wrap gap-2">
-                {attachedImage && (
-                  <div className="group relative h-14 w-14 overflow-hidden rounded-xl border border-surface-container-high bg-surface-container-low">
-                    <Image
-                      src={attachedImage.url}
-                      alt={attachedImage.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={removeAttachedImage}
-                      className="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black group-hover:flex"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-
-                {attachedFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="group relative flex h-14 w-36 items-center gap-2 rounded-xl border border-surface-container-high bg-surface-container-low px-3"
-                  >
-                    <FileText className="h-5 w-5 shrink-0 text-text-secondary" />
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="truncate text-xs font-medium text-text-primary">{file.name}</p>
-                      <p className="text-[10px] text-text-tertiary">{formatBytes(file.size)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachedFile(file.id)}
-                      className="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black group-hover:flex"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="relative pr-12">
-            <textarea
-              ref={textareaRef}
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full bg-transparent border-none text-primary placeholder-text-tertiary resize-none focus:ring-0 focus:outline-none p-0 text-sm leading-6"
-              placeholder="How can I help you today?"
-              rows={1}
-              style={{ minHeight: "24px" }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!promptText.trim() && !attachedImage && attachedFiles.length === 0}
-              aria-label="Send message"
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-colors animate-all"
-              style={{
-                background: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "white" : "rgba(255,255,255,0.1)",
-                color: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "black" : "rgba(255,255,255,0.3)",
-                cursor: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "pointer" : "not-allowed",
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 19V5M5 12l7-7 7 7" />
-              </svg>
-            </button>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 max-w-4xl mx-auto w-full mt-[-10vh]">
+          {/* Greeting */}
+          <div className="flex items-center gap-3 mb-8">
+            <h1 className="text-2xl md:text-3xl font-sans font-semibold text-primary tracking-wide">
+              {getGreeting()}, {user?.name || "User"}
+            </h1>
           </div>
-          <div className="flex items-center justify-between mt-6">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Add attachment"
-              className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
-            >
-              <svg
-                fill="none"
-                height="18"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="18"
-                xmlns="http://www.w3.org/2000/svg"
+
+          <motion.div
+            layoutId="composer-container"
+            className="w-full bg-surface-container-low rounded-2xl border border-surface-container-high p-4 flex flex-col gap-3 shadow-sm input-focus-ring transition-all"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={`${ACCEPTED_DOCUMENT_TYPES},${ACCEPTED_IMAGE_TYPES}`}
+              multiple
+              className="hidden"
+              onChange={handleFileInputChange}
+            />
+            
+            {(attachedImage || attachedFiles.length > 0) && (
+              <div className="border-b border-surface-container-high pb-3">
+                <div className="flex flex-wrap gap-2">
+                  {attachedImage && (
+                    <div className="group relative h-14 w-14 overflow-hidden rounded-xl border border-surface-container-high bg-surface-container-low">
+                      <Image
+                        src={attachedImage.url}
+                        alt={attachedImage.name}
+                        fill
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeAttachedImage}
+                        className="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black group-hover:flex"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  {attachedFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="group relative flex h-14 w-36 items-center gap-2 rounded-xl border border-surface-container-high bg-surface-container-low px-3"
+                    >
+                      <FileText className="h-5 w-5 shrink-0 text-text-secondary" />
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="truncate text-xs font-medium text-text-primary">{file.name}</p>
+                        <p className="text-[10px] text-text-tertiary">{formatBytes(file.size)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachedFile(file.id)}
+                        className="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black group-hover:flex"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="relative pr-12">
+              <textarea
+                ref={textareaRef}
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-transparent border-none text-primary placeholder-text-tertiary resize-none focus:ring-0 focus:outline-none p-0 text-sm leading-6"
+                placeholder="How can I help you today?"
+                rows={1}
+                style={{ minHeight: "24px" }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!promptText.trim() && !attachedImage && attachedFiles.length === 0}
+                aria-label="Send message"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-colors animate-all"
+                style={{
+                  background: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "white" : "rgba(255,255,255,0.1)",
+                  color: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "black" : "rgba(255,255,255,0.3)",
+                  cursor: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "pointer" : "not-allowed",
+                }}
               >
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-            </button>
-            <div className="flex items-center gap-2">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-text-secondary hover:bg-surface-container transition-colors text-xs font-medium cursor-pointer">
-                <span>Oni 4.6</span>
-                <span className="text-text-tertiary ml-1">Medium</span>
-                <svg
-                  fill="none"
-                  height="12"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="12"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="m6 9 6 6 6-6"></path>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19V5M5 12l7-7 7 7" />
                 </svg>
               </button>
+            </div>
+            <div className="flex items-center justify-between mt-6">
               <button
-                onClick={handleVoiceInput}
-                aria-label="Voice input"
-                className={cn(
-                  "p-1.5 rounded-md transition-all cursor-pointer",
-                  isListening
-                    ? "bg-red-500/20 text-red-400 animate-pulse hover:bg-red-500/30"
-                    : "text-text-secondary hover:text-primary hover:bg-surface-container"
-                )}
-              >
-                <svg
-                  fill="none"
-                  height="16"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                  <line x1="12" x2="12" y1="19" y2="22"></line>
-                </svg>
-              </button>
-              <button
-                onClick={() => showToast("Voice mode coming soon")}
-                aria-label="Voice mode"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Add attachment"
                 className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
               >
                 <svg
@@ -564,120 +452,162 @@ export function HomePage() {
                   width="16"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path d="M2 12h4l2-9 4 18 2-9h6"></path>
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                 </svg>
               </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => showToast("Voice mode coming soon")}
+                  aria-label="Voice mode info"
+                  className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                >
+                  <svg
+                    fill="none"
+                    height="16"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => showToast("Voice mode coming soon")}
+                  aria-label="Voice mode"
+                  className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                >
+                  <svg
+                    fill="none"
+                    height="16"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M2 12h4l2-9 4 18 2-9h6"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-wrap justify-center gap-1.5 mt-4">
+            <button
+              onClick={() => handleQuickAction("Build a fully responsive portfolio website for a freelance designer with a dark theme and custom animations.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
+            >
+              <svg
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              Code
+            </button>
+            <button
+              onClick={() => handleQuickAction("Outline a step-by-step strategy to launch my new mobile app product within the next 3 hours.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
+            >
+              <svg
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M3 3v18h18"></path>
+                <path d="m19 9-5 5-4-4-3 3"></path>
+              </svg>
+              Strategize
+            </button>
+            <button
+              onClick={() => handleQuickAction("Outline a comprehensive study guide to learn advanced data structures and algorithms in TypeScript, covering complexities, trees, and graphs.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
+            >
+              <svg
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+              </svg>
+              Learn
+            </button>
+            <button
+              onClick={() => handleQuickAction("Write a highly engaging technical article detailing how Server-Sent Events (SSE) work for streaming AI responses.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
+            >
+              <svg
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+              </svg>
+              Write
+            </button>
+            <button
+              onClick={() => handleQuickAction("I haven't been feeling very well lately, both mentally and physically. Can you suggest some positive daily habits and routines to help me recover?")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
+            >
+              <svg
+                fill="none"
+                height="14"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M17 8h1a4 4 0 1 1 0 8h-1"></path>
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path>
+                <line x1="6" x2="6" y1="2" y2="4"></line>
+                <line x1="10" x2="10" y1="2" y2="4"></line>
+                <line x1="14" x2="14" y1="2" y2="4"></line>
+              </svg>
+              Life stuff
+            </button>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="flex flex-wrap justify-center gap-1.5 mt-4">
-          <button
-            onClick={() => handleQuickAction("Build a fully responsive portfolio website for a freelance designer with a dark theme and custom animations.")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <polyline points="16 18 22 12 16 6"></polyline>
-              <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-            Code
-          </button>
-          <button
-            onClick={() => handleQuickAction("Outline a step-by-step strategy to launch my new mobile app product within the next 3 hours.")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M3 3v18h18"></path>
-              <path d="m19 9-5 5-4-4-3 3"></path>
-            </svg>
-            Strategize
-          </button>
-          <button
-            onClick={() => handleQuickAction("Outline a comprehensive study guide to learn advanced data structures and algorithms in TypeScript, covering complexities, trees, and graphs.")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
-            </svg>
-            Learn
-          </button>
-          <button
-            onClick={() => handleQuickAction("Write a highly engaging technical article detailing how Server-Sent Events (SSE) work for streaming AI responses.")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-            </svg>
-            Write
-          </button>
-          <button
-            onClick={() => handleQuickAction("I haven't been feeling very well lately, both mentally and physically. Can you suggest some positive daily habits and routines to help me recover?")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
-          >
-            <svg
-              fill="none"
-              height="14"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="14"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M17 8h1a4 4 0 1 1 0 8h-1"></path>
-              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path>
-              <line x1="6" x2="6" y1="2" y2="4"></line>
-              <line x1="10" x2="10" y1="2" y2="4"></line>
-              <line x1="14" x2="14" y1="2" y2="4"></line>
-            </svg>
-            Life stuff
-          </button>
-        </div>
-      </div>
+      )}
 
       {toast && (
         <div className="fixed right-4 bottom-4 z-50 rounded-xl border border-white/10 bg-zinc-950 bg-opacity-70 backdrop-blur-md px-4 py-3 text-sm text-white shadow-2xl shadow-black/40 toast-glass">

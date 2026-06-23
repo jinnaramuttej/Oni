@@ -43,6 +43,7 @@ import {
 
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 /**
  * Sanitize AI-generated HTML before rendering in the sandboxed iframe.
@@ -503,8 +504,8 @@ export function OniChat({
   const toastTimerRef = useRef<number | null>(null);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 150,
-    maxHeight: 300,
+    minHeight: 24,
+    maxHeight: 200,
   });
 
   // Load recent conversations from Supabase/server history on mount
@@ -1276,24 +1277,24 @@ export function OniChat({
 
   // Wrapper layout
   return (
-    <div className={hideSidebar ? "h-full overflow-hidden bg-[#0a0a0a] font-sans text-white flex" : "h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_900ms_cubic-bezier(0.16,1,0.3,1)] flex"}>
+    <div className={hideSidebar ? "h-full overflow-hidden bg-surface font-sans text-text-primary flex" : "h-screen overflow-hidden bg-surface font-sans text-text-primary animate-[pageFadeIn_900ms_cubic-bezier(0.16,1,0.3,1)] flex"}>
 
       {/* ── Inline Push Navigation Sidebar ── */}
       {!hideSidebar && (
       <aside
         className={cn(
-          "h-full shrink-0 flex flex-col bg-[#0f0f0f] border-r border-white/10 transition-all duration-300 overflow-hidden",
+          "h-full shrink-0 flex flex-col bg-surface border-r border-surface-container-high transition-all duration-300 overflow-hidden",
           navOpen ? "w-[240px]" : "w-0"
         )}
       >
         {/* Sidebar Header */}
-        <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-white/10">
-          <span className="text-base font-semibold tracking-tight text-white whitespace-nowrap">Oni</span>
+        <div className="h-14 flex items-center justify-between px-4 shrink-0 border-b border-surface-container-high">
+          <span className="text-base font-semibold tracking-tight text-text-primary whitespace-nowrap">Oni</span>
           <button
             type="button"
             onClick={() => setNavOpen(false)}
             aria-label="Close sidebar"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-white/40 hover:bg-white/8 hover:text-white transition-colors shrink-0"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-container hover:text-primary transition-colors shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1304,9 +1305,9 @@ export function OniChat({
           {/* New Chat */}
           <a
             href="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white hover:bg-white/8 transition-colors group whitespace-nowrap"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-primary hover:bg-surface-container transition-colors group whitespace-nowrap"
           >
-            <PlusCircle className="h-4 w-4 text-white/50 group-hover:text-white transition-colors shrink-0" />
+            <PlusCircle className="h-4 w-4 text-text-secondary group-hover:text-primary transition-colors shrink-0" />
             New Chat
           </a>
 
@@ -1318,19 +1319,19 @@ export function OniChat({
             <a
               key={item.label}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/8 transition-colors group whitespace-nowrap"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group whitespace-nowrap"
             >
-              <span className="text-white/35 group-hover:text-white/70 transition-colors shrink-0">{item.icon}</span>
+              <span className="text-text-tertiary group-hover:text-primary transition-colors shrink-0">{item.icon}</span>
               {item.label}
             </a>
           ))}
           {/* Recents */}
-          <div className="mt-5 mb-1.5 px-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-white/30 whitespace-nowrap relative">
+          <div className="mt-5 mb-1.5 px-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-text-tertiary whitespace-nowrap relative">
             <span>Recents</span>
             <button
               type="button"
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className="text-white/40 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+              className="text-text-secondary hover:text-primary transition-colors cursor-pointer flex items-center justify-center"
             >
               <span className="material-symbols-outlined text-[12px] leading-none select-none">tune</span>
             </button>
@@ -1340,8 +1341,8 @@ export function OniChat({
                   className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setShowSortMenu(false)}
                 />
-                <div className="absolute right-3 top-full mt-1 w-40 bg-zinc-900 border border-white/10 rounded-lg shadow-lg py-1.5 z-50 flex flex-col text-left normal-case tracking-normal">
-                  <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider border-b border-white/5 mb-1">
+                <div className="absolute right-3 top-full mt-1 w-40 bg-surface border border-surface-container-high rounded-lg shadow-lg py-1.5 z-50 flex flex-col text-left normal-case tracking-normal">
+                  <div className="px-2.5 py-1 text-[9px] font-bold text-text-tertiary uppercase tracking-wider border-b border-surface-container-high mb-1">
                     Sort chats by
                   </div>
                   {[
@@ -1359,11 +1360,11 @@ export function OniChat({
                         window.dispatchEvent(new Event("oni_sort_change"));
                         setShowSortMenu(false);
                       }}
-                      className="w-full px-2.5 py-1 text-left text-xs text-white/80 hover:bg-white/5 hover:text-white flex items-center justify-between transition-colors cursor-pointer font-normal"
+                      className="w-full px-2.5 py-1 text-left text-xs text-text-primary hover:bg-surface-container hover:text-primary flex items-center justify-between transition-colors cursor-pointer font-normal"
                     >
                       <span>{option.label}</span>
                       {sortMethod === option.id && (
-                        <span className="material-symbols-outlined text-[12px] text-white">check</span>
+                        <span className="material-symbols-outlined text-[12px] text-text-primary">check</span>
                       )}
                     </button>
                   ))}
@@ -1382,8 +1383,8 @@ export function OniChat({
                   className={cn(
                     "group relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left",
                     isActive
-                      ? "bg-white/10 text-white"
-                      : "text-white/50 hover:bg-white/6 hover:text-white/80"
+                      ? "bg-surface-container text-text-primary font-medium"
+                      : "text-text-secondary hover:bg-surface-container-low hover:text-text-primary"
                   )}
                 >
                   <div
@@ -1400,16 +1401,16 @@ export function OniChat({
                     }}
                     className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer"
                   >
-                    <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white/70" : "text-white/30 group-hover:text-white/50")} />
+                    <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary" : "text-text-tertiary group-hover:text-text-secondary")} />
                     {pinnedChatsList.includes(chat.id) && (
-                      <span className="material-symbols-outlined text-[12px] text-white/50 rotate-45 shrink-0">push_pin</span>
+                      <span className="material-symbols-outlined text-[12px] text-text-secondary rotate-45 shrink-0">push_pin</span>
                     )}
                     <span className="truncate text-xs leading-snug">{chat.title}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => togglePin(chat.id)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-opacity transition-colors cursor-pointer text-white/40 hover:text-white flex items-center justify-center shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-surface-container transition-opacity transition-colors cursor-pointer text-text-tertiary hover:text-primary flex items-center justify-center shrink-0"
                   >
                     <span className="material-symbols-outlined text-[14px]">
                       {pinnedChatsList.includes(chat.id) ? "pin_drop" : "push_pin"}
@@ -1422,9 +1423,9 @@ export function OniChat({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-white/10 shrink-0">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/8 transition-colors cursor-pointer">
-            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/70 shrink-0">
+        <div className="p-3 border-t border-surface-container-high shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-container transition-colors cursor-pointer">
+            <div className="h-8 w-8 rounded-full bg-surface-container-high border border-surface-container-highest flex items-center justify-center text-xs font-semibold text-text-secondary shrink-0">
               {oniSettings.displayName
                 ?.split(/\s+/)
                 .filter(Boolean)
@@ -1433,8 +1434,8 @@ export function OniChat({
                 .join("") || "OU"}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-white/80 leading-tight truncate">{oniSettings.displayName}</span>
-              <span className="text-xs text-white/30 capitalize">{oniSettings.billingPlan} plan</span>
+              <span className="text-sm font-medium text-text-primary leading-tight truncate">{oniSettings.displayName}</span>
+              <span className="text-xs text-text-tertiary capitalize">{oniSettings.billingPlan} plan</span>
             </div>
           </div>
         </div>
@@ -1445,7 +1446,7 @@ export function OniChat({
       <div className="flex flex-1 min-w-0 h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
-            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex transition-all duration-300",
+            "min-h-0 flex-col border-surface-container-high bg-surface lg:flex transition-all duration-300",
             generatedHtml
               ? "lg:w-[500px] lg:shrink-0 lg:border-r"
               : "lg:w-full lg:flex-1",
@@ -1500,7 +1501,7 @@ export function OniChat({
         {generatedHtml && (
           <section
             className={cn(
-              "min-h-0 flex-1 flex-col bg-[#0a0a0a] lg:flex",
+              "min-h-0 flex-1 flex-col bg-surface lg:flex",
               mobilePanel === "preview" || mobilePanel === "code" ? "flex flex-1" : "hidden lg:flex"
             )}
           >
@@ -1630,14 +1631,14 @@ function ChatPanel({
 }: ChatPanelProps) {
   return (
     <>
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-surface-container-high bg-surface px-4">
         {!hideSidebar && (
         <button
           type="button"
           onClick={onToggleSidebar}
           aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/8 hover:text-white transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-container hover:text-primary transition-colors"
         >
           {/* sidebar panel icon */}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1647,21 +1648,21 @@ function ChatPanel({
         </button>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight text-white/70">Oni</span>
+          <span className="text-sm font-semibold tracking-tight text-text-secondary">Oni</span>
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-[#0a0a0a]/30 backdrop-blur-xl">
+      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface">
         <div className={cn("flex flex-1 flex-col justify-end w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-inner shadow-white/5">
-                <Laptop className="h-6 w-6 text-white/70" />
-                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-70 blur" />
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-surface-container-high bg-surface-container-low shadow-sm">
+                <Laptop className="h-6 w-6 text-text-secondary" />
+                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-40 blur" />
               </div>
               <div className="space-y-2 max-w-sm">
-                <h2 className="text-xl font-semibold tracking-tight text-white">What are we building today?</h2>
-                <p className="text-sm text-white/45 leading-relaxed">
+                <h2 className="text-xl font-semibold tracking-tight text-text-primary">What are we building today?</h2>
+                <p className="text-sm text-text-tertiary leading-relaxed">
                   Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
                 </p>
               </div>
@@ -1671,7 +1672,7 @@ function ChatPanel({
                     key={s}
                     type="button"
                     onClick={() => onValueChange(s)}
-                    className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-2 text-xs text-white/60 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    className="rounded-full border border-surface-container-high bg-surface-container-low px-3.5 py-2 text-xs text-text-secondary transition-all hover:border-primary hover:bg-surface-container hover:text-primary hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
                     {s}
                   </button>
@@ -1700,7 +1701,7 @@ function ChatPanel({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-white/10 bg-[#0a0a0a] p-4">
+      <div className="shrink-0 bg-surface px-4 pb-4">
         <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           <ChatComposer
             value={value}
@@ -1776,7 +1777,7 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
         {message.content && (
           <div
             style={fontStyle}
-            className={cn("rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors text-zinc-100 shadow-sm", paddingClass)}
+            className={cn("rounded-2xl border border-surface-container-highest bg-surface-container-high hover:bg-surface-container-highest/80 transition-all text-text-primary shadow-sm", paddingClass)}
           >
             {message.content}
           </div>
@@ -1811,17 +1812,17 @@ function AssistantMessage({
   return (
     <div className={cn("animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
       <div className="flex items-center gap-2">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black font-bold text-[10px] select-none">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-[10px] select-none">
           O
         </div>
-        <span className="text-xs text-white/45 font-semibold tracking-wide uppercase select-none">Oni</span>
+        <span className="text-xs text-text-tertiary font-semibold tracking-wide uppercase select-none">Oni</span>
       </div>
 
-      <div className={cn("space-y-2 pl-7 bg-white/8 backdrop-blur-md rounded-xl", paddingClass)}>
+      <div className={cn("space-y-2 bg-surface-container-low border border-surface-container-high rounded-xl", paddingClass)}>
         {message.content ? (
           <p
             style={fontStyle}
-            className={cn("max-w-3xl whitespace-pre-wrap text-zinc-100 description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
+            className={cn("max-w-3xl whitespace-pre-wrap text-text-primary description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
           >
             {message.content}
           </p>
@@ -1830,7 +1831,7 @@ function AssistantMessage({
             {[0, 1, 2].map((dot) => (
               <span
                 key={dot}
-                className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse"
+                className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
                 style={{ animationDelay: `${dot * 150}ms` }}
               />
             ))}
@@ -1926,13 +1927,14 @@ function ChatComposer({
   const canSend = Boolean(value.trim() || attachedImage || attachedFiles.length > 0) && !isGenerating;
 
   return (
-    <div
+    <motion.div
+      layoutId="composer-container"
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       className={cn(
-        "rounded-2xl border border-white/10 bg-white/5 transition-colors duration-200 ease-in-out",
-        isDragging && "border-white/30 bg-white/10"
+        "rounded-2xl border border-surface-container-high bg-surface-container-low transition-colors duration-200 ease-in-out",
+        isDragging && "border-primary/30 bg-primary/5"
       )}
     >
       <input
@@ -1952,10 +1954,10 @@ function ChatComposer({
       />
 
       {(attachedImage || attachedFiles.length > 0) && (
-        <div className="border-b border-white/10 px-3 pt-3">
+        <div className="border-b border-surface-container-high px-3 pt-3">
           <div className="mb-3 flex flex-wrap gap-2">
             {attachedImage && (
-              <div className="relative inline-flex overflow-hidden rounded-lg border border-white/10 bg-black">
+              <div className="relative inline-flex overflow-hidden rounded-lg border border-surface-container-high bg-surface-container-lowest">
                 <Image
                   src={attachedImage.url}
                   alt={attachedImage.name}
@@ -1977,12 +1979,12 @@ function ChatComposer({
             {attachedFiles.map((file) => (
               <div
                 key={file.id}
-                className="flex max-w-full items-start gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+                className="flex max-w-full items-start gap-2 rounded-lg border border-surface-container-high bg-surface-container-lowest px-3 py-2"
               >
-                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-white/55" />
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-text-secondary" />
                 <div className="min-w-0">
-                  <p className="max-w-[220px] truncate text-xs font-medium text-white/80">{file.name}</p>
-                  <p className="text-[11px] text-white/35">
+                  <p className="max-w-[220px] truncate text-xs font-medium text-text-primary">{file.name}</p>
+                  <p className="text-[11px] text-text-tertiary">
                     {formatBytes(file.size)}
                     {file.content ? " read" : file.note ? " metadata only" : ""}
                   </p>
@@ -1990,7 +1992,7 @@ function ChatComposer({
                 <button
                   type="button"
                   onClick={() => onRemoveFile(file.id)}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/10 hover:text-white"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-surface-container hover:text-primary transition-colors"
                   aria-label={`Remove ${file.name}`}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -2001,8 +2003,8 @@ function ChatComposer({
         </div>
       )}
 
-      <div className="flex items-end gap-2 px-3 py-3">
-        <div className="flex shrink-0 items-center gap-1 pb-2">
+      <div className="flex items-end gap-2 px-3 py-2">
+        <div className="flex shrink-0 items-center gap-1 pb-1">
           <IconButton label="Attach file" onClick={onFileButtonClick}>
             <Paperclip className="h-4 w-4" />
           </IconButton>
@@ -2018,40 +2020,40 @@ function ChatComposer({
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder="Describe your website or paste a screenshot..."
-          className="min-h-16 flex-1 resize-none border-0 bg-transparent px-0 py-2 text-sm leading-6 text-white placeholder:text-white/35 focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="min-h-[24px] flex-1 resize-none border-0 bg-transparent px-0 py-1.5 text-sm leading-6 text-primary placeholder:text-text-tertiary focus-visible:ring-0 focus-visible:ring-offset-0"
           style={{ overflow: "hidden" }}
         />
 
-        <div className="flex flex-col items-center gap-2">
-            <button
-              type="button"
-              onClick={onSend}
-              disabled={!canSend}
-              className={cn(
-                "mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
-                canSend ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/35"
-              )}
-              aria-label="Send message"
-            >
-              {isGenerating ? (
+        <div className="flex flex-col items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={!canSend}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer",
+              canSend ? "bg-primary text-primary-foreground hover:opacity-90" : "cursor-not-allowed bg-surface-container text-text-secondary opacity-40"
+            )}
+            aria-label="Send message"
+          >
+            {isGenerating ? (
               <svg className="spinner h-4 w-4" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
                 <path d="M12 2 a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="4" />
               </svg>
             ) : (
               <ArrowUpIcon className="h-4 w-4" />
-              )}
-            </button>
+            )}
+          </button>
           <button
             type="button"
             onClick={onVoiceInput}
             disabled={isGenerating}
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
+              "flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer",
               isListening
                 ? "bg-red-500 text-white hover:bg-red-400"
-                : "bg-white/10 text-white hover:bg-white/20",
-              isGenerating && "cursor-not-allowed opacity-50"
+                : "bg-surface-container text-text-secondary hover:bg-surface-container-high hover:text-primary",
+              isGenerating && "cursor-not-allowed opacity-30"
             )}
             aria-label={isListening ? "Stop voice input" : "Voice input"}
             title={isListening ? "Stop voice input" : "Voice input"}
@@ -2060,7 +2062,7 @@ function ChatComposer({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -2218,9 +2220,9 @@ function PreviewTab({
   onRefreshPreview: () => void;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0a0a0a] p-4">
-      <div className="flex shrink-0 flex-col gap-3 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+    <div className="flex h-full min-h-0 flex-col bg-surface p-4">
+      <div className="flex shrink-0 flex-col gap-3 border-b border-surface-container-high pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-surface-container-high bg-surface-container-low px-3 py-2">
           <button
             type="button"
             onClick={onRefreshPreview}
@@ -2423,7 +2425,7 @@ function MobilePanelTabs({
   onPanelChange: (panel: MobilePanel) => void;
 }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t border-white/10 bg-[#0a0a0a]/95 p-2 backdrop-blur lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t border-surface-container-high bg-surface/95 p-2 backdrop-blur lg:hidden">
       {mobileTabs.map((item) => {
         const Icon = item.icon;
         return (
@@ -2458,7 +2460,7 @@ function IconButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-white/55 transition-colors duration-200 ease-in-out hover:bg-white/10 hover:text-white"
+      className="flex h-8 w-8 items-center justify-center rounded-full text-text-secondary hover:bg-surface-container hover:text-primary transition-colors cursor-pointer"
       aria-label={label}
       title={label}
     >
