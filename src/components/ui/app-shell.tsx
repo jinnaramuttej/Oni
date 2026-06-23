@@ -54,7 +54,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
     };
   }, []);
 
-  // Sync theme and custom display name from settings
+  // Sync theme, custom font, and custom display name from settings
   useEffect(() => {
     const applyTheme = (theme: string | null) => {
       if (typeof window === "undefined") return;
@@ -69,12 +69,28 @@ export function AppShell({ children, activePage }: AppShellProps) {
       root.classList.add(target);
     };
 
+    const applyFont = (font: string | null) => {
+      if (typeof window === "undefined") return;
+      const root = document.documentElement;
+      if (font === "monospace") {
+        root.style.setProperty("font-family", "var(--font-geist-mono), monospace", "important");
+        root.style.setProperty("--font-sans", "var(--font-geist-mono), monospace", "important");
+      } else if (font === "serif") {
+        root.style.setProperty("font-family", "var(--font-serif), serif", "important");
+        root.style.setProperty("--font-sans", "var(--font-serif), serif", "important");
+      } else {
+        root.style.removeProperty("font-family");
+        root.style.removeProperty("--font-sans");
+      }
+    };
+
     const loadSettings = () => {
       try {
         const saved = localStorage.getItem("oni_settings");
         if (saved) {
           const parsed = JSON.parse(saved);
           applyTheme(parsed.theme);
+          applyFont(parsed.chatFont);
           if (parsed.displayName) {
             setCustomDisplayName(parsed.displayName);
           } else {
@@ -82,10 +98,12 @@ export function AppShell({ children, activePage }: AppShellProps) {
           }
         } else {
           applyTheme("dark");
+          applyFont(null);
           setCustomDisplayName(null);
         }
       } catch {
         applyTheme("dark");
+        applyFont(null);
         setCustomDisplayName(null);
       }
     };
