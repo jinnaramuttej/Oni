@@ -361,13 +361,6 @@ export function HomePage() {
           {/* Optional left aligned elements */}
         </div>
         <div className="flex items-center gap-4 pointer-events-auto relative">
-          <div className="text-xs text-text-tertiary px-3 py-1.5 rounded-full bg-surface-container-low border border-surface-container-high hidden md:flex items-center gap-1">
-            <span>Free plan</span>
-            <span className="text-text-secondary px-1">·</span>
-            <button className="text-primary hover:underline font-medium bg-transparent border-none cursor-pointer">
-              Upgrade
-            </button>
-          </div>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             aria-label="Profile Settings"
