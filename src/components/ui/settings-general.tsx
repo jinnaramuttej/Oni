@@ -58,17 +58,17 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
 
   return (
     <div className="w-full max-w-[896px]">
-      <div className="mb-12">
-        <p className="text-text-secondary">Manage your workspace preferences and identity.</p>
+      <div className="mb-6">
+        <p className="text-text-secondary text-sm">Manage your workspace preferences and identity.</p>
       </div>
 
-      <div className="flex flex-col gap-16">
+      <div className="flex flex-col gap-10">
         {/* Profile Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-surface-container-high pb-2">
             <h3 className="text-xs font-semibold tracking-widest text-text-tertiary uppercase">Profile</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 items-center">
             <div className="text-xs font-semibold tracking-wider text-primary uppercase">Display Name</div>
             <div className="max-w-md w-full">
               <input
@@ -82,7 +82,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-xl px-4 py-3 text-base placeholder:text-text-tertiary outline-none transition-colors"
+                className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-lg px-3.5 py-2 text-sm placeholder:text-text-tertiary outline-none transition-colors"
                 placeholder="Enter your display name"
               />
             </div>
@@ -90,26 +90,26 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
         </section>
 
         {/* Appearance Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-surface-container-high pb-2">
             <h3 className="text-xs font-semibold tracking-widest text-text-tertiary uppercase">Appearance</h3>
           </div>
 
           {/* Theme selection */}
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 items-start">
             <div className="text-xs font-semibold tracking-wider text-primary uppercase pt-1">Theme</div>
             <div className="flex gap-4 flex-wrap">
               {/* System */}
-              <label className="cursor-pointer group flex flex-col gap-3">
+              <label className="cursor-pointer group flex flex-col gap-2">
                 <div
                   onClick={() => handleThemeChange("system")}
-                  className={`w-24 h-16 rounded-xl border-2 bg-surface relative overflow-hidden transition-colors ${
+                  className={`w-20 h-14 rounded-lg border-2 bg-surface relative overflow-hidden transition-colors ${
                     theme === "system" ? "border-primary" : "border-outline-variant hover:border-text-secondary"
                   }`}
                 >
                   <div className="absolute inset-x-2 top-2 h-1 bg-surface-container-high rounded-full w-1/2"></div>
-                  <div className="absolute inset-x-2 top-5 h-1 bg-surface-container-high rounded-full w-3/4"></div>
-                  <div className="absolute inset-x-2 bottom-2 h-4 bg-surface-container-low rounded-md border border-surface-container-high"></div>
+                  <div className="absolute inset-x-2 top-4 h-1 bg-surface-container-high rounded-full w-3/4"></div>
+                  <div className="absolute inset-x-2 bottom-1.5 h-3 bg-surface-container-low rounded border border-surface-container-high"></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -117,7 +117,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
                     name="theme"
                     checked={theme === "system"}
                     onChange={() => handleThemeChange("system")}
-                    className="w-4 h-4 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
+                    className="w-3.5 h-3.5 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
                   />
                   <span
                     className={`text-xs font-semibold transition-colors ${
@@ -130,16 +130,16 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
               </label>
 
               {/* Light */}
-              <label className="cursor-pointer group flex flex-col gap-3">
+              <label className="cursor-pointer group flex flex-col gap-2">
                 <div
                   onClick={() => handleThemeChange("light")}
-                  className={`w-24 h-16 rounded-xl border bg-[#e3e2e6] relative overflow-hidden transition-colors ${
+                  className={`w-20 h-14 rounded-lg border bg-[#e3e2e6] relative overflow-hidden transition-colors ${
                     theme === "light" ? "border-2 border-primary" : "border-surface-container-high hover:border-outline-variant"
                   }`}
                 >
                   <div className="absolute inset-x-2 top-2 h-1 bg-[#c4c7c8] rounded-full w-1/2"></div>
-                  <div className="absolute inset-x-2 top-5 h-1 bg-[#c4c7c8] rounded-full w-3/4"></div>
-                  <div className="absolute inset-x-2 bottom-2 h-4 bg-white rounded-md border border-[#c4c7c8]"></div>
+                  <div className="absolute inset-x-2 top-4 h-1 bg-[#c4c7c8] rounded-full w-3/4"></div>
+                  <div className="absolute inset-x-2 bottom-1.5 h-3 bg-white rounded border border-[#c4c7c8]"></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -147,7 +147,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
                     name="theme"
                     checked={theme === "light"}
                     onChange={() => handleThemeChange("light")}
-                    className="w-4 h-4 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
+                    className="w-3.5 h-3.5 text-outline-variant bg-surface border-surface-container-high focus:ring-outline-variant focus:ring-offset-background cursor-pointer"
                   />
                   <span
                     className={`text-xs font-semibold transition-colors ${
@@ -160,16 +160,16 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
               </label>
 
               {/* Dark */}
-              <label className="cursor-pointer group flex flex-col gap-3">
+              <label className="cursor-pointer group flex flex-col gap-2">
                 <div
                   onClick={() => handleThemeChange("dark")}
-                  className={`w-24 h-16 rounded-xl border-2 bg-background relative overflow-hidden transition-colors ${
+                  className={`w-20 h-14 rounded-lg border-2 bg-background relative overflow-hidden transition-colors ${
                     theme === "dark" ? "border-primary" : "border-surface-container-high hover:border-outline-variant"
                   }`}
                 >
                   <div className="absolute inset-x-2 top-2 h-1 bg-surface-container-high rounded-full w-1/2"></div>
-                  <div className="absolute inset-x-2 top-5 h-1 bg-surface-container-high rounded-full w-3/4"></div>
-                  <div className="absolute inset-x-2 bottom-2 h-4 bg-surface-container-low rounded-md border border-surface-container-high"></div>
+                  <div className="absolute inset-x-2 top-4 h-1 bg-surface-container-high rounded-full w-3/4"></div>
+                  <div className="absolute inset-x-2 bottom-1.5 h-3 bg-surface-container-low rounded border border-surface-container-high"></div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -177,7 +177,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
                     name="theme"
                     checked={theme === "dark"}
                     onChange={() => handleThemeChange("dark")}
-                    className="w-4 h-4 text-primary bg-surface border-surface-container-high focus:ring-primary focus:ring-offset-background cursor-pointer"
+                    className="w-3.5 h-3.5 text-primary bg-surface border-surface-container-high focus:ring-primary focus:ring-offset-background cursor-pointer"
                   />
                   <span
                     className={`text-xs font-semibold transition-colors ${
@@ -192,7 +192,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
           </div>
 
           {/* Chat Font */}
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 items-center">
             <div className="text-xs font-semibold tracking-wider text-primary uppercase">Chat Font</div>
             <div className="max-w-md w-full relative">
               <select
@@ -201,7 +201,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
                   setChatFont(e.target.value);
                   updateSetting("chatFont", e.target.value, "Chat font updated");
                 }}
-                className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-xl px-4 py-3 text-base appearance-none outline-none transition-colors cursor-pointer"
+                className="w-full bg-surface-container-low border border-surface-container-high focus:border-outline-variant text-primary rounded-lg px-3.5 py-2 text-sm appearance-none outline-none transition-colors cursor-pointer"
               >
                 <option value="inter">Inter (System Default)</option>
                 <option value="monospace">Monospace (Technical)</option>
@@ -214,7 +214,7 @@ export function SettingsGeneral({ user }: { user: AuthUser | null }) {
           </div>
 
           {/* Compact Mode */}
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-center pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 items-center pt-1">
             <div className="text-xs font-semibold tracking-wider text-primary uppercase">Compact Mode</div>
             <div className="max-w-md w-full flex items-center justify-between">
               <span className="text-text-secondary text-xs font-semibold tracking-wider">
