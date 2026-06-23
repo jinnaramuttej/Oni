@@ -286,6 +286,19 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.0);
 }
 
+function isConversationalMessage(text: string): boolean {
+  const clean = text.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
+  const casualPhrases = new Set([
+    "hi", "hello", "hey", "greetings", "yo", "hola", "sup",
+    "thanks", "thank you", "thx", "tysm",
+    "ok", "okay", "yes", "no", "yep", "nope", "sure", "indeed",
+    "cool", "awesome", "great", "wow", "nice", "perfect", "good", "fine",
+    "how are you", "hows it going", "whats up",
+    "bye", "goodbye", "see ya", "later"
+  ]);
+  return casualPhrases.has(clean);
+}
+
 function prepareMessagesForGroq(
   messages: GroqMessage[],
   currentHtml: string
@@ -327,10 +340,14 @@ function prepareMessagesForGroq(
 
   let finalLastContent = lastContentTruncated;
   if (currentHtml && lastMessage.role === "user") {
-    // Slice currentHtml dynamically based on remaining character budget, capping at 24000 characters
-    const htmlSliceLimit = Math.max(2000, Math.min(24000, remainingCharsForHtml - 500));
-    const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
-    finalLastContent = `User request: ${lastContentTruncated}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+    if (isConversationalMessage(lastContentTruncated)) {
+      finalLastContent = lastContentTruncated;
+    } else {
+      // Slice currentHtml dynamically based on remaining character budget, capping at 24000 characters
+      const htmlSliceLimit = Math.max(2000, Math.min(24000, remainingCharsForHtml - 500));
+      const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
+      finalLastContent = `User request: ${lastContentTruncated}\n\nThe user might be asking for a change or addition to the existing website below, or they might just be chatting or asking a general question.\n\nIf the request is casual conversation, a greeting, or a question NOT asking to change/modify the website, do NOT output any code. Just reply in 1-2 natural sentences.\n\nOnly if the user is requesting a modification, style change, or update to the website, return the updated FULL HTML file inside <ONI_CODE>...</ONI_CODE> tags.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+    }
   }
 
   const processedLastMessage = {
