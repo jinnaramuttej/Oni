@@ -224,10 +224,14 @@ function getOrCreateVisitorId() {
 
 export function OniChat({
   initialPrompt = "",
+  initialImage = null,
+  initialFiles = [],
   chatId,
   hideSidebar = false,
 }: {
   initialPrompt?: string;
+  initialImage?: ImageAttachment | null;
+  initialFiles?: FileAttachment[];
   chatId?: string;
   hideSidebar?: boolean;
 }) {
@@ -277,8 +281,8 @@ export function OniChat({
     } catch { /* ignore */ }
     return initialMessages;
   });
-  const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
-  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
+  const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(initialImage);
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>(initialFiles);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -1279,14 +1283,14 @@ export function OniChat({
 
   // Wrapper layout
   return (
-    <div className={hideSidebar ? "h-full overflow-hidden bg-[#0a0a0a] font-sans text-white flex" : "h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_600ms_ease-out] flex"}>
+    <div className={hideSidebar ? "h-full overflow-hidden bg-[#0a0a0a] font-sans text-white flex" : "h-screen overflow-hidden bg-[#0a0a0a] font-sans text-white animate-[pageFadeIn_900ms_cubic-bezier(0.16,1,0.3,1)] flex"}>
 
       {/* ── Inline Push Navigation Sidebar ── */}
       {!hideSidebar && (
       <aside
         className={cn(
           "h-full shrink-0 flex flex-col bg-[#0f0f0f] border-r border-white/10 transition-all duration-300 overflow-hidden",
-          navOpen ? "w-[240px]" : "w-0"
+          navOpen ? "w-[210px]" : "w-0"
         )}
       >
         {/* Sidebar Header */}
@@ -1663,7 +1667,7 @@ function ChatPanel({
                 <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-70 blur" />
               </div>
               <div className="space-y-2 max-w-sm">
-                <h2 className="text-2xl font-semibold tracking-tight text-white">What are we building today?</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-white">What are we building today?</h2>
                 <p className="text-sm text-white/45 leading-relaxed">
                   Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
                 </p>
@@ -1746,7 +1750,7 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
   const paddingClass = compactMode ? "px-3 py-1.5 text-xs leading-5" : "px-4 py-2.5 text-sm leading-6";
 
   return (
-    <div className="flex animate-[fadeSlideUp_400ms_ease-out] justify-end">
+    <div className="flex animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)] justify-end">
       <div className="flex max-w-[82%] flex-col items-end gap-2">
         {message.image && (
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/10 p-1">
@@ -1812,7 +1816,7 @@ function AssistantMessage({
   const paddingClass = compactMode ? "p-2.5" : "p-4";
 
   return (
-    <div className={cn("animate-[fadeSlideUp_400ms_ease-out]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
+    <div className={cn("animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
       <div className="flex items-center gap-2">
         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black font-bold text-[10px] select-none">
           O
@@ -1878,7 +1882,7 @@ function AssistantMessage({
 
 function AssistantThinking() {
   return (
-    <div className="animate-[fadeSlideUp_200ms_ease-out]">
+    <div className="animate-[fadeSlideUp_600ms_cubic-bezier(0.16,1,0.3,1)]">
       <span className="text-xs text-white/35">Oni</span>
       <div className="mt-2 flex items-center gap-2 text-sm text-white/55">
         <span>thinking</span>

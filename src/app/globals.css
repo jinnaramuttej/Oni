@@ -208,6 +208,11 @@
 
 /* Animations used by SignInPage component */
 @keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(16px);
+  }
   to {
     opacity: 1;
     filter: blur(0px);
@@ -218,7 +223,7 @@
 @keyframes fadeSlideUp {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -229,7 +234,7 @@
 @keyframes pageFadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -247,10 +252,15 @@
 }
 
 .description-fade {
-  animation: slowFadeIn 0.8s ease-out forwards;
+  animation: slowFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes slideRightIn {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateX(-40px);
+  }
   to {
     opacity: 1;
     filter: blur(0px);
@@ -259,6 +269,11 @@
 }
 
 @keyframes testimonialIn {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(20px) scale(.98);
+  }
   to {
     opacity: 1;
     filter: blur(0px);
@@ -267,23 +282,23 @@
 }
 
 /* Utility animation classes */
-.animate-element{opacity:0;filter:blur(6px);transform:translateY(12px);animation-fill-mode:forwards;}
-.animate-delay-100{animation:fadeSlideIn .5s .1s both}
-.animate-delay-200{animation:fadeSlideIn .5s .2s both}
-.animate-delay-250{animation:fadeSlideIn .5s .25s both}
-.animate-delay-300{animation:fadeSlideIn .5s .3s both}
-.animate-delay-400{animation:fadeSlideIn .5s .4s both}
-.animate-delay-450{animation:fadeSlideIn .5s .45s both}
-.animate-delay-500{animation:fadeSlideIn .5s .5s both}
-.animate-delay-600{animation:fadeSlideIn .5s .6s both}
-.animate-delay-700{animation:fadeSlideIn .5s .7s both}
-.animate-delay-800{animation:fadeSlideIn .5s .8s both}
-.animate-delay-900{animation:fadeSlideIn .5s .9s both}
+.animate-element{opacity:0;filter:blur(6px);transform:translateY(16px);animation-fill-mode:forwards;}
+.animate-delay-100{animation:fadeSlideIn .8s .1s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-200{animation:fadeSlideIn .8s .2s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-250{animation:fadeSlideIn .8s .25s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-300{animation:fadeSlideIn .8s .3s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-400{animation:fadeSlideIn .8s .4s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-450{animation:fadeSlideIn .8s .45s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-500{animation:fadeSlideIn .8s .5s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-600{animation:fadeSlideIn .8s .6s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-700{animation:fadeSlideIn .8s .7s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-800{animation:fadeSlideIn .8s .8s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-900{animation:fadeSlideIn .8s .9s cubic-bezier(0.16, 1, 0.3, 1) both}
 .animate-slide-right{opacity:0;filter:blur(6px);transform:translateX(-40px);animation-fill-mode:forwards}
 .animate-testimonial{opacity:0;filter:blur(6px);transform:translateY(20px) scale(.98);animation-fill-mode:forwards}
-.animate-delay-1000{animation:testimonialIn .6s 1s both}
-.animate-delay-1200{animation:testimonialIn .6s 1.2s both}
-.animate-delay-1400{animation:testimonialIn .6s 1.4s both}
+.animate-delay-1000{animation:testimonialIn .9s 1s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-1200{animation:testimonialIn .9s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both}
+.animate-delay-1400{animation:testimonialIn .9s 1.4s cubic-bezier(0.16, 1, 0.3, 1) both}
 
 /* Toast glass and spinner */
 .toast-glass {
