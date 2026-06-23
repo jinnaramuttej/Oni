@@ -85,21 +85,21 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
 
   return (
     <div className="w-full max-w-[896px]">
-      <div className="mb-12">
-        <p className="text-text-secondary">Manage your profile identity, security preferences, and account status.</p>
+      <div className="mb-6">
+        <p className="text-text-secondary text-sm">Manage your profile identity, security preferences, and account status.</p>
       </div>
 
-      <div className="flex flex-col gap-16">
+      <div className="flex flex-col gap-10">
         {/* Profile Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-surface-container-high pb-2">
             <h3 className="text-xs font-semibold tracking-widest text-text-tertiary uppercase">Profile</h3>
           </div>
 
-          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-6 transition-colors hover:border-outline-variant">
+          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 transition-colors hover:border-outline-variant">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex-1">
-                <div className="text-xs font-semibold tracking-wider text-text-tertiary uppercase mb-1">
+                <div className="text-[11px] font-semibold tracking-wider text-text-tertiary uppercase mb-1">
                   Email Address
                 </div>
                 {isEditingEmail ? (
@@ -125,7 +125,7 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-primary text-base">{email}</div>
+                  <div className="text-primary text-sm">{email}</div>
                 )}
               </div>
               {!isEditingEmail && (
@@ -134,7 +134,7 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
                     setTempEmail(email);
                     setIsEditingEmail(true);
                   }}
-                  className="px-4 py-2 bg-surface border border-surface-container-high rounded-md text-text-secondary hover:text-primary hover:border-outline-variant transition-all text-xs font-semibold cursor-pointer"
+                  className="px-3 py-1.5 bg-surface border border-surface-container-high rounded-md text-text-secondary hover:text-primary hover:border-outline-variant transition-all text-xs font-semibold cursor-pointer"
                 >
                   Change Email
                 </button>
@@ -142,13 +142,13 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
             </div>
           </div>
 
-          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-6 transition-colors hover:border-outline-variant">
+          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 transition-colors hover:border-outline-variant">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <div className="text-xs font-semibold tracking-wider text-text-tertiary uppercase mb-1">
+                <div className="text-[11px] font-semibold tracking-wider text-text-tertiary uppercase mb-1">
                   Password
                 </div>
-                <div className="text-text-secondary text-base flex items-center space-x-1 py-1">
+                <div className="text-text-secondary text-sm flex items-center space-x-1 py-1">
                   <span className="w-1.5 h-1.5 bg-text-secondary rounded-full"></span>
                   <span className="w-1.5 h-1.5 bg-text-secondary rounded-full"></span>
                   <span className="w-1.5 h-1.5 bg-text-secondary rounded-full"></span>
@@ -161,7 +161,7 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
               </div>
               <button
                 onClick={handleResetPassword}
-                className="px-4 py-2 bg-surface border border-surface-container-high rounded-md text-text-secondary hover:text-primary hover:border-outline-variant transition-all text-xs font-semibold cursor-pointer"
+                className="px-3 py-1.5 bg-surface border border-surface-container-high rounded-md text-text-secondary hover:text-primary hover:border-outline-variant transition-all text-xs font-semibold cursor-pointer"
               >
                 Reset Password
               </button>
@@ -170,16 +170,16 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
         </section>
 
         {/* Security Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-surface-container-high pb-2">
             <h3 className="text-xs font-semibold tracking-widest text-text-tertiary uppercase">Security</h3>
           </div>
 
-          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-6 transition-colors hover:border-outline-variant">
+          <div className="bg-surface-container-lowest border border-surface-container-high rounded-xl p-4 transition-colors hover:border-outline-variant">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <div className="text-primary text-base font-medium mb-1">Two-factor Authentication</div>
-                <p className="text-text-secondary text-sm">Add an extra layer of security to your account.</p>
+                <div className="text-primary text-sm font-medium mb-1">Two-factor Authentication</div>
+                <p className="text-text-secondary text-xs">Add an extra layer of security to your account.</p>
               </div>
 
               {/* Custom Toggle Switch */}
@@ -197,16 +197,16 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
         </section>
 
         {/* Account Management Section */}
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-surface-container-high pb-2">
             <h3 className="text-xs font-semibold tracking-widest text-error uppercase">Account Management</h3>
           </div>
 
-          <div className="bg-surface-container-lowest border border-error-container/30 rounded-xl p-6 transition-colors hover:border-error-container/60">
+          <div className="bg-surface-container-lowest border border-error-container/30 rounded-xl p-4 transition-colors hover:border-error-container/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex-1">
-                <div className="text-primary text-base font-medium mb-1">Delete Account</div>
-                <p className="text-text-secondary text-sm max-w-md">
+                <div className="text-primary text-sm font-medium mb-1">Delete Account</div>
+                <p className="text-text-secondary text-xs max-w-md">
                   Permanently delete your account and all of your content. This action is not reversible.
                 </p>
               </div>
@@ -214,13 +214,13 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
                 <div className="flex items-center gap-2 mt-2 sm:mt-0">
                   <button
                     onClick={handleDeleteAccount}
-                    className="px-4 py-2 bg-error text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-error text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer"
                   >
                     Confirm Delete
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="px-4 py-2 bg-surface-container border border-surface-container-high rounded-md text-text-secondary hover:text-primary transition-all text-xs font-semibold cursor-pointer"
+                    className="px-3 py-1.5 bg-surface-container border border-surface-container-high rounded-md text-text-secondary hover:text-primary transition-all text-xs font-semibold cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -228,7 +228,7 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
               ) : (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-4 py-2 bg-error-container/20 border border-error-container rounded-md text-error hover:bg-error-container/40 transition-all text-xs font-semibold flex-shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-error-container/20 border border-error-container rounded-md text-error hover:bg-error-container/40 transition-all text-xs font-semibold flex-shrink-0 cursor-pointer"
                 >
                   Delete account
                 </button>
