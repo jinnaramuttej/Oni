@@ -366,6 +366,7 @@ export function OniChat({
   const [pinnedChatsList, setPinnedChatsList] = useState<string[]>([]);
   const [sortMethod, setSortMethod] = useState("date_desc");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
 
   // Sync pins and sort settings
   useEffect(() => {
@@ -494,7 +495,6 @@ export function OniChat({
   });
   const [navOpen, setNavOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
-  const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
