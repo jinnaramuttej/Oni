@@ -14,6 +14,9 @@ class RateLimiterInstance {
    * Check if a request exceeds the limit for the given key and rule.
    */
   public isLimitExceeded(key: string, rule: RateLimitRule): boolean {
+    if (process.env.NODE_ENV === "development") {
+      return false;
+    }
     const now = Date.now();
     const timestamps = this.cache.get(key) || [];
 
