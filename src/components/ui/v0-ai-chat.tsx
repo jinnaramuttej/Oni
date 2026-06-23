@@ -44,6 +44,50 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+/**
+ * Sanitize AI-generated HTML before rendering in the sandboxed iframe.
+ *
+ * The iframe uses sandbox="allow-scripts" (no allow-same-origin), so
+ * generated scripts cannot access parent cookies, localStorage, or DOM.
+ * These additional checks strip patterns that could cause annoyance,
+ * resource exhaustion, or unexpected behavior even within the sandbox:
+ *
+ * - meta http-equiv="refresh" → redirect loops
+ * - window.open / window.location → popups / redirects
+ * - location.href / location.replace → navigation hijack
+ * - Obvious infinite loops → CPU exhaustion in the iframe
+ * - Excessively large output → DoS via memory
+ */
+function sanitizeGeneratedHtml(html: string): string {
+  if (!html) return html;
+
+  // Cap size — no need to render 500k lines
+  const MAX_HTML_BYTES = 500_000;
+  if (html.length > MAX_HTML_BYTES) {
+    html = html.slice(0, MAX_HTML_BYTES) + "\n<!-- [Oni] Output was truncated for safety -->";
+  }
+
+  // Strip meta refresh redirects
+  html = html.replace(/<meta[^>]+http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, "<!-- [Oni] meta-refresh removed -->")
+
+  // Strip window.open calls
+  html = html.replace(/\bwindow\.open\s*\(/gi, "void(/*window.open*/");
+
+  // Strip location navigation (covers location.href=, location.replace(, location.assign()
+  html = html.replace(/\blocation\s*\.\s*(href|replace|assign)\s*[=(]/gi, "void(/*location.");
+
+  // Strip obvious infinite loops — while(true) and while(1)
+  html = html.replace(/\bwhile\s*\(\s*(true|1)\s*\)\s*\{/gi, "if(false){");
+
+  // Strip setInterval with very short delays (< 50ms) which can spam events
+  html = html.replace(/setInterval\s*\([^,]+,\s*([0-9]+)\s*\)/g, (match, ms) => {
+    return parseInt(ms, 10) < 50 ? "void(/*setInterval throttled*/" : match;
+  });
+
+  return html;
+}
+
+
 type BrowserSpeechRecognitionResult = {
   isFinal: boolean;
   0?: { transcript?: string };
@@ -958,7 +1002,7 @@ export function OniChat({
 
               // Stream partial code block into files in real-time
               if (partialHtml) {
-                setGeneratedHtml(partialHtml);
+                setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
               }
             } catch { }
           }
@@ -969,7 +1013,7 @@ export function OniChat({
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
-        const extractedHtml = match[1].trim();
+        const extractedHtml = sanitizeGeneratedHtml(match[1].trim());
         setGeneratedHtml(extractedHtml);
         setActiveFilePath("index.html");
       }
@@ -1121,7 +1165,7 @@ export function OniChat({
 
               // Stream partial code block into files in real-time
               if (partialHtml) {
-                setGeneratedHtml(partialHtml);
+                setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
               }
             } catch { }
           }
@@ -1132,7 +1176,7 @@ export function OniChat({
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
-        const extractedHtml = match[1].trim();
+        const extractedHtml = sanitizeGeneratedHtml(match[1].trim());
         setGeneratedHtml(extractedHtml);
         setActiveFilePath("index.html");
       }

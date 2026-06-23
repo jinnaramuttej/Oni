@@ -91,8 +91,17 @@ function signPayload(payload: string) {
   return crypto.createHmac("sha256", getSecret()).update(payload).digest("base64url");
 }
 
+const SESSION_LIFETIME_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+
 function encodeSession(userId: string) {
-  const payload = Buffer.from(JSON.stringify({ userId, iat: Date.now() })).toString("base64url");
+  const now = Date.now();
+  const payload = Buffer.from(
+    JSON.stringify({
+      userId,
+      iat: now,
+      exp: now + SESSION_LIFETIME_MS,
+    })
+  ).toString("base64url");
   const signature = signPayload(payload);
   return `${payload}.${signature}`;
 }
@@ -101,6 +110,7 @@ function decodeSession(session: string) {
   const [payload, signature] = session.split(".");
   if (!payload || !signature) return null;
 
+  // Verify signature first (constant-time comparison prevents timing attacks)
   const expectedSignature = signPayload(payload);
   const expectedBuffer = Buffer.from(expectedSignature);
   const signatureBuffer = Buffer.from(signature);
@@ -109,8 +119,29 @@ function decodeSession(session: string) {
   if (!crypto.timingSafeEqual(expectedBuffer, signatureBuffer)) return null;
 
   try {
-    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { userId?: string };
-    return typeof parsed.userId === "string" ? parsed.userId : null;
+    const parsed = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8")
+    ) as { userId?: string; iat?: number; exp?: number };
+
+    if (
+      !parsed ||
+      typeof parsed.userId !== "string" ||
+      typeof parsed.iat !== "number" ||
+      typeof parsed.exp !== "number"
+    ) return null;
+
+    // Validate ID format to prevent injection
+    if (!isValidId(parsed.userId)) return null;
+
+    const now = Date.now();
+    // Token must not be expired
+    if (now > parsed.exp) return null;
+    // iat must be in the past (allow 60s clock skew)
+    if (parsed.iat > now + 60_000) return null;
+    // exp must not be further than SESSION_LIFETIME_MS from iat (tamper check)
+    if (parsed.exp - parsed.iat > SESSION_LIFETIME_MS + 60_000) return null;
+
+    return parsed.userId;
   } catch {
     return null;
   }
