@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function SettingsCapabilities() {
   const [longTermContext, setLongTermContext] = useState(true);
@@ -8,6 +8,72 @@ export function SettingsCapabilities() {
   const [codeInterpreter, setCodeInterpreter] = useState(true);
   const [imageGen, setImageGen] = useState(false);
   const [defaultModel, setDefaultModel] = useState("oni-pro");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("oni_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.longTermContext !== undefined) setLongTermContext(!!parsed.longTermContext);
+        if (parsed.webSearch !== undefined) setWebSearch(!!parsed.webSearch);
+        if (parsed.codeInterpreter !== undefined) setCodeInterpreter(!!parsed.codeInterpreter);
+        if (parsed.imageGen !== undefined) setImageGen(!!parsed.imageGen);
+        if (parsed.defaultModel) setDefaultModel(parsed.defaultModel);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const updateSetting = (key: string, value: any, successMessage?: string) => {
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed[key] = value;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      
+      window.dispatchEvent(new Event("oni_settings_change"));
+      
+      if (successMessage) {
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: successMessage }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleLongTermContextChange = (checked: boolean) => {
+    setLongTermContext(checked);
+    updateSetting("longTermContext", checked, checked ? "AI Memory / Long-term context enabled" : "AI Memory / Long-term context disabled");
+  };
+
+  const handleWebSearchChange = (checked: boolean) => {
+    setWebSearch(checked);
+    updateSetting("webSearch", checked, checked ? "Web Search capability enabled" : "Web Search capability disabled");
+  };
+
+  const handleCodeInterpreterChange = (checked: boolean) => {
+    setCodeInterpreter(checked);
+    updateSetting("codeInterpreter", checked, checked ? "Code Interpreter capability enabled" : "Code Interpreter capability disabled");
+  };
+
+  const handleImageGenChange = (checked: boolean) => {
+    setImageGen(checked);
+    updateSetting("imageGen", checked, checked ? "Image Generation capability enabled" : "Image Generation capability disabled");
+  };
+
+  const handleDefaultModelChange = (model: string) => {
+    setDefaultModel(model);
+    let label = "Oni Pro";
+    if (model === "oni-flash") label = "Oni Flash";
+    if (model === "oni-creative") label = "Oni Creative";
+    
+    updateSetting("defaultModel", model, `Default model changed to ${label}`);
+  };
+
+  const handleManageMemory = () => {
+    window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Memory details loaded (0 items stored)" }));
+  };
 
   return (
     <div className="w-full max-w-[896px]">
@@ -43,14 +109,17 @@ export function SettingsCapabilities() {
                 <input
                   type="checkbox"
                   checked={longTermContext}
-                  onChange={(e) => setLongTermContext(e.target.checked)}
+                  onChange={(e) => handleLongTermContextChange(e.target.checked)}
                   className="sr-only peer cursor-pointer"
                 />
                 <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-text-secondary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-outline-variant peer-checked:after:bg-primary"></div>
               </label>
             </div>
             <div className="pt-2">
-              <button className="text-xs text-text-tertiary hover:text-primary transition-colors flex items-center gap-1 group cursor-pointer bg-transparent border-none">
+              <button
+                onClick={handleManageMemory}
+                className="text-xs text-text-tertiary hover:text-primary transition-colors flex items-center gap-1 group cursor-pointer bg-transparent border-none"
+              >
                 <span>Manage Memory Details</span>
                 <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">
                   arrow_forward
@@ -87,7 +156,7 @@ export function SettingsCapabilities() {
                 <input
                   type="checkbox"
                   checked={webSearch}
-                  onChange={(e) => setWebSearch(e.target.checked)}
+                  onChange={(e) => handleWebSearchChange(e.target.checked)}
                   className="sr-only peer cursor-pointer"
                 />
                 <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-text-secondary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-outline-variant peer-checked:after:bg-primary"></div>
@@ -109,7 +178,7 @@ export function SettingsCapabilities() {
                 <input
                   type="checkbox"
                   checked={codeInterpreter}
-                  onChange={(e) => setCodeInterpreter(e.target.checked)}
+                  onChange={(e) => handleCodeInterpreterChange(e.target.checked)}
                   className="sr-only peer cursor-pointer"
                 />
                 <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-text-secondary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-outline-variant peer-checked:after:bg-primary"></div>
@@ -131,7 +200,7 @@ export function SettingsCapabilities() {
                 <input
                   type="checkbox"
                   checked={imageGen}
-                  onChange={(e) => setImageGen(e.target.checked)}
+                  onChange={(e) => handleImageGenChange(e.target.checked)}
                   className="sr-only peer cursor-pointer"
                 />
                 <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-secondary after:border-text-secondary after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-outline-variant peer-checked:after:bg-primary"></div>
@@ -160,7 +229,7 @@ export function SettingsCapabilities() {
             <div className="relative">
               <select
                 value={defaultModel}
-                onChange={(e) => setDefaultModel(e.target.value)}
+                onChange={(e) => handleDefaultModelChange(e.target.value)}
                 className="w-full appearance-none bg-surface border border-outline-variant text-primary py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:border-text-secondary focus:ring-1 focus:ring-text-secondary transition-colors cursor-pointer"
                 id="model_select"
               >
@@ -174,7 +243,7 @@ export function SettingsCapabilities() {
             </div>
             <p className="mt-3 text-xs text-text-tertiary flex items-center gap-1.5 font-normal tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-              Pro plan models are currently active.
+              {defaultModel === "oni-flash" ? "Speed-optimized model is currently active." : "Pro plan models are currently active."}
             </p>
           </div>
         </section>
