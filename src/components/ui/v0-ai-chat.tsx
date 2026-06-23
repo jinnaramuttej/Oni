@@ -1589,7 +1589,12 @@ function ChatPanel({
 }
 
 function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage; chatFont?: string; compactMode?: boolean }) {
-  const fontClass = chatFont === "monospace" ? "font-mono" : chatFont === "serif" ? "font-serif" : "font-sans";
+  const fontStyle = chatFont === "monospace"
+    ? { fontFamily: "var(--font-geist-mono), monospace" }
+    : chatFont === "serif"
+    ? { fontFamily: "var(--font-serif), serif" }
+    : { fontFamily: "var(--font-sans), sans-serif" };
+
   const paddingClass = compactMode ? "px-3 py-1.5 text-xs leading-5" : "px-4 py-2.5 text-sm leading-6";
 
   return (
@@ -1624,7 +1629,10 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
           </div>
         )}
         {message.content && (
-          <div className={cn("rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors text-zinc-100 shadow-sm", fontClass, paddingClass)}>
+          <div
+            style={fontStyle}
+            className={cn("rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors text-zinc-100 shadow-sm", paddingClass)}
+          >
             {message.content}
           </div>
         )}
@@ -1647,7 +1655,12 @@ function AssistantMessage({
   onRegenerate: () => void;
 }) {
   const [thoughtOpen, setThoughtOpen] = useState(false);
-  const fontClass = chatFont === "monospace" ? "font-mono" : chatFont === "serif" ? "font-serif" : "font-sans";
+  const fontStyle = chatFont === "monospace"
+    ? { fontFamily: "var(--font-geist-mono), monospace" }
+    : chatFont === "serif"
+    ? { fontFamily: "var(--font-serif), serif" }
+    : { fontFamily: "var(--font-sans), sans-serif" };
+
   const paddingClass = compactMode ? "p-2.5" : "p-4";
 
   return (
@@ -1661,7 +1674,10 @@ function AssistantMessage({
 
       <div className={cn("space-y-2 pl-7 bg-white/8 backdrop-blur-md rounded-xl", paddingClass)}>
         {message.content ? (
-          <p className={cn("max-w-3xl whitespace-pre-wrap text-zinc-100 description-fade", fontClass, compactMode ? "text-xs leading-6" : "text-sm leading-7")}>
+          <p
+            style={fontStyle}
+            className={cn("max-w-3xl whitespace-pre-wrap text-zinc-100 description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
+          >
             {message.content}
           </p>
         ) : (
