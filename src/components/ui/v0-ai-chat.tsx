@@ -44,10 +44,45 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+type BrowserSpeechRecognitionResult = {
+  isFinal: boolean;
+  0?: { transcript?: string };
+};
+
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  onstart: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  onresult: ((event: { resultIndex: number; results: ArrayLike<BrowserSpeechRecognitionResult> }) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 type ImageAttachment = {
   id: string;
   name: string;
   url: string;
+};
+
+type FileAttachment = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  content?: string;
+  note?: string;
 };
 
 type ChatMessage = {
@@ -55,6 +90,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   image?: ImageAttachment;
+  files?: FileAttachment[];
   thought?: string;
 };
 
@@ -66,6 +102,36 @@ type StoredConversation = {
 
 const STORAGE_KEY = "oni_conversations";
 const SESSION_KEY = "oni_session";
+const MAX_FILE_TEXT_CHARS = 24000;
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
+const ACCEPTED_DOCUMENT_TYPES = [
+  ".pdf",
+  ".md",
+  ".markdown",
+  ".txt",
+  ".csv",
+  ".json",
+  ".html",
+  ".htm",
+  ".css",
+  ".js",
+  ".jsx",
+  ".ts",
+  ".tsx",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".log",
+  ".rtf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+].join(",");
+const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml,image/avif";
 
 type EditorTab = "preview" | "code";
 type PreviewSize = "desktop" | "tablet" | "mobile";
@@ -198,6 +264,8 @@ export function OniChat({
     return initialMessages;
   });
   const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
+  const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -251,7 +319,9 @@ export function OniChat({
   const [navOpen, setNavOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
   const [recentChats, setRecentChats] = useState<StoredConversation[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -349,6 +419,7 @@ export function OniChat({
 
   useEffect(() => {
     return () => {
+      recognitionRef.current?.stop();
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
@@ -390,21 +461,141 @@ export function OniChat({
     setAttachedImage(null);
   }, [attachedImage]);
 
+  const addFilesFromList = useCallback(
+    async (fileList: FileList | File[]) => {
+      const files = Array.from(fileList);
+      const nextFiles: FileAttachment[] = [];
+
+      for (const file of files) {
+        if (file.type.startsWith("image/")) {
+          setImageFromFile(file);
+          continue;
+        }
+
+        const attachment: FileAttachment = {
+          id: createId(),
+          name: file.name || "untitled-file",
+          type: file.type || getFileExtension(file.name).toUpperCase().replace(".", "") || "unknown",
+          size: file.size,
+        };
+
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          attachment.note = `File is ${formatBytes(file.size)}, over the ${formatBytes(MAX_FILE_SIZE_BYTES)} text-reading limit.`;
+        } else if (isReadableTextFile(file)) {
+          const text = await file.text();
+          attachment.content =
+            text.length > MAX_FILE_TEXT_CHARS
+              ? `${text.slice(0, MAX_FILE_TEXT_CHARS)}\n...[truncated after ${MAX_FILE_TEXT_CHARS} characters]`
+              : text;
+        } else if (isPdfFile(file)) {
+          attachment.note = "PDF attached. Browser-side PDF text extraction is not available in this build, so only file metadata will be sent.";
+        } else {
+          attachment.note = "Binary document attached. Only file metadata will be sent.";
+        }
+
+        nextFiles.push(attachment);
+      }
+
+      if (nextFiles.length > 0) {
+        setAttachedFiles((current) => [...current, ...nextFiles]);
+        setMobilePanel("chat");
+      }
+    },
+    [setImageFromFile]
+  );
+
+  const removeAttachedFile = useCallback((fileId: string) => {
+    setAttachedFiles((current) => current.filter((file) => file.id !== fileId));
+  }, []);
+
+  const handleFileInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files?.length) {
+        void addFilesFromList(files);
+      }
+      event.target.value = "";
+    },
+    [addFilesFromList]
+  );
+
+  const handleVoiceInput = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    const SpeechRecognitionConstructor =
+      window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionConstructor) {
+      showToast("Voice input is not supported in this browser");
+      return;
+    }
+
+    const recognition = new SpeechRecognitionConstructor();
+    recognitionRef.current = recognition;
+    recognition.lang = navigator.language || "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    let finalTranscript = "";
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      showToast(`Voice input error: ${event.error}`);
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+      adjustHeight();
+    };
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const transcript = event.results[index][0]?.transcript ?? "";
+        if (event.results[index].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const transcript = `${finalTranscript}${interimTranscript}`.trim();
+      if (!transcript) return;
+
+      const separator = input.trim() ? " " : "";
+      setInput(`${input}${separator}${transcript}`);
+      window.requestAnimationFrame(() => adjustHeight());
+    };
+
+    recognition.start();
+  }, [adjustHeight, input, isListening, showToast]);
+
   const handleSend = useCallback(async (overrideText?: string) => {
     const prompt = (overrideText ?? input).trim();
-    if ((!prompt && !attachedImage) || generating || isLoading) return;
+    if ((!prompt && !attachedImage && attachedFiles.length === 0) || generating || isLoading) return;
 
     const imageForMessage = attachedImage ?? undefined;
+    const filesForMessage = attachedFiles;
+    const promptForApi = buildPromptWithAttachments(prompt, imageForMessage, filesForMessage);
     const userMessage: ChatMessage = {
       id: createId(),
       role: "user",
       content: prompt,
       image: imageForMessage,
+      files: filesForMessage,
     };
 
     setMessages((current) => [...current, userMessage]);
     setInput("");
     setAttachedImage(null);
+    setAttachedFiles([]);
     setEditorTab("preview");
     adjustHeight(true);
 
@@ -422,10 +613,10 @@ export function OniChat({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt: promptForApi,
           messages: messagesForApi.map(m => ({
             role: m.role,
-            content: m.content
+            content: m.id === userMessage.id ? promptForApi : m.content
           })),
           currentHtml: generatedHtml
         }),
@@ -441,7 +632,7 @@ export function OniChat({
           updated[updated.length - 1] = {
             id: assistantId,
             role: 'assistant',
-            content: `Sorry, there was an error: ${response.statusText}`,
+            content: `Sorry, there was an error: ${errorText || response.statusText}`,
           };
           return updated;
         });
@@ -578,7 +769,7 @@ export function OniChat({
       setIsLoading(false);
       setGenerating(false);
     }
-  }, [adjustHeight, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages]);
+  }, [adjustHeight, attachedFiles, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages]);
 
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
   // Guard: don't re-fire on refresh if session already has messages
@@ -619,6 +810,21 @@ export function OniChat({
           currentHtml: generatedHtml
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error:', errorText);
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            id: assistantId,
+            role: 'assistant',
+            content: `Sorry, there was an error: ${errorText || response.statusText}`,
+          };
+          return updated;
+        });
+        return;
+      }
 
       if (!response.body) {
         setIsLoading(false);
@@ -760,20 +966,19 @@ export function OniChat({
   };
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const imageFile = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/"));
-    if (!imageFile) return;
+    const files = Array.from(event.clipboardData.files);
+    if (files.length === 0) return;
 
     event.preventDefault();
-    setImageFromFile(imageFile);
+    void addFilesFromList(files);
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
 
-    const imageFile = Array.from(event.dataTransfer.files).find((file) => file.type.startsWith("image/"));
-    if (imageFile) {
-      setImageFromFile(imageFile);
+    if (event.dataTransfer.files.length > 0) {
+      void addFilesFromList(event.dataTransfer.files);
     }
   };
 
@@ -928,10 +1133,13 @@ export function OniChat({
             value={input}
             messages={messages}
             attachedImage={attachedImage}
+            attachedFiles={attachedFiles}
             isGenerating={generating}
+            isListening={isListening}
             isLoading={isLoading}
             isDragging={isDragging}
             textareaRef={textareaRef}
+            fileInputRef={fileInputRef}
             imageInputRef={imageInputRef}
             onValueChange={(nextValue) => {
               setInput(nextValue);
@@ -946,8 +1154,12 @@ export function OniChat({
               setIsDragging(true);
             }}
             onDragLeave={() => setIsDragging(false)}
+            onFileInputChange={handleFileInputChange}
+            onFileButtonClick={() => fileInputRef.current?.click()}
             onImageInputChange={handleImageInputChange}
             onImageButtonClick={() => imageInputRef.current?.click()}
+            onVoiceInput={handleVoiceInput}
+            onRemoveFile={removeAttachedFile}
             onRemoveImage={removeAttachedImage}
             onCopy={handleCopyText}
             onRegenerate={() => { void handleRegenerate(); }}
@@ -1016,10 +1228,13 @@ interface ChatPanelProps {
   value: string;
   messages: ChatMessage[];
   attachedImage: ImageAttachment | null;
+  attachedFiles: FileAttachment[];
   isGenerating: boolean;
+  isListening: boolean;
   isLoading: boolean;
   isDragging: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   imageInputRef: RefObject<HTMLInputElement | null>;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   onValueChange: (value: string) => void;
@@ -1029,8 +1244,12 @@ interface ChatPanelProps {
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDragLeave: () => void;
+  onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onFileButtonClick: () => void;
   onImageInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImageButtonClick: () => void;
+  onVoiceInput: () => void;
+  onRemoveFile: (fileId: string) => void;
   onRemoveImage: () => void;
   onCopy: (text: string) => void;
   onRegenerate: () => void;
@@ -1043,10 +1262,13 @@ function ChatPanel({
   value,
   messages,
   attachedImage,
+  attachedFiles,
   isGenerating,
+  isListening,
   isLoading,
   isDragging,
   textareaRef,
+  fileInputRef,
   imageInputRef,
   messagesEndRef,
   onValueChange,
@@ -1056,8 +1278,12 @@ function ChatPanel({
   onDrop,
   onDragOver,
   onDragLeave,
+  onFileInputChange,
+  onFileButtonClick,
   onImageInputChange,
   onImageButtonClick,
+  onVoiceInput,
+  onRemoveFile,
   onRemoveImage,
   onCopy,
   onRegenerate,
@@ -1137,9 +1363,12 @@ function ChatPanel({
         <ChatComposer
           value={value}
           attachedImage={attachedImage}
+          attachedFiles={attachedFiles}
           isGenerating={isGenerating}
+          isListening={isListening}
           isDragging={isDragging}
           textareaRef={textareaRef}
+          fileInputRef={fileInputRef}
           imageInputRef={imageInputRef}
           onValueChange={onValueChange}
           onKeyDown={onKeyDown}
@@ -1148,8 +1377,12 @@ function ChatPanel({
           onDrop={onDrop}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
+          onFileInputChange={onFileInputChange}
+          onFileButtonClick={onFileButtonClick}
           onImageInputChange={onImageInputChange}
           onImageButtonClick={onImageButtonClick}
+          onVoiceInput={onVoiceInput}
+          onRemoveFile={onRemoveFile}
           onRemoveImage={onRemoveImage}
         />
       </div>
@@ -1171,6 +1404,22 @@ function UserMessage({ message }: { message: ChatMessage }) {
               unoptimized
               className="max-h-56 w-auto rounded-xl object-cover"
             />
+          </div>
+        )}
+        {message.files && message.files.length > 0 && (
+          <div className="flex max-w-full flex-col items-end gap-1.5">
+            {message.files.map((file) => (
+              <div
+                key={file.id}
+                className="flex max-w-[260px] items-center gap-2 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-left"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-white/55" />
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-white/80">{file.name}</p>
+                  <p className="text-[11px] text-white/35">{formatBytes(file.size)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {message.content && (
@@ -1279,9 +1528,12 @@ function AssistantThinking() {
 type ChatComposerProps = {
   value: string;
   attachedImage: ImageAttachment | null;
+  attachedFiles: FileAttachment[];
   isGenerating: boolean;
+  isListening: boolean;
   isDragging: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   imageInputRef: RefObject<HTMLInputElement | null>;
   onValueChange: (value: string) => void;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -1290,17 +1542,24 @@ type ChatComposerProps = {
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDragLeave: () => void;
+  onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onFileButtonClick: () => void;
   onImageInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImageButtonClick: () => void;
+  onVoiceInput: () => void;
+  onRemoveFile: (fileId: string) => void;
   onRemoveImage: () => void;
 };
 
 function ChatComposer({
   value,
   attachedImage,
+  attachedFiles,
   isGenerating,
+  isListening,
   isDragging,
   textareaRef,
+  fileInputRef,
   imageInputRef,
   onValueChange,
   onKeyDown,
@@ -1309,11 +1568,15 @@ function ChatComposer({
   onDrop,
   onDragOver,
   onDragLeave,
+  onFileInputChange,
+  onFileButtonClick,
   onImageInputChange,
   onImageButtonClick,
+  onVoiceInput,
+  onRemoveFile,
   onRemoveImage,
 }: ChatComposerProps) {
-  const canSend = Boolean(value.trim() || attachedImage) && !isGenerating;
+  const canSend = Boolean(value.trim() || attachedImage || attachedFiles.length > 0) && !isGenerating;
 
   return (
     <div
@@ -1326,39 +1589,74 @@ function ChatComposer({
       )}
     >
       <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_DOCUMENT_TYPES}
+        multiple
+        className="hidden"
+        onChange={onFileInputChange}
+      />
+      <input
         ref={imageInputRef}
         type="file"
-        accept="image/*"
+        accept={ACCEPTED_IMAGE_TYPES}
         className="hidden"
         onChange={onImageInputChange}
       />
 
-      {attachedImage && (
+      {(attachedImage || attachedFiles.length > 0) && (
         <div className="border-b border-white/10 px-3 pt-3">
-          <div className="relative mb-3 inline-flex overflow-hidden rounded-lg border border-white/10 bg-black">
-            <Image
-              src={attachedImage.url}
-              alt={attachedImage.name}
-              width={128}
-              height={80}
-              unoptimized
-              className="max-h-20 w-auto object-cover"
-            />
-            <button
-              type="button"
-              onClick={onRemoveImage}
-              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-white transition-colors duration-200 ease-in-out hover:bg-white hover:text-black"
-              aria-label="Remove image"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {attachedImage && (
+              <div className="relative inline-flex overflow-hidden rounded-lg border border-white/10 bg-black">
+                <Image
+                  src={attachedImage.url}
+                  alt={attachedImage.name}
+                  width={128}
+                  height={80}
+                  unoptimized
+                  className="max-h-20 w-auto object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={onRemoveImage}
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-white transition-colors duration-200 ease-in-out hover:bg-white hover:text-black"
+                  aria-label="Remove image"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {attachedFiles.map((file) => (
+              <div
+                key={file.id}
+                className="flex max-w-full items-start gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2"
+              >
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-white/55" />
+                <div className="min-w-0">
+                  <p className="max-w-[220px] truncate text-xs font-medium text-white/80">{file.name}</p>
+                  <p className="text-[11px] text-white/35">
+                    {formatBytes(file.size)}
+                    {file.content ? " read" : file.note ? " metadata only" : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemoveFile(file.id)}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label={`Remove ${file.name}`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       <div className="flex items-end gap-2 px-3 py-3">
         <div className="flex shrink-0 items-center gap-1 pb-2">
-          <IconButton label="Attach file">
+          <IconButton label="Attach file" onClick={onFileButtonClick}>
             <Paperclip className="h-4 w-4" />
           </IconButton>
           <IconButton label="Upload image" onClick={onImageButtonClick}>
@@ -1399,8 +1697,17 @@ function ChatComposer({
             </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-            aria-label="Voice input"
+            onClick={onVoiceInput}
+            disabled={isGenerating}
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ease-in-out",
+              isListening
+                ? "bg-red-500 text-white hover:bg-red-400"
+                : "bg-white/10 text-white hover:bg-white/20",
+              isGenerating && "cursor-not-allowed opacity-50"
+            )}
+            aria-label={isListening ? "Stop voice input" : "Voice input"}
+            title={isListening ? "Stop voice input" : "Voice input"}
           >
             <Mic className="h-4 w-4" />
           </button>
@@ -1851,6 +2158,89 @@ function buildProjectFiles(html: string): ProjectFile[] {
       content: html,
     },
   ];
+}
+
+function buildPromptWithAttachments(
+  prompt: string,
+  image: ImageAttachment | undefined,
+  files: FileAttachment[]
+) {
+  const attachmentBlocks: string[] = [];
+
+  if (image) {
+    attachmentBlocks.push(
+      [
+        "Attached image:",
+        `Name: ${image.name}`,
+        "Use it as a visual reference if the user asks for design, layout, branding, or screenshot-based changes.",
+      ].join("\n")
+    );
+  }
+
+  files.forEach((file) => {
+    const lines = [
+      `Attached file: ${file.name}`,
+      `Type: ${file.type || "unknown"}`,
+      `Size: ${formatBytes(file.size)}`,
+    ];
+
+    if (file.content) {
+      lines.push("Content:", file.content);
+    } else if (file.note) {
+      lines.push(`Note: ${file.note}`);
+    }
+
+    attachmentBlocks.push(lines.join("\n"));
+  });
+
+  if (attachmentBlocks.length === 0) return prompt;
+
+  return [prompt || "Use the attached files for this request.", "<ATTACHMENTS>", attachmentBlocks.join("\n\n---\n\n"), "</ATTACHMENTS>"].join("\n\n");
+}
+
+function isReadableTextFile(file: File) {
+  const extension = getFileExtension(file.name);
+  const readableExtensions = new Set([
+    ".md",
+    ".markdown",
+    ".txt",
+    ".csv",
+    ".json",
+    ".html",
+    ".htm",
+    ".css",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".xml",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".log",
+    ".rtf",
+  ]);
+
+  return file.type.startsWith("text/") || readableExtensions.has(extension) || file.type === "application/json";
+}
+
+function isPdfFile(file: File) {
+  return file.type === "application/pdf" || getFileExtension(file.name) === ".pdf";
+}
+
+function getFileExtension(fileName: string) {
+  const lastDot = fileName.lastIndexOf(".");
+  return lastDot === -1 ? "" : fileName.slice(lastDot).toLowerCase();
+}
+
+function formatBytes(bytes: number) {
+  if (bytes === 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB"];
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** unitIndex;
+
+  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 
