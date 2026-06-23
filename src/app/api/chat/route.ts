@@ -403,15 +403,21 @@ export async function POST(req: Request) {
   }
 
   try {
+    const defaultModelInput = body?.defaultModel || "oni-pro";
+    let modelToUse = GROQ_MODEL;
+    if (defaultModelInput === "oni-flash") {
+      modelToUse = "llama-3.1-8b-instant";
+    }
+
     const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
     const requestBody = JSON.stringify({
-      model: GROQ_MODEL,
+      model: modelToUse,
       messages: messagesToSend,
       temperature: 0.9,
       max_tokens: maxTokens,
       stream: true,
     });
-    console.log('Request body length:', requestBody.length);
+    console.log('Request body length:', requestBody.length, 'Model used:', modelToUse);
 
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",

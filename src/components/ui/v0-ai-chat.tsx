@@ -309,6 +309,40 @@ export function OniChat({
     return "";
   });
   const [toast, setToast] = useState<string | null>(null);
+  const [oniSettings, setOniSettings] = useState({
+    displayName: "Oni User",
+    billingPlan: "pro",
+    chatFont: "inter",
+    compactMode: false,
+    defaultModel: "oni-pro"
+  });
+
+  useEffect(() => {
+    const loadSettings = () => {
+      try {
+        const saved = localStorage.getItem("oni_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setOniSettings({
+            displayName: parsed.displayName || "Oni User",
+            billingPlan: parsed.billingPlan || "pro",
+            chatFont: parsed.chatFont || "inter",
+            compactMode: !!parsed.compactMode,
+            defaultModel: parsed.defaultModel || "oni-pro"
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadSettings();
+    window.addEventListener("storage", loadSettings);
+    window.addEventListener("oni_settings_change", loadSettings);
+    return () => {
+      window.removeEventListener("storage", loadSettings);
+      window.removeEventListener("oni_settings_change", loadSettings);
+    };
+  }, []);
   const [hasStarted, setHasStarted] = useState(() => {
     if (chatId) {
       try {
@@ -751,7 +785,8 @@ export function OniChat({
             role: m.role,
             content: m.id === userMessage.id ? promptForApi : m.content
           })),
-          currentHtml: generatedHtml
+          currentHtml: generatedHtml,
+          defaultModel: oniSettings.defaultModel
         }),
       });
 
@@ -940,7 +975,8 @@ export function OniChat({
         body: JSON.stringify({
           prompt: prompt,
           messages: [{ role: "user", content: prompt }],
-          currentHtml: generatedHtml
+          currentHtml: generatedHtml,
+          defaultModel: oniSettings.defaultModel
         }),
       });
 
@@ -1243,10 +1279,17 @@ export function OniChat({
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-white/10 shrink-0">
           <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/8 transition-colors cursor-pointer">
-            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/70 shrink-0">OU</div>
+            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-white/70 shrink-0">
+              {oniSettings.displayName
+                ?.split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase() ?? "")
+                .join("") || "OU"}
+            </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-white/80 leading-tight truncate">Oni User</span>
-              <span className="text-xs text-white/30">Free plan</span>
+              <span className="text-sm font-medium text-white/80 leading-tight truncate">{oniSettings.displayName}</span>
+              <span className="text-xs text-white/30 capitalize">{oniSettings.billingPlan} plan</span>
             </div>
           </div>
         </div>
@@ -1304,6 +1347,8 @@ export function OniChat({
             sidebarOpen={navOpen}
             hideSidebar={hideSidebar}
             hasWebsite={Boolean(generatedHtml)}
+            chatFont={oniSettings.chatFont}
+            compactMode={oniSettings.compactMode}
           />
         </section>
 
@@ -1398,6 +1443,8 @@ interface ChatPanelProps {
   sidebarOpen: boolean;
   hideSidebar?: boolean;
   hasWebsite: boolean;
+  chatFont?: string;
+  compactMode?: boolean;
 }
 
 function ChatPanel({
@@ -1433,6 +1480,8 @@ function ChatPanel({
   sidebarOpen,
   hideSidebar,
   hasWebsite,
+  chatFont,
+  compactMode,
 }: ChatPanelProps) {
   return (
     <>
@@ -1488,11 +1537,13 @@ function ChatPanel({
             <div className="flex flex-col justify-end space-y-8">
               {messages.map((message) =>
                 message.role === "user" ? (
-                  <UserMessage key={message.id} message={message} />
+                  <UserMessage key={message.id} message={message} chatFont={chatFont} compactMode={compactMode} />
                 ) : (
                   <AssistantMessage
                     key={message.id}
                     message={message}
+                    chatFont={chatFont}
+                    compactMode={compactMode}
                     onCopy={() => onCopy(message.content)}
                     onRegenerate={onRegenerate}
                   />
@@ -1537,7 +1588,10 @@ function ChatPanel({
   );
 }
 
-function UserMessage({ message }: { message: ChatMessage }) {
+function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage; chatFont?: string; compactMode?: boolean }) {
+  const fontClass = chatFont === "monospace" ? "font-mono" : chatFont === "serif" ? "font-serif" : "font-sans";
+  const paddingClass = compactMode ? "px-3 py-1.5 text-xs leading-5" : "px-4 py-2.5 text-sm leading-6";
+
   return (
     <div className="flex animate-[fadeSlideUp_400ms_ease-out] justify-end">
       <div className="flex max-w-[82%] flex-col items-end gap-2">
@@ -1570,7 +1624,7 @@ function UserMessage({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.content && (
-          <div className="rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors px-4 py-2.5 text-sm leading-6 text-zinc-100 shadow-sm">
+          <div className={cn("rounded-2xl border border-white/8 bg-white/10 backdrop-blur-md hover:bg-white/12 transition-colors text-zinc-100 shadow-sm", fontClass, paddingClass)}>
             {message.content}
           </div>
         )}
@@ -1581,17 +1635,23 @@ function UserMessage({ message }: { message: ChatMessage }) {
 
 function AssistantMessage({
   message,
+  chatFont,
+  compactMode,
   onCopy,
   onRegenerate,
 }: {
   message: ChatMessage;
+  chatFont?: string;
+  compactMode?: boolean;
   onCopy: () => void;
   onRegenerate: () => void;
 }) {
   const [thoughtOpen, setThoughtOpen] = useState(false);
+  const fontClass = chatFont === "monospace" ? "font-mono" : chatFont === "serif" ? "font-serif" : "font-sans";
+  const paddingClass = compactMode ? "p-2.5" : "p-4";
 
   return (
-    <div className="animate-[fadeSlideUp_400ms_ease-out] space-y-2.5">
+    <div className={cn("animate-[fadeSlideUp_400ms_ease-out]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
       <div className="flex items-center gap-2">
         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black font-bold text-[10px] select-none">
           O
@@ -1599,9 +1659,9 @@ function AssistantMessage({
         <span className="text-xs text-white/45 font-semibold tracking-wide uppercase select-none">Oni</span>
       </div>
 
-          <div className="space-y-2 pl-7 bg-white/8 backdrop-blur-md rounded-xl p-4">
+      <div className={cn("space-y-2 pl-7 bg-white/8 backdrop-blur-md rounded-xl", paddingClass)}>
         {message.content ? (
-          <p className="max-w-3xl whitespace-pre-wrap text-sm leading-7 text-zinc-100 description-fade">
+          <p className={cn("max-w-3xl whitespace-pre-wrap text-zinc-100 description-fade", fontClass, compactMode ? "text-xs leading-6" : "text-sm leading-7")}>
             {message.content}
           </p>
         ) : (
