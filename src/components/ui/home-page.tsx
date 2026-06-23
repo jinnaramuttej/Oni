@@ -389,13 +389,12 @@ export function HomePage() {
             </svg>
           </button>
           {profileOpen && (
-            <div className="absolute right-0 top-10 z-50">
-              <ProfileMenu
-                user={user}
-                onClose={() => setProfileOpen(false)}
-                onLogout={handleLogout}
-              />
-            </div>
+            <ProfileMenu
+              user={user}
+              onClose={() => setProfileOpen(false)}
+              onLogout={handleLogout}
+              className="top-full right-0 mt-1"
+            />
           )}
         </div>
       </header>
