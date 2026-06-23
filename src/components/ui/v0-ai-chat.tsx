@@ -2016,7 +2016,7 @@ function ChatComposer({
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
-          placeholder="Describe your website or paste a screenshot..."
+          placeholder="Write a message..."
           className="min-h-[36px] flex-1 resize-none border-none bg-transparent px-0 py-1.5 text-sm leading-6 text-primary placeholder:text-text-tertiary focus:ring-0 focus:outline-none"
           style={{ overflow: "hidden" }}
         />
