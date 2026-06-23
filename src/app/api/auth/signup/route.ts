@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
 import { attachSessionCookie, createUser, sanitizeText, validateAuthInput } from "@/lib/auth";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// 3 signups per hour per IP — prevents bot account creation
+const SIGNUP_LIMIT = { windowMs: 60 * 60 * 1000, max: 3 };
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  if (rateLimiter.isLimitExceeded(`signup:${ip}`, SIGNUP_LIMIT)) {
+    return NextResponse.json(
+      { error: "Too many signup attempts. Please wait before trying again." },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const data = validateAuthInput(body);
 

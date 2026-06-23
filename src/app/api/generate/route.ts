@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import DOMPurify from "isomorphic-dompurify";
-import { getUserFromRequest, sanitizeText } from "@/lib/auth";
+import { sanitizeText } from "@/lib/auth";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// 10 AI generation requests per minute per IP
+const GENERATE_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 
 const ONI_SYSTEM_PROMPT = `You are Oni, an expert AI website builder. When the user describes any website, you must respond with:
 
@@ -22,8 +26,14 @@ Rules for the HTML:
 - Hero heading must NEVER be the user's raw prompt text`;
 
 export async function POST(req: Request) {
-  const user = await getUserFromRequest(req);
-  if (!user) return new NextResponse("Unauthorized", { status: 401 });
+  // Rate limiting — protect Groq credits
+  const ip = getClientIp(req);
+  if (rateLimiter.isLimitExceeded(`generate:${ip}`, GENERATE_RATE_LIMIT)) {
+    return new NextResponse("Rate limit exceeded. Please slow down.", {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body.prompt !== "string") return new NextResponse("Bad request", { status: 400 });
@@ -45,7 +55,7 @@ export async function POST(req: Request) {
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
 
   if (!groqApiKey) {
-    return NextResponse.json({ output: buildLocalWebsiteResponse(clean) });
+    return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
   }
 
   const userContent = currentHtml

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import DOMPurify from "isomorphic-dompurify";
+import { z } from "zod";
 import { sanitizeText } from "@/lib/auth";
+import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// 10 AI generation requests per minute per IP
+const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 11000;
@@ -370,8 +375,14 @@ function prepareMessagesForGroq(
 }
 
 export async function POST(req: Request) {
-  console.log('GROQ_API_KEY exists:', !!process.env.GROQ_API_KEY);
-  console.log('GROQ_API_KEY first 8 chars:', process.env.GROQ_API_KEY?.slice(0, 8));
+  // Rate limiting — protect Groq credits
+  const ip = getClientIp(req);
+  if (rateLimiter.isLimitExceeded(`chat:${ip}`, CHAT_RATE_LIMIT)) {
+    return new NextResponse("Rate limit exceeded. Please slow down.", {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body) {

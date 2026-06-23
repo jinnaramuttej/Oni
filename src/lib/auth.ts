@@ -34,8 +34,25 @@ const SESSION_COOKIE = "oni_session";
 const LOCAL_STORE_DIR = path.join(process.cwd(), ".data");
 const LOCAL_STORE_FILE = path.join(LOCAL_STORE_DIR, "users.json");
 
+let randomSecret: string | null = null;
+
 function getSecret() {
-  return process.env.INTERNAL_SECRET || "dev-only-secret-change-me";
+  const secret = process.env.INTERNAL_SECRET;
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    if (!randomSecret) {
+      console.warn("WARNING: INTERNAL_SECRET is not configured in production. Generating a temporary random secret for this session/process instance.");
+      randomSecret = crypto.randomBytes(32).toString("hex");
+    }
+    return randomSecret;
+  }
+
+  return "dev-only-secret-change-me";
+}
+
+export function isValidId(id: unknown): id is string {
+  return typeof id === "string" && /^[a-zA-Z0-9-]+$/.test(id);
 }
 
 function normalizeEmail(email: string) {
@@ -296,7 +313,7 @@ export async function getUserFromRequest(req: NextRequest | Request) {
 export function attachSessionCookie(response: NextResponse, userId: string) {
   response.cookies.set(SESSION_COOKIE, encodeSession(userId), {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 30,
@@ -308,7 +325,7 @@ export function attachSessionCookie(response: NextResponse, userId: string) {
 export function clearSessionCookie(response: NextResponse) {
   response.cookies.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     secure: process.env.NODE_ENV === "production",
     maxAge: 0,
@@ -317,16 +334,22 @@ export function clearSessionCookie(response: NextResponse) {
   return response;
 }
 
+// Basic but strict email regex — rejects obvious garbage
+const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 export function validateAuthInput(input: unknown) {
   if (!input || typeof input !== "object") return null;
   const record = input as Record<string, unknown>;
   const name = typeof record.name === "string" ? record.name.trim() : "";
-  const email = typeof record.email === "string" ? record.email.trim() : "";
+  const email = typeof record.email === "string" ? record.email.trim().toLowerCase() : "";
   const password = typeof record.password === "string" ? record.password : "";
   const confirmPassword = typeof record.confirmPassword === "string" ? record.confirmPassword : "";
 
-  if (email.length < 3 || !email.includes("@")) return null;
-  if (password.length < 6) return null;
+  if (!EMAIL_RE.test(email)) return null;
+  if (email.length > 254) return null; // RFC 5321 max
+  if (password.length < 8) return null; // minimum 8 chars
+  if (password.length > 128) return null; // prevent DoS via bcrypt cost
+  if (name.length > 100) return null;
 
   return { name, email, password, confirmPassword };
 }
