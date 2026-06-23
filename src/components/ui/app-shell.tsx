@@ -279,38 +279,38 @@ export function AppShell({ children, activePage }: AppShellProps) {
   ];
 
   return (
-    <div className="h-screen w-full flex overflow-hidden font-sans antialiased text-sm bg-surface text-text-primary">
+    <div className="h-screen w-full flex overflow-hidden font-sans antialiased text-[13px] bg-surface text-text-primary">
       {/* Sidebar */}
       <aside
         className={cn(
           "h-full flex flex-col bg-surface-container-lowest border-r border-surface-container-high shrink-0 transition-all duration-300 z-30",
-          sidebarOpen ? "w-[260px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
+          sidebarOpen ? "w-[220px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
         )}
       >
         {/* Sidebar Header */}
-        <div className="h-14 flex items-center justify-between px-4 shrink-0">
+        <div className="h-11 flex items-center justify-between px-3 shrink-0 border-b border-surface-container-high/50">
           <div className="flex items-center gap-2">
             <span
               onClick={() => router.push("/")}
-              className="text-xl font-bold tracking-tight text-primary cursor-pointer"
+              className="text-[15px] font-semibold tracking-tight text-primary cursor-pointer select-none"
             >
               Oni
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <button
               aria-label="Search"
-              className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
+              className="p-1 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
             >
               <svg
                 fill="none"
-                height="16"
+                height="14"
                 stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
                 viewBox="0 0 24 24"
-                width="16"
+                width="14"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <circle cx="11" cy="11" r="8"></circle>
@@ -320,17 +320,17 @@ export function AppShell({ children, activePage }: AppShellProps) {
             <button
               onClick={() => setSidebarOpen(false)}
               aria-label="Collapse Sidebar"
-              className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
+              className="p-1 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
             >
               <svg
                 fill="none"
-                height="16"
+                height="14"
                 stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
                 viewBox="0 0 24 24"
-                width="16"
+                width="14"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect>
@@ -341,7 +341,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
         </div>
 
         {/* Sidebar Scrollable Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 flex flex-col gap-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-1.5 flex flex-col gap-4">
           {/* Primary Actions */}
           <div className="flex flex-col gap-0.5">
             <button
@@ -351,9 +351,9 @@ export function AppShell({ children, activePage }: AppShellProps) {
                 } catch { /* ignore */ }
                 window.location.href = "/";
               }}
-              className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-surface-container text-primary transition-colors group w-full text-left cursor-pointer"
+              className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-surface-container text-primary transition-colors group w-full text-left cursor-pointer"
             >
-              <span className="material-symbols-outlined text-primary text-[20px]">add</span>
+              <span className="material-symbols-outlined text-primary text-[16px]">add</span>
               <span className="font-medium">New chat</span>
             </button>
 
@@ -365,7 +365,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                   key={item.id}
                   onClick={() => item.href !== "#" && router.push(item.href)}
                   className={cn(
-                    "flex items-center gap-3 px-2.5 py-2 rounded-md transition-colors w-full text-left cursor-pointer",
+                    "flex items-center gap-2 px-2 py-1 rounded-md transition-colors w-full text-left cursor-pointer",
                     isActive
                       ? "bg-surface-container-high text-primary"
                       : "text-text-secondary hover:text-primary hover:bg-surface-container-low"
@@ -373,7 +373,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                 >
                   <span
                     className={cn(
-                      "material-symbols-outlined text-[20px]",
+                      "material-symbols-outlined text-[16px]",
                       isActive ? "text-primary" : "text-text-secondary"
                     )}
                   >
@@ -445,7 +445,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                   <div
                     key={chat.id}
                     className={cn(
-                      "group relative w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-left text-xs transition-colors cursor-pointer",
+                      "group relative w-full flex items-center gap-2 px-2 py-1 rounded-md text-left text-xs transition-colors cursor-pointer",
                       isActive
                         ? "bg-surface-container-high text-primary font-medium"
                         : "text-text-secondary hover:bg-surface-container-low hover:text-primary"
@@ -578,16 +578,16 @@ export function AppShell({ children, activePage }: AppShellProps) {
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             className={cn(
-              "w-full flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer",
+              "w-full flex items-center justify-between p-1.5 rounded-lg transition-colors cursor-pointer",
               profileOpen ? "bg-surface-container-high border border-outline-variant" : "hover:bg-surface-container border border-transparent"
             )}
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-medium shrink-0">
+              <div className="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-primary text-xs font-semibold shrink-0">
                 {initials}
               </div>
               <div className="flex flex-col items-start text-left">
-                <span className="font-medium text-primary text-sm leading-tight">
+                <span className="font-medium text-primary text-[13px] leading-tight">
                   {customDisplayName || user?.name || "Oni User"}
                 </span>
                 <span className="text-xs text-text-tertiary">Free plan</span>
