@@ -84,8 +84,8 @@ export function SettingsPage() {
   return (
     <AppShell activePage="settings">
       {/* TopAppBar for Settings (Desktop & Mobile) */}
-      <header className="flex justify-between items-center w-full h-16 px-6 md:px-12 bg-surface border-b border-surface-container-high z-10 flex-shrink-0">
-        <h1 className="font-sans font-bold text-2xl text-primary">Settings</h1>
+      <header className="flex justify-between items-center w-full h-14 px-6 md:px-10 bg-surface border-b border-surface-container-high z-10 flex-shrink-0">
+        <h1 className="font-sans font-bold text-xl text-primary">Settings</h1>
         <button
           onClick={() => router.push("/")}
           className="text-text-tertiary hover:text-primary transition-colors cursor-pointer active:opacity-70 p-2 rounded-full hover:bg-surface-container flex items-center justify-center border-none"
@@ -95,7 +95,7 @@ export function SettingsPage() {
       </header>
 
       {/* Settings Sub-Nav */}
-      <div className="w-full border-b border-surface-container-high bg-surface/80 backdrop-blur-sm sticky top-0 z-10 px-6 md:px-12 overflow-x-auto scrollbar-hide">
+      <div className="w-full border-b border-surface-container-high bg-surface/80 backdrop-blur-sm sticky top-0 z-10 px-6 md:px-10 overflow-x-auto scrollbar-hide">
         <nav className="flex space-x-6 min-w-max">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -104,7 +104,7 @@ export function SettingsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "text-xs font-semibold tracking-wider py-4 uppercase border-b-2 cursor-pointer transition-colors",
+                  "text-[11px] font-semibold tracking-wider py-3.5 uppercase border-b-2 cursor-pointer transition-colors",
                   isActive
                     ? "text-primary border-primary"
                     : "text-text-tertiary hover:text-primary border-transparent"
@@ -118,9 +118,9 @@ export function SettingsPage() {
       </div>
 
       {/* Scrollable Workspace Canvas */}
-      <main className="flex-1 overflow-y-auto px-6 md:px-12 py-8 w-full flex flex-col items-start pb-32">
-        <div className="w-full max-w-[896px] mb-6">
-          <h2 className="font-sans font-bold text-3xl md:text-[40px] leading-[1.2] tracking-[-0.02em] text-primary mb-2">
+      <main className="flex-1 overflow-y-auto px-6 md:px-10 py-6 w-full flex flex-col items-start pb-24">
+        <div className="w-full max-w-[896px] mb-4">
+          <h2 className="font-sans font-bold text-2xl md:text-[28px] leading-tight tracking-tight text-primary mb-1">
             {activeTabLabel}
           </h2>
         </div>
