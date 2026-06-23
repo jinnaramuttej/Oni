@@ -1844,37 +1844,34 @@ function AssistantMessage({
           </div>
         )}
 
-        {message.thought && (
-          <div className="max-w-3xl rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+        <div className="flex items-center justify-between mt-2 pt-1">
+          <div className="flex items-center gap-1">
+            <IconButton label="Copy response" onClick={onCopy}>
+              <Copy className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton label="Regenerate response" onClick={onRegenerate}>
+              <RotateCcw className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
+          {message.thought && (
             <button
               type="button"
               onClick={() => setThoughtOpen((current) => !current)}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-white/55 transition-colors duration-200 ease-in-out hover:text-white/80"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 hover:text-white/80 hover:bg-white/5 rounded-md transition-all cursor-pointer font-medium border border-white/5"
             >
-              <div className="flex items-center gap-2">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40">
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-                </svg>
-                <span>Thought Process</span>
-              </div>
-              {thoughtOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-75">
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+              </svg>
+              <span>{thoughtOpen ? "Hide thought" : "View thought"}</span>
             </button>
-            {thoughtOpen && (
-              <div className="px-3 pb-3 pt-1 border-t border-white/5 text-xs leading-6 text-white/45 whitespace-pre-wrap">
-                {message.thought}
-              </div>
-            )}
+          )}
+        </div>
+
+        {thoughtOpen && message.thought && (
+          <div className="text-[11px] leading-relaxed text-white/35 mt-3 pt-3 border-t border-white/5 whitespace-pre-wrap select-text font-mono max-w-3xl">
+            {message.thought}
           </div>
         )}
-
-        <div className="flex items-center gap-1">
-          <IconButton label="Copy response" onClick={onCopy}>
-            <Copy className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton label="Regenerate response" onClick={onRegenerate}>
-            <RotateCcw className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
       </div>
     </div>
   );
