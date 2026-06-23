@@ -1290,7 +1290,7 @@ export function OniChat({
       <aside
         className={cn(
           "h-full shrink-0 flex flex-col bg-[#0f0f0f] border-r border-white/10 transition-all duration-300 overflow-hidden",
-          navOpen ? "w-[210px]" : "w-0"
+          navOpen ? "w-[240px]" : "w-0"
         )}
       >
         {/* Sidebar Header */}

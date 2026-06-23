@@ -284,11 +284,11 @@ export function AppShell({ children, activePage }: AppShellProps) {
       <aside
         className={cn(
           "h-full flex flex-col bg-surface-container-lowest border-r border-surface-container-high shrink-0 transition-all duration-300 z-30",
-          sidebarOpen ? "w-[220px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
+          sidebarOpen ? "w-[240px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
         )}
       >
         {/* Sidebar Header */}
-        <div className="h-11 flex items-center justify-between px-3 shrink-0 border-b border-surface-container-high/50">
+        <div className="h-12 flex items-center justify-between px-4 shrink-0 border-b border-surface-container-high/50">
           <div className="flex items-center gap-2">
             <span
               onClick={() => router.push("/")}
@@ -297,7 +297,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
               Oni
             </span>
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <button
               aria-label="Search"
               className="p-1 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container-low transition-colors cursor-pointer"
@@ -341,7 +341,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
         </div>
 
         {/* Sidebar Scrollable Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-1.5 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 flex flex-col gap-5">
           {/* Primary Actions */}
           <div className="flex flex-col gap-0.5">
             <button
@@ -351,7 +351,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                 } catch { /* ignore */ }
                 window.location.href = "/";
               }}
-              className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-surface-container text-primary transition-colors group w-full text-left cursor-pointer"
+              className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-surface-container text-primary transition-colors group w-full text-left cursor-pointer"
             >
               <span className="material-symbols-outlined text-primary text-[16px]">add</span>
               <span className="font-medium">New chat</span>
@@ -365,7 +365,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
                   key={item.id}
                   onClick={() => item.href !== "#" && router.push(item.href)}
                   className={cn(
-                    "flex items-center gap-2 px-2 py-1 rounded-md transition-colors w-full text-left cursor-pointer",
+                    "flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-colors w-full text-left cursor-pointer",
                     isActive
                       ? "bg-surface-container-high text-primary"
                       : "text-text-secondary hover:text-primary hover:bg-surface-container-low"
