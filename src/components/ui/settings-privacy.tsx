@@ -108,21 +108,21 @@ export function SettingsPrivacy() {
 
   return (
     <div className="w-full max-w-[896px]">
-      <div className="mb-12">
-        <p className="text-text-secondary">Manage how Oni handles your data and personalizes your experience.</p>
+      <div className="mb-6">
+        <p className="text-text-secondary text-sm">Manage how Oni handles your data and personalizes your experience.</p>
       </div>
 
-      <div className="flex flex-col gap-16">
+      <div className="flex flex-col gap-10">
         {/* Data Usage Section */}
-        <section className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
-            <span className="material-symbols-outlined text-text-tertiary text-[24px]">database</span>
-            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Data Usage</h3>
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 border-b border-surface-container-high pb-3">
+            <span className="material-symbols-outlined text-text-tertiary text-[20px]">database</span>
+            <h3 className="text-lg font-semibold text-text-primary tracking-wide">Data Usage</h3>
           </div>
 
-          <div className="flex items-start justify-between gap-8 p-6 rounded-2xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
-            <div className="space-y-2">
-              <h4 className="text-base font-medium text-primary">Improve AI models</h4>
+          <div className="flex items-start justify-between gap-6 p-4 rounded-xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-primary">Improve AI models</h4>
               <p className="text-xs text-text-secondary leading-relaxed font-normal normal-case">
                 Allow Oni to use your conversation history to train and improve our models. This helps us provide better,
                 more accurate responses over time. Your data is anonymized before use.
@@ -143,15 +143,15 @@ export function SettingsPrivacy() {
         </section>
 
         {/* Personalization Section */}
-        <section className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
-            <span className="material-symbols-outlined text-text-tertiary text-[24px]">person</span>
-            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Personalization</h3>
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 border-b border-surface-container-high pb-3">
+            <span className="material-symbols-outlined text-text-tertiary text-[20px]">person</span>
+            <h3 className="text-lg font-semibold text-text-primary tracking-wide">Personalization</h3>
           </div>
 
-          <div className="flex items-start justify-between gap-8 p-6 rounded-2xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
-            <div className="space-y-2">
-              <h4 className="text-base font-medium text-primary">Course location metadata</h4>
+          <div className="flex items-start justify-between gap-6 p-4 rounded-xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-primary">Course location metadata</h4>
               <p className="text-xs text-text-secondary leading-relaxed font-normal normal-case">
                 Permit Oni to analyze your geographic location data (city/region) to provide contextually relevant answers,
                 local time conversions, and location-aware formatting.
@@ -172,15 +172,15 @@ export function SettingsPrivacy() {
         </section>
 
         {/* Data Export Section */}
-        <section className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
-            <span className="material-symbols-outlined text-text-tertiary text-[24px]">download</span>
-            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Data Export</h3>
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 border-b border-surface-container-high pb-3">
+            <span className="material-symbols-outlined text-text-tertiary text-[20px]">download</span>
+            <h3 className="text-lg font-semibold text-text-primary tracking-wide">Data Export</h3>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl bg-surface-container-low border border-surface-container-high">
-            <div className="space-y-2">
-              <h4 className="text-base font-medium text-primary">Export Workspace Data</h4>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-surface-container-low border border-surface-container-high">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-primary">Export Workspace Data</h4>
               <p className="text-xs text-text-secondary leading-relaxed font-normal normal-case max-w-md">
                 Request an archive of your account information, chat history, and uploaded files. The export process may
                 take several hours depending on your usage.
@@ -189,9 +189,9 @@ export function SettingsPrivacy() {
             <button
               onClick={handleDownloadData}
               disabled={downloading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-outline-variant hover:border-primary text-primary rounded-xl transition-colors shrink-0 group focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant hover:border-primary text-primary rounded-lg transition-colors shrink-0 group focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-[16px] group-hover:text-primary transition-colors">
                 {downloading ? "autorenew" : "cloud_download"}
               </span>
               <span className="text-xs font-semibold tracking-wider uppercase">
@@ -202,10 +202,10 @@ export function SettingsPrivacy() {
         </section>
 
         {/* Danger Zone */}
-        <section className="space-y-6 pt-8 mt-12 border-t border-error-container/30">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl bg-[#1a0a0b] border border-error-container/50">
-            <div className="space-y-2">
-              <h4 className="text-base font-medium text-error">Delete Account</h4>
+        <section className="space-y-4 pt-6 mt-8 border-t border-error-container/30">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-[#1a0a0b] border border-error-container/50">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-error">Delete Account</h4>
               <p className="text-xs text-text-tertiary leading-relaxed font-normal normal-case max-w-md">
                 Permanently delete your account and all associated data. This action cannot be undone.
               </p>
@@ -214,13 +214,13 @@ export function SettingsPrivacy() {
               <div className="flex items-center gap-2 mt-2 sm:mt-0">
                 <button
                   onClick={handleDeleteAccount}
-                  className="px-4 py-2.5 bg-error text-white rounded-xl text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer"
+                  className="px-3.5 py-2 bg-error text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer"
                 >
                   Confirm Permanent Delete
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2.5 bg-transparent border border-outline-variant text-text-secondary hover:text-primary rounded-xl transition-all text-xs font-semibold cursor-pointer"
+                  className="px-3.5 py-2 bg-transparent border border-outline-variant text-text-secondary hover:text-primary rounded-lg transition-all text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -228,7 +228,7 @@ export function SettingsPrivacy() {
             ) : (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-transparent border border-error/30 hover:border-error hover:bg-error/10 text-error rounded-xl transition-all shrink-0 focus:outline-none focus:ring-1 focus:ring-error cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-transparent border border-error/30 hover:border-error hover:bg-error/10 text-error rounded-lg transition-all shrink-0 focus:outline-none focus:ring-1 focus:ring-error cursor-pointer"
               >
                 <span className="text-xs font-semibold tracking-wider uppercase">Delete Account</span>
               </button>
