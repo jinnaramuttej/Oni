@@ -7,7 +7,7 @@ export function SettingsPrivacy() {
   const [locationMetadata, setLocationMetadata] = useState(false);
 
   return (
-    <div className="flex-1 py-8 px-4 md:px-12 md:py-10 overflow-y-auto w-full max-w-[896px]">
+    <div className="w-full max-w-[896px]">
       <div className="mb-12">
         <p className="text-text-secondary">Manage how Oni handles your data and personalizes your experience.</p>
       </div>
@@ -17,7 +17,7 @@ export function SettingsPrivacy() {
         <section className="flex flex-col gap-6">
           <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
             <span className="material-symbols-outlined text-text-tertiary text-[24px]">database</span>
-            <h3 className="text-xl font-serif text-text-primary tracking-wide">Data Usage</h3>
+            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Data Usage</h3>
           </div>
 
           <div className="flex items-start justify-between gap-8 p-6 rounded-2xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
@@ -46,7 +46,7 @@ export function SettingsPrivacy() {
         <section className="flex flex-col gap-6">
           <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
             <span className="material-symbols-outlined text-text-tertiary text-[24px]">person</span>
-            <h3 className="text-xl font-serif text-text-primary tracking-wide">Personalization</h3>
+            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Personalization</h3>
           </div>
 
           <div className="flex items-start justify-between gap-8 p-6 rounded-2xl bg-surface border border-outline-variant hover:border-surface-container-highest transition-colors">
@@ -75,7 +75,7 @@ export function SettingsPrivacy() {
         <section className="flex flex-col gap-6">
           <div className="flex items-center gap-3 border-b border-surface-container-high pb-4">
             <span className="material-symbols-outlined text-text-tertiary text-[24px]">download</span>
-            <h3 className="text-xl font-serif text-text-primary tracking-wide">Data Export</h3>
+            <h3 className="text-xl font-semibold text-text-primary tracking-wide">Data Export</h3>
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl bg-surface-container-low border border-surface-container-high">

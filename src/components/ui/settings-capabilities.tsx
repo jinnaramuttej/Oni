@@ -10,7 +10,7 @@ export function SettingsCapabilities() {
   const [defaultModel, setDefaultModel] = useState("oni-pro");
 
   return (
-    <div className="flex-1 py-8 px-4 md:px-12 md:py-10 overflow-y-auto w-full max-w-[896px]">
+    <div className="w-full max-w-[896px]">
       <div className="mb-12">
         <p className="text-text-secondary">
           Configure AI behavior, tool access, and underlying models to tailor Oni to your specific workflow.
@@ -25,7 +25,7 @@ export function SettingsCapabilities() {
               <span className="material-symbols-outlined text-primary">memory</span>
             </div>
             <div>
-              <h3 className="font-serif text-[22px] leading-tight text-primary mb-1">AI Memory</h3>
+              <h3 className="font-semibold text-[22px] leading-tight text-primary mb-1">AI Memory</h3>
               <p className="text-text-tertiary text-sm">Control how Oni retains context across sessions.</p>
             </div>
           </div>
@@ -67,7 +67,7 @@ export function SettingsCapabilities() {
               <span className="material-symbols-outlined text-primary">construction</span>
             </div>
             <div>
-              <h3 className="font-serif text-[22px] leading-tight text-primary mb-1">Tool Access</h3>
+              <h3 className="font-semibold text-[22px] leading-tight text-primary mb-1">Tool Access</h3>
               <p className="text-text-tertiary text-sm">Enable specialized capabilities for complex tasks.</p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export function SettingsCapabilities() {
               <span className="material-symbols-outlined text-primary">psychology</span>
             </div>
             <div>
-              <h3 className="font-serif text-[22px] leading-tight text-primary mb-1">Model Selection</h3>
+              <h3 className="font-semibold text-[22px] leading-tight text-primary mb-1">Model Selection</h3>
               <p className="text-text-tertiary text-sm">
                 Choose the underlying intelligence powering your workspace.
               </p>

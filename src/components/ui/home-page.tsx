@@ -136,7 +136,7 @@ export function HomePage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 max-w-4xl mx-auto w-full mt-[-10vh]">
         {/* Greeting */}
         <div className="flex items-center gap-3 mb-10">
-          <h1 className="text-4xl md:text-5xl font-serif text-primary tracking-wide">
+          <h1 className="text-4xl md:text-5xl font-sans font-bold text-primary tracking-wide">
             {getGreeting()}, {user?.name || "User"}
           </h1>
         </div>

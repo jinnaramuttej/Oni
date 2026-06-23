@@ -8,7 +8,7 @@ export function SettingsBilling() {
   ];
 
   return (
-    <div className="flex-1 py-8 px-4 md:px-12 md:py-10 overflow-y-auto w-full max-w-[896px]">
+    <div className="w-full max-w-[896px]">
       <div className="mb-12">
         <p className="text-text-secondary">Manage your subscription, payment methods, and billing history.</p>
       </div>
@@ -19,7 +19,7 @@ export function SettingsBilling() {
           <div>
             <p className="text-xs font-semibold tracking-widest text-text-tertiary uppercase mb-1">Current Plan</p>
             <div className="flex items-end gap-3">
-              <h3 className="text-xl font-serif text-primary">Pro Plan</h3>
+              <h3 className="text-xl font-semibold text-primary">Pro Plan</h3>
               <span className="text-sm text-text-secondary mb-1">/ $20 per month</span>
             </div>
             <p className="text-sm text-text-secondary mt-2">
@@ -34,7 +34,7 @@ export function SettingsBilling() {
         {/* Payment Method Section */}
         <section className="border border-outline-variant rounded-2xl p-6 bg-surface flex flex-col gap-6">
           <div className="flex justify-between items-center border-b border-surface-container-high pb-4">
-            <h4 className="text-base font-serif text-primary">Payment Method</h4>
+            <h4 className="text-base font-semibold text-primary">Payment Method</h4>
             <button className="text-xs font-semibold text-text-secondary hover:text-primary transition-colors px-3 py-1.5 border border-outline-variant rounded-md hover:bg-surface-container cursor-pointer">
               Update
             </button>
@@ -53,7 +53,7 @@ export function SettingsBilling() {
         {/* Billing History Section */}
         <section className="border border-outline-variant rounded-2xl overflow-hidden bg-surface flex flex-col">
           <div className="p-6 border-b border-surface-container-high">
-            <h4 className="text-base font-serif text-primary">Billing History</h4>
+            <h4 className="text-base font-semibold text-primary">Billing History</h4>
           </div>
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left border-collapse">

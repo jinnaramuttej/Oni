@@ -68,7 +68,7 @@ export function SettingsPage() {
     <AppShell activePage="settings">
       {/* TopAppBar for Settings (Desktop & Mobile) */}
       <header className="flex justify-between items-center w-full h-16 px-6 md:px-12 bg-surface border-b border-surface-container-high z-10 flex-shrink-0">
-        <h1 className="font-serif text-2xl text-primary">Settings</h1>
+        <h1 className="font-sans font-bold text-2xl text-primary">Settings</h1>
         <button
           onClick={() => router.push("/")}
           className="text-text-tertiary hover:text-primary transition-colors cursor-pointer active:opacity-70 p-2 rounded-full hover:bg-surface-container flex items-center justify-center border-none"
@@ -103,7 +103,7 @@ export function SettingsPage() {
       {/* Scrollable Workspace Canvas */}
       <main className="flex-1 overflow-y-auto px-6 md:px-12 py-8 w-full flex flex-col items-start pb-32">
         <div className="w-full max-w-[896px] mb-6">
-          <h2 className="font-serif text-3xl md:text-[48px] leading-[1.2] tracking-[-0.02em] text-primary mb-2">
+          <h2 className="font-sans font-bold text-3xl md:text-[40px] leading-[1.2] tracking-[-0.02em] text-primary mb-2">
             {activeTabLabel}
           </h2>
         </div>

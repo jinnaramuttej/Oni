@@ -9,7 +9,7 @@ export function SettingsGeneral() {
   const [compactMode, setCompactMode] = useState(false);
 
   return (
-    <div className="flex-1 py-8 px-4 md:px-12 md:py-10 overflow-y-auto w-full max-w-[896px]">
+    <div className="w-full max-w-[896px]">
       <div className="mb-12">
         <p className="text-text-secondary">Manage your workspace preferences and identity.</p>
       </div>

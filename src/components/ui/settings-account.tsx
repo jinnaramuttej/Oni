@@ -11,7 +11,7 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
   const [twoFactor, setTwoFactor] = useState(true);
 
   return (
-    <div className="flex-1 py-8 px-4 md:px-12 md:py-10 overflow-y-auto w-full max-w-[896px]">
+    <div className="w-full max-w-[896px]">
       <div className="mb-12">
         <p className="text-text-secondary">Manage your profile identity, security preferences, and account status.</p>
       </div>
