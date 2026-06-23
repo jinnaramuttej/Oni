@@ -582,7 +582,7 @@ export function HomePage() {
         {/* Quick Actions */}
         <div className="flex flex-wrap justify-center gap-1.5 mt-4">
           <button
-            onClick={() => handleQuickAction("Build a developer portfolio website with a dark terminal theme, project showcase, and contact form.")}
+            onClick={() => handleQuickAction("Build a fully responsive portfolio website for a freelance designer with a dark theme and custom animations.")}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
           >
             <svg
@@ -602,7 +602,7 @@ export function HomePage() {
             Code
           </button>
           <button
-            onClick={() => handleQuickAction("Design a landing page for a SaaS startup including product features, client testimonials, and a pricing table.")}
+            onClick={() => handleQuickAction("Outline a step-by-step strategy to launch my new mobile app product within the next 3 hours.")}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
           >
             <svg
@@ -662,7 +662,7 @@ export function HomePage() {
             Write
           </button>
           <button
-            onClick={() => handleQuickAction("Design a fitness and meal planner dashboard website with progress tracker tables and calendar views.")}
+            onClick={() => handleQuickAction("I haven't been feeling very well lately, both mentally and physically. Can you suggest some positive daily habits and routines to help me recover?")}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
           >
             <svg
