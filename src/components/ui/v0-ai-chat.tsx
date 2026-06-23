@@ -316,6 +316,87 @@ export function OniChat({
     compactMode: false,
     defaultModel: "oni-pro"
   });
+  const [pinnedChatsList, setPinnedChatsList] = useState<string[]>([]);
+  const [sortMethod, setSortMethod] = useState("date_desc");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Sync pins and sort settings
+  useEffect(() => {
+    const loadPinsAndSort = () => {
+      try {
+        const savedPins = localStorage.getItem("oni_pins");
+        if (savedPins) setPinnedChatsList(JSON.parse(savedPins));
+        else setPinnedChatsList([]);
+      } catch {
+        setPinnedChatsList([]);
+      }
+      try {
+        const savedSort = localStorage.getItem("oni_recent_sort");
+        if (savedSort) setSortMethod(savedSort);
+        else setSortMethod("date_desc");
+      } catch {
+        setSortMethod("date_desc");
+      }
+    };
+    loadPinsAndSort();
+    window.addEventListener("storage", loadPinsAndSort);
+    window.addEventListener("oni_pins_change", loadPinsAndSort);
+    window.addEventListener("oni_sort_change", loadPinsAndSort);
+    return () => {
+      window.removeEventListener("storage", loadPinsAndSort);
+      window.removeEventListener("oni_pins_change", loadPinsAndSort);
+      window.removeEventListener("oni_sort_change", loadPinsAndSort);
+    };
+  }, []);
+
+  const togglePin = (chatId: string) => {
+    try {
+      const savedPins = localStorage.getItem("oni_pins");
+      let currentPins: string[] = savedPins ? JSON.parse(savedPins) : [];
+      
+      if (currentPins.includes(chatId)) {
+        currentPins = currentPins.filter(id => id !== chatId);
+        setToast("Chat unpinned");
+      } else {
+        if (currentPins.length >= 3) {
+          setToast("Maximum of 3 pinned chats allowed");
+          return;
+        }
+        currentPins.push(chatId);
+        setToast("Chat pinned to top");
+      }
+      
+      localStorage.setItem("oni_pins", JSON.stringify(currentPins));
+      window.dispatchEvent(new Event("oni_pins_change"));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getSortedChats = () => {
+    const pinned = recentChats.filter(c => pinnedChatsList.includes(c.id));
+    const unpinned = recentChats.filter(c => !pinnedChatsList.includes(c.id));
+
+    const sortFn = (a: StoredConversation, b: StoredConversation) => {
+      if (sortMethod === "date_desc") {
+        return b.updatedAt - a.updatedAt;
+      } else if (sortMethod === "date_asc") {
+        return a.updatedAt - b.updatedAt;
+      } else if (sortMethod === "name_asc") {
+        return a.title.localeCompare(b.title);
+      } else if (sortMethod === "name_desc") {
+        return b.title.localeCompare(a.title);
+      }
+      return 0;
+    };
+
+    pinned.sort(sortFn);
+    unpinned.sort(sortFn);
+
+    return [...pinned, ...unpinned];
+  };
+
+  const sortedRecentChats = getSortedChats();
 
   useEffect(() => {
     const loadSettings = () => {
@@ -1246,31 +1327,98 @@ export function OniChat({
               {item.label}
             </a>
           ))}
-
           {/* Recents */}
-          <div className="mt-5 mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/30 whitespace-nowrap">Recents</div>
-          {recentChats.length === 0 ? (
+          <div className="mt-5 mb-1.5 px-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-white/30 whitespace-nowrap relative">
+            <span>Recents</span>
+            <button
+              type="button"
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="text-white/40 hover:text-white transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">tune</span>
+            </button>
+            {showSortMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setShowSortMenu(false)}
+                />
+                <div className="absolute right-3 top-full mt-1 w-40 bg-zinc-900 border border-white/10 rounded-lg shadow-lg py-1.5 z-50 flex flex-col text-left normal-case tracking-normal">
+                  <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider border-b border-white/5 mb-1">
+                    Sort chats by
+                  </div>
+                  {[
+                    { id: "date_desc", label: "Newest Modified" },
+                    { id: "date_asc", label: "Oldest Modified" },
+                    { id: "name_asc", label: "Name A-Z" },
+                    { id: "name_desc", label: "Name Z-A" },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSortMethod(option.id);
+                        localStorage.setItem("oni_recent_sort", option.id);
+                        window.dispatchEvent(new Event("oni_sort_change"));
+                        setShowSortMenu(false);
+                      }}
+                      className="w-full px-2.5 py-1 text-left text-xs text-white/80 hover:bg-white/5 hover:text-white flex items-center justify-between transition-colors cursor-pointer font-normal"
+                    >
+                      <span>{option.label}</span>
+                      {sortMethod === option.id && (
+                        <span className="material-symbols-outlined text-[12px] text-white">check</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          {sortedRecentChats.length === 0 ? (
             <div className="px-3 py-2 text-xs text-white/25 italic whitespace-nowrap">No recent chats</div>
           ) : (
-            recentChats.map((chat) => {
+            sortedRecentChats.map((chat) => {
               const isActive = chat.id === conversationId;
               return (
-                <button
+                <div
                   key={chat.id}
-                  type="button"
                   className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left group",
+                    "group relative w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left",
                     isActive
                       ? "bg-white/10 text-white"
                       : "text-white/50 hover:bg-white/6 hover:text-white/80"
                   )}
                 >
-                  <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white/70" : "text-white/30 group-hover:text-white/50")} />
-                  <span className="truncate text-xs leading-snug">{chat.title}</span>
-                  {isActive && (
-                    <span className="ml-auto shrink-0 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  )}
-                </button>
+                  <div
+                    onClick={() => {
+                      try {
+                        const rawChat = localStorage.getItem(`oni_chat_${chat.id}`);
+                        if (rawChat) {
+                          sessionStorage.setItem("oni_session", rawChat);
+                        } else {
+                          sessionStorage.setItem("oni_session", JSON.stringify({ id: chat.id, messages: [] }));
+                        }
+                      } catch { /* ignore */ }
+                      window.location.href = `/chat?id=${chat.id}`;
+                    }}
+                    className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer"
+                  >
+                    <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-white/70" : "text-white/30 group-hover:text-white/50")} />
+                    {pinnedChatsList.includes(chat.id) && (
+                      <span className="material-symbols-outlined text-[12px] text-white/50 rotate-45 shrink-0">push_pin</span>
+                    )}
+                    <span className="truncate text-xs leading-snug">{chat.title}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => togglePin(chat.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-opacity transition-colors cursor-pointer text-white/40 hover:text-white flex items-center justify-center shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {pinnedChatsList.includes(chat.id) ? "pin_drop" : "push_pin"}
+                    </span>
+                  </button>
+                </div>
               );
             })
           )}

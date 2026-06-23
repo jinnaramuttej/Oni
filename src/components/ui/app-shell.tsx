@@ -30,7 +30,88 @@ export function AppShell({ children, activePage }: AppShellProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [pinnedChatsList, setPinnedChatsList] = useState<string[]>([]);
+  const [sortMethod, setSortMethod] = useState("date_desc");
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const router = useRouter();
+
+  // Sync pins and sort settings
+  useEffect(() => {
+    const loadPinsAndSort = () => {
+      try {
+        const savedPins = localStorage.getItem("oni_pins");
+        if (savedPins) setPinnedChatsList(JSON.parse(savedPins));
+        else setPinnedChatsList([]);
+      } catch {
+        setPinnedChatsList([]);
+      }
+      try {
+        const savedSort = localStorage.getItem("oni_recent_sort");
+        if (savedSort) setSortMethod(savedSort);
+        else setSortMethod("date_desc");
+      } catch {
+        setSortMethod("date_desc");
+      }
+    };
+    loadPinsAndSort();
+    window.addEventListener("storage", loadPinsAndSort);
+    window.addEventListener("oni_pins_change", loadPinsAndSort);
+    window.addEventListener("oni_sort_change", loadPinsAndSort);
+    return () => {
+      window.removeEventListener("storage", loadPinsAndSort);
+      window.removeEventListener("oni_pins_change", loadPinsAndSort);
+      window.removeEventListener("oni_sort_change", loadPinsAndSort);
+    };
+  }, []);
+
+  const togglePin = (chatId: string) => {
+    try {
+      const savedPins = localStorage.getItem("oni_pins");
+      let currentPins: string[] = savedPins ? JSON.parse(savedPins) : [];
+      
+      if (currentPins.includes(chatId)) {
+        currentPins = currentPins.filter(id => id !== chatId);
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Chat unpinned" }));
+      } else {
+        if (currentPins.length >= 3) {
+          window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Maximum of 3 pinned chats allowed" }));
+          return;
+        }
+        currentPins.push(chatId);
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Chat pinned to top" }));
+      }
+      
+      localStorage.setItem("oni_pins", JSON.stringify(currentPins));
+      window.dispatchEvent(new Event("oni_pins_change"));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getSortedChats = () => {
+    const pinned = recentChats.filter(c => pinnedChatsList.includes(c.id));
+    const unpinned = recentChats.filter(c => !pinnedChatsList.includes(c.id));
+
+    const sortFn = (a: StoredConversation, b: StoredConversation) => {
+      if (sortMethod === "date_desc") {
+        return b.updatedAt - a.updatedAt;
+      } else if (sortMethod === "date_asc") {
+        return a.updatedAt - b.updatedAt;
+      } else if (sortMethod === "name_asc") {
+        return a.title.localeCompare(b.title);
+      } else if (sortMethod === "name_desc") {
+        return b.title.localeCompare(a.title);
+      }
+      return 0;
+    };
+
+    pinned.sort(sortFn);
+    unpinned.sort(sortFn);
+
+    return [...pinned, ...unpinned];
+  };
+
+  const sortedRecentChats = getSortedChats();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -306,38 +387,59 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
           {/* Recents */}
           <div className="flex flex-col gap-1 mt-2">
-            <div className="flex items-center justify-between px-2.5 py-1 text-xs font-semibold text-text-tertiary mb-1">
+            <div className="flex items-center justify-between px-2.5 py-1 text-xs font-semibold text-text-tertiary mb-1 relative">
               <span>Recents</span>
-              <button aria-label="Filter Recents" className="hover:text-primary transition-colors cursor-pointer">
-                <svg
-                  fill="none"
-                  height="12"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="12"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <line x1="21" x2="14" y1="4" y2="4"></line>
-                  <line x1="10" x2="3" y1="4" y2="4"></line>
-                  <line x1="21" x2="12" y1="12" y2="12"></line>
-                  <line x1="8" x2="3" y1="12" y2="12"></line>
-                  <line x1="21" x2="16" y1="20" y2="20"></line>
-                  <line x1="12" x2="3" y1="20" y2="20"></line>
-                  <line x1="14" x2="14" y1="2" y2="6"></line>
-                  <line x1="8" x2="8" y1="10" y2="14"></line>
-                  <line x1="16" x2="16" y1="18" y2="22"></line>
-                </svg>
+              <button
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                aria-label="Filter Recents"
+                className="hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-0.5 rounded hover:bg-surface-container"
+              >
+                <span className="material-symbols-outlined text-[16px] text-text-secondary hover:text-primary">
+                  tune
+                </span>
               </button>
+              {showSortMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setShowSortMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-surface-container-high border border-surface-container-highest rounded-lg shadow-lg py-1.5 z-50 flex flex-col text-left">
+                    <div className="px-2.5 py-1 text-[10px] font-bold text-text-tertiary uppercase tracking-wider border-b border-surface-container-highest mb-1">
+                      Sort chats by
+                    </div>
+                    {[
+                      { id: "date_desc", label: "Newest Modified" },
+                      { id: "date_asc", label: "Oldest Modified" },
+                      { id: "name_asc", label: "Name A-Z" },
+                      { id: "name_desc", label: "Name Z-A" },
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSortMethod(option.id);
+                          localStorage.setItem("oni_recent_sort", option.id);
+                          window.dispatchEvent(new Event("oni_sort_change"));
+                          setShowSortMenu(false);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-left text-xs text-text-primary hover:bg-surface-container-highest flex items-center justify-between transition-colors cursor-pointer font-normal"
+                      >
+                        <span>{option.label}</span>
+                        {sortMethod === option.id && (
+                          <span className="material-symbols-outlined text-[14px] text-primary">check</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-            {recentChats.length === 0 ? (
+            {sortedRecentChats.length === 0 ? (
               <div className="text-xs text-text-tertiary px-2.5 py-2 italic">
                 No recent chats
               </div>
             ) : (
-              recentChats.map((chat) => {
+              sortedRecentChats.map((chat) => {
                 const isActive = chat.id === activeSessionId;
                 return (
                   <div
@@ -367,6 +469,9 @@ export function AppShell({ children, activePage }: AppShellProps) {
                       <svg fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14" className="shrink-0 text-text-secondary group-hover:text-primary">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       </svg>
+                      {pinnedChatsList.includes(chat.id) && (
+                        <span className="material-symbols-outlined text-[12px] text-primary rotate-45 shrink-0">push_pin</span>
+                      )}
                       {renamingId === chat.id ? (
                         <input
                           type="text"
@@ -412,6 +517,18 @@ export function AppShell({ children, activePage }: AppShellProps) {
                               }}
                             />
                             <div className="absolute right-0 top-full mt-1 w-28 bg-surface-container-high border border-surface-container-highest rounded-md shadow-lg py-1 z-50 flex flex-col text-left">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePin(chat.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-surface-container-highest flex items-center gap-2 transition-colors cursor-pointer border-b border-surface-container-highest"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">push_pin</span>
+                                {pinnedChatsList.includes(chat.id) ? "Unpin" : "Pin"}
+                              </button>
                               <button
                                 type="button"
                                 onClick={(e) => {
