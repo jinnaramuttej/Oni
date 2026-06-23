@@ -1,8 +1,134 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 export function SettingsBilling() {
+  const [billingPlan, setBillingPlan] = useState("pro"); // free, pro, enterprise
+  const [paymentCard, setPaymentCard] = useState("Mastercard ending in 4242");
+  const [paymentExpiry, setPaymentExpiry] = useState("12/2025");
+  
+  // Interactive UI states
+  const [isManagingSub, setIsManagingSub] = useState(false);
+  const [isUpdatingCard, setIsUpdatingCard] = useState(false);
+  
+  // Card form states
+  const [cardBrand, setCardBrand] = useState("Visa");
+  const [cardLast4, setCardLast4] = useState("4242");
+  const [cardExpiry, setCardExpiry] = useState("12/2025");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("oni_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.billingPlan) setBillingPlan(parsed.billingPlan);
+        if (parsed.paymentCard) setPaymentCard(parsed.paymentCard);
+        if (parsed.paymentExpiry) setPaymentExpiry(parsed.paymentExpiry);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const updateSetting = (key: string, value: any, successMessage?: string) => {
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed[key] = value;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      
+      window.dispatchEvent(new Event("oni_settings_change"));
+      
+      if (successMessage) {
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: successMessage }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handlePlanChange = (plan: string) => {
+    setBillingPlan(plan);
+    setIsManagingSub(false);
+    
+    let label = "Pro Plan";
+    if (plan === "free") label = "Free Plan";
+    if (plan === "enterprise") label = "Enterprise Plan";
+    
+    // Save to settings
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed.billingPlan = plan;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      window.dispatchEvent(new Event("oni_settings_change"));
+      window.dispatchEvent(new CustomEvent("oni_toast", { detail: `Successfully subscribed to ${label}!` }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveCard = () => {
+    if (!/^\d{4}$/.test(cardLast4)) {
+      window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Card ending digits must be exactly 4 numbers" }));
+      return;
+    }
+    const newCard = `${cardBrand} ending in ${cardLast4}`;
+    setPaymentCard(newCard);
+    setPaymentExpiry(cardExpiry);
+    setIsUpdatingCard(false);
+    
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed.paymentCard = newCard;
+      parsed.paymentExpiry = cardExpiry;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      window.dispatchEvent(new Event("oni_settings_change"));
+      window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Payment details updated successfully" }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDownloadReceipt = (invoice: { date: string; amount: string; plan: string }) => {
+    window.dispatchEvent(new CustomEvent("oni_toast", { detail: `Generating receipt for ${invoice.date}...` }));
+    
+    setTimeout(() => {
+      try {
+        const receiptText = `
+=========================================
+          ONI SYSTEM INVOICE
+=========================================
+Date:         ${invoice.date}
+Plan:         ${invoice.plan}
+Amount:       ${invoice.amount}
+Status:       PAID / SETTLED
+Payment:      ${paymentCard}
+Expires:      ${paymentExpiry}
+=========================================
+Thank you for building with Oni!
+        `;
+        const blob = new Blob([receiptText], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `oni_receipt_${invoice.date.replace(/,?\s+/g, "_")}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Receipt downloaded!" }));
+      } catch (err) {
+        console.error(err);
+        window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Failed to download receipt" }));
+      }
+    }, 800);
+  };
+
   const billingHistory = [
-    { date: "Oct 15, 2023", amount: "$20.00", plan: "Pro Plan" },
+    { date: "Oct 15, 2023", amount: billingPlan === "free" ? "$0.00" : billingPlan === "enterprise" ? "$120.00" : "$20.00", plan: billingPlan === "free" ? "Free Plan" : billingPlan === "enterprise" ? "Enterprise Plan" : "Pro Plan" },
     { date: "Sep 15, 2023", amount: "$20.00", plan: "Pro Plan" },
     { date: "Aug 15, 2023", amount: "$20.00", plan: "Pro Plan" },
   ];
@@ -15,39 +141,168 @@ export function SettingsBilling() {
 
       <div className="flex flex-col gap-12">
         {/* Current Plan Section */}
-        <section className="border border-outline-variant rounded-2xl p-6 bg-surface-container-lowest flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-text-tertiary uppercase mb-1">Current Plan</p>
-            <div className="flex items-end gap-3">
-              <h3 className="text-xl font-semibold text-primary">Pro Plan</h3>
-              <span className="text-sm text-text-secondary mb-1">/ $20 per month</span>
+        <section className="border border-outline-variant rounded-2xl p-6 bg-surface-container-lowest flex flex-col justify-between gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-text-tertiary uppercase mb-1">Current Plan</p>
+              <div className="flex items-end gap-3">
+                <h3 className="text-xl font-semibold text-primary capitalize">{billingPlan} Plan</h3>
+                <span className="text-sm text-text-secondary mb-1">
+                  / {billingPlan === "free" ? "$0" : billingPlan === "enterprise" ? "$120" : "$20"} per month
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary mt-2">
+                Your next billing date is <span className="text-primary font-medium">Nov 15, 2023</span>.
+              </p>
             </div>
-            <p className="text-sm text-text-secondary mt-2">
-              Your next billing date is <span className="text-primary font-medium">Nov 15, 2023</span>.
-            </p>
+            <button
+              onClick={() => setIsManagingSub(!isManagingSub)}
+              className="bg-primary text-on-primary px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-surface-tint transition-colors whitespace-nowrap cursor-pointer"
+            >
+              {isManagingSub ? "Close Plan Manager" : "Manage subscription"}
+            </button>
           </div>
-          <button className="bg-primary text-on-primary px-6 py-2.5 rounded-xl text-xs font-semibold hover:bg-surface-tint transition-colors whitespace-nowrap cursor-pointer">
-            Manage subscription
-          </button>
+
+          {/* Subscriptions Options */}
+          {isManagingSub && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-outline-variant/50 animate-in fade-in slide-in-from-top-4 duration-200">
+              {/* Free Plan Option */}
+              <div className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${billingPlan === "free" ? "border-primary bg-surface" : "border-outline-variant bg-surface-container-low"}`}>
+                <div>
+                  <h4 className="font-semibold text-primary">Free Plan</h4>
+                  <p className="text-xs text-text-secondary mt-1">Perfect for trying out Oni.</p>
+                  <p className="text-lg font-bold text-primary mt-2">$0</p>
+                </div>
+                <button
+                  onClick={() => handlePlanChange("free")}
+                  disabled={billingPlan === "free"}
+                  className="w-full py-2 bg-surface-container border border-surface-container-high hover:border-outline-variant hover:text-primary disabled:opacity-50 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  {billingPlan === "free" ? "Current Plan" : "Switch to Free"}
+                </button>
+              </div>
+
+              {/* Pro Plan Option */}
+              <div className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${billingPlan === "pro" ? "border-primary bg-surface" : "border-outline-variant bg-surface-container-low"}`}>
+                <div>
+                  <h4 className="font-semibold text-primary">Pro Plan</h4>
+                  <p className="text-xs text-text-secondary mt-1">For professional creators.</p>
+                  <p className="text-lg font-bold text-primary mt-2">$20/mo</p>
+                </div>
+                <button
+                  onClick={() => handlePlanChange("pro")}
+                  disabled={billingPlan === "pro"}
+                  className="w-full py-2 bg-primary text-on-primary hover:bg-surface-tint disabled:opacity-50 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  {billingPlan === "pro" ? "Current Plan" : "Upgrade to Pro"}
+                </button>
+              </div>
+
+              {/* Enterprise Plan Option */}
+              <div className={`p-4 rounded-xl border flex flex-col justify-between gap-4 ${billingPlan === "enterprise" ? "border-primary bg-surface" : "border-outline-variant bg-surface-container-low"}`}>
+                <div>
+                  <h4 className="font-semibold text-primary">Enterprise Plan</h4>
+                  <p className="text-xs text-text-secondary mt-1">High limits & dedicated assets.</p>
+                  <p className="text-lg font-bold text-primary mt-2">$120/mo</p>
+                </div>
+                <button
+                  onClick={() => handlePlanChange("enterprise")}
+                  disabled={billingPlan === "enterprise"}
+                  className="w-full py-2 bg-surface-container border border-surface-container-high hover:border-outline-variant hover:text-primary disabled:opacity-50 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  {billingPlan === "enterprise" ? "Current Plan" : "Upgrade to Enterprise"}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Payment Method Section */}
         <section className="border border-outline-variant rounded-2xl p-6 bg-surface flex flex-col gap-6">
           <div className="flex justify-between items-center border-b border-surface-container-high pb-4">
             <h4 className="text-base font-semibold text-primary">Payment Method</h4>
-            <button className="text-xs font-semibold text-text-secondary hover:text-primary transition-colors px-3 py-1.5 border border-outline-variant rounded-md hover:bg-surface-container cursor-pointer">
-              Update
+            <button
+              onClick={() => {
+                if (!isUpdatingCard) {
+                  // Pre-populate card form details
+                  const parts = paymentCard.split(" ending in ");
+                  setCardBrand(parts[0] || "Visa");
+                  setCardLast4(parts[1] || "4242");
+                  setCardExpiry(paymentExpiry);
+                }
+                setIsUpdatingCard(!isUpdatingCard);
+              }}
+              className="text-xs font-semibold text-text-secondary hover:text-primary transition-colors px-3 py-1.5 border border-outline-variant rounded-md hover:bg-surface-container cursor-pointer"
+            >
+              {isUpdatingCard ? "Cancel" : "Update"}
             </button>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-8 bg-surface-container-high border border-outline-variant rounded-md flex items-center justify-center">
-              <span className="material-symbols-outlined text-text-secondary">credit_card</span>
+          
+          {isUpdatingCard ? (
+            <div className="flex flex-col gap-4 max-w-md animate-in fade-in slide-in-from-top-4 duration-200">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1 uppercase tracking-wider" htmlFor="card_brand">
+                    Card Provider
+                  </label>
+                  <select
+                    id="card_brand"
+                    value={cardBrand}
+                    onChange={(e) => setCardBrand(e.target.value)}
+                    className="w-full bg-surface-container border border-outline-variant text-primary p-2.5 rounded-lg text-sm focus:outline-none"
+                  >
+                    <option value="Visa">Visa</option>
+                    <option value="Mastercard">Mastercard</option>
+                    <option value="American Express">American Express</option>
+                    <option value="Discover">Discover</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1 uppercase tracking-wider" htmlFor="card_last_4">
+                    Last 4 Digits
+                  </label>
+                  <input
+                    id="card_last_4"
+                    type="text"
+                    maxLength={4}
+                    value={cardLast4}
+                    onChange={(e) => setCardLast4(e.target.value.replace(/\D/g, ""))}
+                    className="w-full bg-surface-container border border-outline-variant text-primary p-2.5 rounded-lg text-sm focus:outline-none"
+                    placeholder="4242"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary mb-1 uppercase tracking-wider" htmlFor="card_expiry">
+                  Expiry Date (MM/YYYY)
+                </label>
+                <input
+                  id="card_expiry"
+                  type="text"
+                  placeholder="12/2025"
+                  value={cardExpiry}
+                  onChange={(e) => setCardExpiry(e.target.value)}
+                  className="w-full bg-surface-container border border-outline-variant text-primary p-2.5 rounded-lg text-sm focus:outline-none"
+                />
+              </div>
+              <button
+                onClick={handleSaveCard}
+                className="w-fit px-4 py-2 bg-primary text-on-primary hover:bg-surface-tint text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Save Payment Method
+              </button>
             </div>
-            <div>
-              <p className="text-sm text-primary font-medium">Mastercard ending in 4242</p>
-              <p className="text-xs text-text-tertiary mt-0.5">Expires 12/2025</p>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-8 bg-surface-container-high border border-outline-variant rounded-md flex items-center justify-center">
+                <span className="material-symbols-outlined text-text-secondary">credit_card</span>
+              </div>
+              <div>
+                <p className="text-sm text-primary font-medium">{paymentCard}</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Expires {paymentExpiry}</p>
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Billing History Section */}
@@ -85,7 +340,10 @@ export function SettingsBilling() {
                     <td className="py-4 px-6">{invoice.amount}</td>
                     <td className="py-4 px-6 hidden sm:table-cell">{invoice.plan}</td>
                     <td className="py-4 px-6 text-right">
-                      <button className="text-text-tertiary hover:text-primary transition-colors cursor-pointer">
+                      <button
+                        onClick={() => handleDownloadReceipt(invoice)}
+                        className="text-text-tertiary hover:text-primary transition-colors cursor-pointer"
+                      >
                         <span className="material-symbols-outlined text-[20px]">download</span>
                       </button>
                     </td>
