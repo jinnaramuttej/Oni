@@ -368,6 +368,35 @@ export function clearSessionCookie(response: NextResponse) {
 // Basic but strict email regex — rejects obvious garbage
 const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+export function validatePasswordStrength(password: string): string | null {
+  if (password.length < 8) {
+    return "Password must be at least 8 characters long";
+  }
+  if (password.length > 128) {
+    return "Password is too long (maximum 128 characters)";
+  }
+
+  const lower = password.toLowerCase();
+  const blacklisted = [
+    "12345678", "123456789", "1234567890",
+    "password", "password123", "password1234",
+    "qwertyui", "qwertyuiop", "asdfghjkl",
+    "admin123", "admin1234", "security123"
+  ];
+  if (blacklisted.includes(lower)) {
+    return "Password is too common or easy to guess";
+  }
+
+  // Require letters AND (numbers OR special characters)
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumberOrSpecial = /[0-9!@#$%^&*(),.?":{}|<>]/.test(password);
+  if (!hasLetter || !hasNumberOrSpecial) {
+    return "Password must contain both letters and numbers/special characters";
+  }
+
+  return null;
+}
+
 export function validateAuthInput(input: unknown) {
   if (!input || typeof input !== "object") return null;
   const record = input as Record<string, unknown>;
@@ -378,7 +407,7 @@ export function validateAuthInput(input: unknown) {
 
   if (!EMAIL_RE.test(email)) return null;
   if (email.length > 254) return null; // RFC 5321 max
-  if (password.length < 8) return null; // minimum 8 chars
+  if (password.length < 1) return null; // must not be empty
   if (password.length > 128) return null; // prevent DoS via bcrypt cost
   if (name.length > 100) return null;
 

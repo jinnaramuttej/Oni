@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { attachSessionCookie, createUser, sanitizeText, validateAuthInput } from "@/lib/auth";
+import { attachSessionCookie, createUser, sanitizeText, validateAuthInput, validatePasswordStrength } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 
 // 3 signups per hour per IP — prevents bot account creation
@@ -23,6 +23,11 @@ export async function POST(req: Request) {
 
   if (!data.name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const strengthError = validatePasswordStrength(data.password);
+  if (strengthError) {
+    return NextResponse.json({ error: strengthError }, { status: 400 });
   }
 
   if (data.password !== data.confirmPassword) {
