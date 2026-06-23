@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { AuthUser } from "@/lib/auth";
 
-export function SettingsGeneral() {
+export function SettingsGeneral({ user }: { user: AuthUser | null }) {
   const [displayName, setDisplayName] = useState("Oni User");
   const [theme, setTheme] = useState("dark");
   const [chatFont, setChatFont] = useState("inter");
@@ -13,20 +14,29 @@ export function SettingsGeneral() {
       const saved = localStorage.getItem("oni_settings");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.displayName) setDisplayName(parsed.displayName);
+        if (parsed.displayName) {
+          setDisplayName(parsed.displayName);
+        } else if (user?.name) {
+          setDisplayName(user.name);
+        }
         if (parsed.theme) setTheme(parsed.theme);
         if (parsed.chatFont) setChatFont(parsed.chatFont);
         if (parsed.compactMode !== undefined) setCompactMode(!!parsed.compactMode);
+      } else if (user?.name) {
+        setDisplayName(user.name);
       }
     } catch {
       // ignore
     }
-  }, []);
+  }, [user]);
 
   const updateSetting = (key: string, value: any, successMessage?: string) => {
     try {
       const saved = localStorage.getItem("oni_settings") || "{}";
       const parsed = JSON.parse(saved);
+      if (!parsed.displayName) {
+        parsed.displayName = user?.name || displayName || "Oni User";
+      }
       parsed[key] = value;
       localStorage.setItem("oni_settings", JSON.stringify(parsed));
       

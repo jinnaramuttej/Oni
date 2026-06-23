@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, LayoutGrid } from "lucide-react";
 import { AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,35 @@ const inputClass =
 export function SettingsModal({ open, onClose, user }: Props) {
   const [fullName, setFullName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("oni_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.displayName) setFullName(parsed.displayName);
+        if (parsed.email) setEmail(parsed.email);
+      }
+    } catch {
+      // ignore
+    }
+  }, [user]);
+
+  const handleSave = () => {
+    try {
+      const saved = localStorage.getItem("oni_settings") || "{}";
+      const parsed = JSON.parse(saved);
+      parsed.displayName = fullName;
+      parsed.email = email;
+      localStorage.setItem("oni_settings", JSON.stringify(parsed));
+      
+      window.dispatchEvent(new Event("oni_settings_change"));
+      window.dispatchEvent(new CustomEvent("oni_toast", { detail: "Settings saved successfully" }));
+      onClose();
+    } catch (e) {
+      console.error("Failed to save modal settings:", e);
+    }
+  };
 
   if (!open) return null;
 
@@ -102,7 +131,7 @@ export function SettingsModal({ open, onClose, user }: Props) {
               </div>
 
               <div className="mt-6 flex justify-end">
-                <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">Save Changes</button>
+                <button onClick={handleSave} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">Save Changes</button>
               </div>
             </div>
           </main>

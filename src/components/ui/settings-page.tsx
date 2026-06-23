@@ -65,7 +65,7 @@ export function SettingsPage() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case "general":
-        return <SettingsGeneral />;
+        return <SettingsGeneral user={user} />;
       case "account":
         return <SettingsAccount user={user} />;
       case "privacy":
@@ -75,7 +75,7 @@ export function SettingsPage() {
       case "capabilities":
         return <SettingsCapabilities />;
       default:
-        return <SettingsGeneral />;
+        return <SettingsGeneral user={user} />;
     }
   };
 
