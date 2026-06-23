@@ -556,8 +556,8 @@ export function HomePage() {
                 </svg>
               </button>
               <button
-                onClick={() => { window.location.href = "/settings"; }}
-                aria-label="Settings"
+                onClick={() => showToast("Voice mode coming soon")}
+                aria-label="Voice mode"
                 className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
               >
                 <svg
