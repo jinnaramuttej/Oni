@@ -30,29 +30,29 @@ CREATE POLICY "profiles_insert_own"
   ON profiles
   FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid()::text = id);
+  WITH CHECK (auth.uid() = id);
 
 -- Users can only read their own profile
 CREATE POLICY "profiles_select_own"
   ON profiles
   FOR SELECT
   TO authenticated
-  USING (auth.uid()::text = id);
+  USING (auth.uid() = id);
 
 -- Users can only update their own profile
 CREATE POLICY "profiles_update_own"
   ON profiles
   FOR UPDATE
   TO authenticated
-  USING (auth.uid()::text = id)
-  WITH CHECK (auth.uid()::text = id);
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
 
 -- Users can only delete their own profile
 CREATE POLICY "profiles_delete_own"
   ON profiles
   FOR DELETE
   TO authenticated
-  USING (auth.uid()::text = id);
+  USING (auth.uid() = id);
 
 -- =============================================================================
 -- STEP 3: chats table policies
@@ -71,26 +71,26 @@ DROP POLICY IF EXISTS "chats_delete_own" ON chats;
 CREATE POLICY "chats_select_own"
   ON chats
   FOR SELECT
-  USING (visitor_id::text = auth.uid()::text);
+  USING (visitor_id = auth.uid());
 
 -- Users can only insert chats for themselves
 CREATE POLICY "chats_insert_own"
   ON chats
   FOR INSERT
-  WITH CHECK (visitor_id::text = auth.uid()::text);
+  WITH CHECK (visitor_id = auth.uid());
 
 -- Users can only update their own chats
 CREATE POLICY "chats_update_own"
   ON chats
   FOR UPDATE
-  USING (visitor_id::text = auth.uid()::text)
-  WITH CHECK (visitor_id::text = auth.uid()::text);
+  USING (visitor_id = auth.uid())
+  WITH CHECK (visitor_id = auth.uid());
 
 -- Users can only delete their own chats
 CREATE POLICY "chats_delete_own"
   ON chats
   FOR DELETE
-  USING (visitor_id::text = auth.uid()::text);
+  USING (visitor_id = auth.uid());
 
 -- =============================================================================
 -- STEP 4: Recommended indexes (if not already created)
