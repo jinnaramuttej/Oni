@@ -621,7 +621,7 @@ export function HomePage() {
             Strategize
           </button>
           <button
-            onClick={() => handleQuickAction("Create an educational website for learning web design with interactive layout guides and tutorial steps.")}
+            onClick={() => handleQuickAction("Outline a comprehensive study guide to learn advanced data structures and algorithms in TypeScript, covering complexities, trees, and graphs.")}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
           >
             <svg
@@ -641,7 +641,7 @@ export function HomePage() {
             Learn
           </button>
           <button
-            onClick={() => handleQuickAction("Build a clean, minimalist personal blog website layout featuring articles, tags, and a newsletter signup form.")}
+            onClick={() => handleQuickAction("Write a highly engaging technical article detailing how Server-Sent Events (SSE) work for streaming AI responses.")}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-high border border-surface-container-highest hover:bg-surface-container-highest transition-colors text-text-secondary hover:text-primary text-xs font-medium cursor-pointer"
           >
             <svg
