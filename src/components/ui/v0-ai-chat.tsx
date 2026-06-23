@@ -91,7 +91,6 @@ type ChatMessage = {
   content: string;
   image?: ImageAttachment;
   files?: FileAttachment[];
-  thought?: string;
 };
 
 type StoredConversation = {
@@ -921,21 +920,9 @@ export function OniChat({
               const token = parsed.choices?.[0]?.delta?.content || '';
               fullText += token;
 
-              // Extract thought block
-              let currentThought = "";
-              if (fullText.includes("<ONI_THOUGHT>")) {
-                const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
-                const endIndex = fullText.indexOf("</ONI_THOUGHT>");
-                if (endIndex !== -1) {
-                  currentThought = fullText.slice(startIndex, endIndex).trim();
-                } else {
-                  currentThought = fullText.slice(startIndex).trim();
-                }
-              }
-
-              // Strip completed/partial ONI_THOUGHT from displayContent
+              // Strip ONI_THOUGHT — never expose model reasoning to the client
               let displayContent = fullText;
-              if (displayContent.includes("</ONI_THOUGHT>")) {
+              if (displayContent.includes('</ONI_THOUGHT>')) {
                 displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
               } else {
                 displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
@@ -965,7 +952,6 @@ export function OniChat({
                   id: assistantId,
                   role: 'assistant',
                   content: cleanDisplay,
-                  thought: currentThought || undefined,
                 };
                 return updated;
               });
@@ -980,17 +966,6 @@ export function OniChat({
       }
 
       setIsLoading(false);
-
-      let finalThought = "";
-      if (fullText.includes("<ONI_THOUGHT>")) {
-        const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
-        const endIndex = fullText.indexOf("</ONI_THOUGHT>");
-        if (endIndex !== -1) {
-          finalThought = fullText.slice(startIndex, endIndex).trim();
-        } else {
-          finalThought = fullText.slice(startIndex).trim();
-        }
-      }
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
@@ -1010,7 +985,6 @@ export function OniChat({
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
-          thought: finalThought || undefined
         };
         return updated;
       });
@@ -1109,21 +1083,9 @@ export function OniChat({
               const token = parsed.choices?.[0]?.delta?.content || '';
               fullText += token;
 
-              // Extract thought block
-              let currentThought = "";
-              if (fullText.includes("<ONI_THOUGHT>")) {
-                const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
-                const endIndex = fullText.indexOf("</ONI_THOUGHT>");
-                if (endIndex !== -1) {
-                  currentThought = fullText.slice(startIndex, endIndex).trim();
-                } else {
-                  currentThought = fullText.slice(startIndex).trim();
-                }
-              }
-
-              // Strip completed/partial ONI_THOUGHT from displayContent
+              // Strip ONI_THOUGHT — never expose model reasoning to the client
               let displayContent = fullText;
-              if (displayContent.includes("</ONI_THOUGHT>")) {
+              if (displayContent.includes('</ONI_THOUGHT>')) {
                 displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
               } else {
                 displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
@@ -1153,7 +1115,6 @@ export function OniChat({
                   id: assistantId,
                   role: 'assistant',
                   content: cleanDisplay,
-                  thought: currentThought || undefined,
                 };
                 return updated;
               });
@@ -1168,17 +1129,6 @@ export function OniChat({
       }
 
       setIsLoading(false);
-
-      let finalThought = "";
-      if (fullText.includes("<ONI_THOUGHT>")) {
-        const startIndex = fullText.indexOf("<ONI_THOUGHT>") + 13;
-        const endIndex = fullText.indexOf("</ONI_THOUGHT>");
-        if (endIndex !== -1) {
-          finalThought = fullText.slice(startIndex, endIndex).trim();
-        } else {
-          finalThought = fullText.slice(startIndex).trim();
-        }
-      }
 
       const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
       if (match && match[1]) {
@@ -1198,7 +1148,6 @@ export function OniChat({
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
-          thought: finalThought || undefined
         };
         return updated;
       });
@@ -1806,7 +1755,7 @@ function AssistantMessage({
   onCopy: () => void;
   onRegenerate: () => void;
 }) {
-  const [thoughtOpen, setThoughtOpen] = useState(false);
+  // thoughtOpen removed — model reasoning is never exposed to users
   const fontStyle = chatFont === "monospace"
     ? { fontFamily: "var(--font-geist-mono), monospace" }
     : chatFont === "serif"
@@ -1853,25 +1802,7 @@ function AssistantMessage({
               <RotateCcw className="h-3.5 w-3.5" />
             </IconButton>
           </div>
-          {message.thought && (
-            <button
-              type="button"
-              onClick={() => setThoughtOpen((current) => !current)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 hover:text-white/80 hover:bg-white/5 rounded-md transition-all cursor-pointer font-medium border border-white/5"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-75">
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-              </svg>
-              <span>{thoughtOpen ? "Hide thought" : "View thought"}</span>
-            </button>
-          )}
         </div>
-
-        {thoughtOpen && message.thought && (
-          <div className="text-[11px] leading-relaxed text-white/35 mt-3 pt-3 border-t border-white/5 whitespace-pre-wrap select-text font-mono max-w-3xl">
-            {message.thought}
-          </div>
-        )}
       </div>
     </div>
   );
