@@ -237,11 +237,8 @@ function useAutoResizeTextarea({ minHeight, maxHeight }: UseAutoResizeTextareaPr
   );
 
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = `${minHeight}px`;
-    }
-  }, [minHeight]);
+    adjustHeight();
+  }, [minHeight, adjustHeight]);
 
   useEffect(() => {
     const handleResize = () => adjustHeight();
@@ -504,7 +501,7 @@ export function OniChat({
   const toastTimerRef = useRef<number | null>(null);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-    minHeight: 24,
+    minHeight: 36,
     maxHeight: 200,
   });
 
@@ -1631,8 +1628,8 @@ function ChatPanel({
 }: ChatPanelProps) {
   return (
     <>
+      {!hideSidebar && (
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-surface-container-high bg-surface px-4">
-        {!hideSidebar && (
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -1646,11 +1643,11 @@ function ChatPanel({
             <path d="M9 3v18" />
           </svg>
         </button>
-        )}
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold tracking-tight text-text-secondary">Oni</span>
         </div>
       </header>
+      )}
 
       <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface">
         <div className={cn("flex flex-1 flex-col justify-end w-full", !hasWebsite && "max-w-3xl mx-auto")}>
@@ -1701,7 +1698,7 @@ function ChatPanel({
         </div>
       </div>
 
-      <div className="shrink-0 bg-surface px-4 pb-4">
+      <div className="shrink-0 bg-surface px-5 pb-5 pt-2">
         <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           <ChatComposer
             value={value}
@@ -2003,8 +2000,8 @@ function ChatComposer({
         </div>
       )}
 
-      <div className="flex items-end gap-2 px-3 py-2">
-        <div className="flex shrink-0 items-center gap-1 pb-1">
+      <div className="flex items-end gap-3 px-4 py-3">
+        <div className="flex shrink-0 items-center gap-1.5 pb-1">
           <IconButton label="Attach file" onClick={onFileButtonClick}>
             <Paperclip className="h-4 w-4" />
           </IconButton>
@@ -2013,14 +2010,14 @@ function ChatComposer({
           </IconButton>
         </div>
 
-        <Textarea
+        <textarea
           ref={textareaRef}
           value={value}
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder="Describe your website or paste a screenshot..."
-          className="min-h-[24px] flex-1 resize-none border-0 bg-transparent px-0 py-1.5 text-sm leading-6 text-primary placeholder:text-text-tertiary focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="min-h-[36px] flex-1 resize-none border-none bg-transparent px-0 py-1.5 text-sm leading-6 text-primary placeholder:text-text-tertiary focus:ring-0 focus:outline-none"
           style={{ overflow: "hidden" }}
         />
 
