@@ -3,7 +3,7 @@ import DOMPurify from "isomorphic-dompurify";
 import { sanitizeText } from "@/lib/auth";
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
-const GROQ_MAX_TOKENS = 16000;
+const GROQ_MAX_TOKENS = 11000;
 const GROQ_MAX_HISTORY_MESSAGES = 6;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
 const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
@@ -282,31 +282,74 @@ function truncateContent(content: string, maxChars = GROQ_MAX_MESSAGE_CHARS) {
   return `${content.slice(0, maxChars)}\n...[truncated]`;
 }
 
-function prepareMessagesForGroq(messages: GroqMessage[], currentHtml: string): GroqMessage[] {
-  const trimmed = messages
-    .slice(-GROQ_MAX_HISTORY_MESSAGES)
-    .map((message) => ({
-      role: message.role,
-      content:
-        message.role === "assistant"
-          ? truncateContent(stripOniBlocks(message.content) || "[Generated website]")
-          : truncateContent(message.content),
-    }));
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 3.0);
+}
 
-  if (!currentHtml || trimmed.length === 0) return trimmed;
+function prepareMessagesForGroq(
+  messages: GroqMessage[],
+  currentHtml: string
+): { messages: GroqMessage[]; maxTokens: number } {
+  const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT);
+  const maxPromptTokensBudget = 6500; // Target prompt size to allow plenty of output space
+  const remainingBudget = maxPromptTokensBudget - systemTokens;
 
-  const last = trimmed[trimmed.length - 1];
-  if (last.role !== "user") return trimmed;
+  // Process historical messages (everything except the last one), keeping them extremely compact
+  const history = messages.slice(0, -1).map((m) => ({
+    role: m.role,
+    content:
+      m.role === "assistant"
+        ? truncateContent(stripOniBlocks(m.content) || "[Generated website]", 600)
+        : truncateContent(m.content, 600),
+  }));
 
-  trimmed[trimmed.length - 1] = {
-    role: "user",
-    content: truncateContent(
-      `User request: ${last.content}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${currentHtml}\n</CURRENT_HTML>`,
-      GROQ_MAX_MESSAGE_CHARS + 2000
-    ),
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage) {
+    return {
+      messages: [],
+      maxTokens: Math.max(4000, Math.min(16000, 11000 - systemTokens)),
+    };
+  }
+
+  // Budget remaining space for the last message
+  const historyTokens = estimateTokens(JSON.stringify(history));
+  let availableTokensForLastMessage = remainingBudget - historyTokens;
+  if (availableTokensForLastMessage < 2000) {
+    availableTokensForLastMessage = 2000; // Ensure minimal budget for user query
+  }
+
+  const availableChars = Math.floor(availableTokensForLastMessage * 3.0);
+
+  // Reserve up to 3000 chars for the user prompt/attachments
+  const lastContentRaw = lastMessage.content;
+  const lastContentTruncated = truncateContent(lastContentRaw, Math.min(3000, availableChars));
+  const remainingCharsForHtml = Math.max(0, availableChars - lastContentTruncated.length);
+
+  let finalLastContent = lastContentTruncated;
+  if (currentHtml && lastMessage.role === "user") {
+    // Slice currentHtml dynamically based on remaining character budget, capping at 24000 characters
+    const htmlSliceLimit = Math.max(2000, Math.min(24000, remainingCharsForHtml - 500));
+    const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
+    finalLastContent = `User request: ${lastContentTruncated}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+  }
+
+  const processedLastMessage = {
+    role: lastMessage.role,
+    content: finalLastContent,
   };
 
-  return trimmed;
+  const finalMessages = [...history, processedLastMessage];
+
+  // Calculate final total prompt tokens
+  const totalPromptTokens = systemTokens + estimateTokens(JSON.stringify(finalMessages));
+
+  // Limit total requested tokens (prompt + output) to 11000 to fit under the 12000 TPM limit
+  const calculatedMaxTokens = Math.max(4000, Math.min(16000, 11000 - totalPromptTokens));
+
+  return {
+    messages: finalMessages,
+    maxTokens: calculatedMaxTokens,
+  };
 }
 
 export async function POST(req: Request) {
@@ -320,22 +363,22 @@ export async function POST(req: Request) {
 
   const currentHtml =
     typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0
-      ? body.currentHtml.slice(0, 2000)
+      ? body.currentHtml.slice(0, 80000)
       : "";
 
-  let groqMessages: { role: string; content: string }[] = [];
-  let clean: string | undefined;
+  let groqMessages: GroqMessage[] = [];
+  let maxTokens = 8000;
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
-    groqMessages = prepareMessagesForGroq(
-      body.messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      currentHtml
-    );
+    const rawMessages = body.messages.map((m: { role: string; content: string }) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    const result = prepareMessagesForGroq(rawMessages, currentHtml);
+    groqMessages = result.messages;
+    maxTokens = result.maxTokens;
   } else if (body.prompt) {
-    clean = sanitizeText(
+    const clean = sanitizeText(
       DOMPurify.sanitize(body.prompt, { ALLOWED_TAGS: [] })
     );
     if (!clean || clean.length > 1000) {
@@ -343,15 +386,13 @@ export async function POST(req: Request) {
     }
 
     const banned = ["ignore previous", "system:", "you are now", "jailbreak"];
-    if (banned.some((b) => clean!.toLowerCase().includes(b))) {
+    if (banned.some((b) => clean.toLowerCase().includes(b))) {
       return new NextResponse("Invalid prompt", { status: 400 });
     }
 
-    const userContent = currentHtml
-      ? `User request: ${clean}\n\nThe user is asking for a change to the existing website below. Return the short conversational message and the FULL updated HTML file again inside <ONI_CODE> tags.\n\n<CURRENT_HTML>\n${currentHtml}\n</CURRENT_HTML>`
-      : clean;
-
-    groqMessages = [{ role: "user", content: userContent }];
+    const result = prepareMessagesForGroq([{ role: "user", content: clean }], currentHtml);
+    groqMessages = result.messages;
+    maxTokens = result.maxTokens;
   } else {
     return new NextResponse("Bad request", { status: 400 });
   }
@@ -367,11 +408,11 @@ export async function POST(req: Request) {
       model: GROQ_MODEL,
       messages: messagesToSend,
       temperature: 0.9,
-      max_tokens: GROQ_MAX_TOKENS,
+      max_tokens: maxTokens,
       stream: true,
     });
     console.log('Request body length:', requestBody.length);
-    
+
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {

@@ -1124,9 +1124,12 @@ export function OniChat({
       <div className="flex flex-1 min-w-0 h-full min-h-0 flex-col pb-16 lg:flex-row lg:pb-0">
         <section
           className={cn(
-            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex lg:w-[500px] lg:shrink-0 lg:border-r transition-all duration-300",
+            "min-h-0 flex-col border-white/10 bg-[#0a0a0a] lg:flex transition-all duration-300",
+            generatedHtml
+              ? "lg:w-[500px] lg:shrink-0 lg:border-r"
+              : "lg:w-full lg:flex-1",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
-            !chatPanelOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
+            generatedHtml && !chatPanelOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
           )}
         >
           <ChatPanel
@@ -1167,50 +1170,55 @@ export function OniChat({
             onToggleSidebar={() => setNavOpen((v) => !v)}
             sidebarOpen={navOpen}
             hideSidebar={hideSidebar}
+            hasWebsite={Boolean(generatedHtml)}
           />
         </section>
 
-        <section
-          className={cn(
-            "min-h-0 flex-1 flex-col bg-[#0a0a0a] lg:flex",
-            mobilePanel === "preview" || mobilePanel === "code" ? "flex flex-1" : "hidden lg:flex"
-          )}
-        >
-          <WorkspacePanel
-            editorTab={editorTab}
-            previewSize={previewSize}
-            previewHtml={previewHtml}
-            previewRefreshKey={previewRefreshKey}
-            isGenerating={generating}
-            projectFiles={projectFiles}
-            activeFile={activeFile}
-            activeFilePath={activeFilePath}
-            sidebarOpen={chatPanelOpen}
-            onToggleSidebar={() => setChatPanelOpen((v) => !v)}
-            onEditorTabChange={(tab) => {
-              setEditorTab(tab);
-              setMobilePanel(tab);
-            }}
-            onPreviewSizeChange={setPreviewSize}
-            onRefreshPreview={() => setPreviewRefreshKey((current) => current + 1)}
-            onPublish={handlePublish}
-            onDownloadZip={() => { void handleDownloadZip(); }}
-            onOpenPreview={handleOpenPreview}
-            onFileSelect={setActiveFilePath}
-            onCopyCode={() => { void handleCopyText(activeFile.content); }}
-          />
-        </section>
+        {generatedHtml && (
+          <section
+            className={cn(
+              "min-h-0 flex-1 flex-col bg-[#0a0a0a] lg:flex",
+              mobilePanel === "preview" || mobilePanel === "code" ? "flex flex-1" : "hidden lg:flex"
+            )}
+          >
+            <WorkspacePanel
+              editorTab={editorTab}
+              previewSize={previewSize}
+              previewHtml={previewHtml}
+              previewRefreshKey={previewRefreshKey}
+              isGenerating={generating}
+              projectFiles={projectFiles}
+              activeFile={activeFile}
+              activeFilePath={activeFilePath}
+              sidebarOpen={chatPanelOpen}
+              onToggleSidebar={() => setChatPanelOpen((v) => !v)}
+              onEditorTabChange={(tab) => {
+                setEditorTab(tab);
+                setMobilePanel(tab);
+              }}
+              onPreviewSizeChange={setPreviewSize}
+              onRefreshPreview={() => setPreviewRefreshKey((current) => current + 1)}
+              onPublish={handlePublish}
+              onDownloadZip={() => { void handleDownloadZip(); }}
+              onOpenPreview={handleOpenPreview}
+              onFileSelect={setActiveFilePath}
+              onCopyCode={() => { void handleCopyText(activeFile.content); }}
+            />
+          </section>
+        )}
       </div>
 
-      <MobilePanelTabs
-        activePanel={mobilePanel}
-        onPanelChange={(panel) => {
-          setMobilePanel(panel);
-          if (panel === "preview" || panel === "code") {
-            setEditorTab(panel);
-          }
-        }}
-      />
+      {generatedHtml && (
+        <MobilePanelTabs
+          activePanel={mobilePanel}
+          onPanelChange={(panel) => {
+            setMobilePanel(panel);
+            if (panel === "preview" || panel === "code") {
+              setEditorTab(panel);
+            }
+          }}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -1256,6 +1264,7 @@ interface ChatPanelProps {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
   hideSidebar?: boolean;
+  hasWebsite: boolean;
 }
 
 function ChatPanel({
@@ -1290,6 +1299,7 @@ function ChatPanel({
   onToggleSidebar,
   sidebarOpen,
   hideSidebar,
+  hasWebsite,
 }: ChatPanelProps) {
   return (
     <>
@@ -1314,77 +1324,81 @@ function ChatPanel({
         </div>
       </header>
 
-        <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-[#0a0a0a]/30 backdrop-blur-xl">
-        {messages.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-inner shadow-white/5">
-              <Laptop className="h-6 w-6 text-white/70" />
-              <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-70 blur" />
+      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-[#0a0a0a]/30 backdrop-blur-xl">
+        <div className={cn("flex flex-1 flex-col justify-end w-full", !hasWebsite && "max-w-3xl mx-auto")}>
+          {messages.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-inner shadow-white/5">
+                <Laptop className="h-6 w-6 text-white/70" />
+                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-70 blur" />
+              </div>
+              <div className="space-y-2 max-w-sm">
+                <h2 className="text-2xl font-semibold tracking-tight text-white">What are we building today?</h2>
+                <p className="text-sm text-white/45 leading-relaxed">
+                  Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
+                {["Portfolio site", "Restaurant landing page", "SaaS dashboard", "Personal blog"].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onValueChange(s)}
+                    className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-2 text-xs text-white/60 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2 max-w-sm">
-              <h2 className="text-2xl font-semibold tracking-tight text-white">What are we building today?</h2>
-              <p className="text-sm text-white/45 leading-relaxed">
-                Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
-              </p>
+          ) : (
+            <div className="flex flex-col justify-end space-y-8">
+              {messages.map((message) =>
+                message.role === "user" ? (
+                  <UserMessage key={message.id} message={message} />
+                ) : (
+                  <AssistantMessage
+                    key={message.id}
+                    message={message}
+                    onCopy={() => onCopy(message.content)}
+                    onRegenerate={onRegenerate}
+                  />
+                )
+              )}
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
-              {["Portfolio site", "Restaurant landing page", "SaaS dashboard", "Personal blog"].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onValueChange(s)}
-                  className="rounded-full border border-white/8 bg-white/[0.03] px-3.5 py-2 text-xs text-white/60 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col justify-end space-y-8">
-            {messages.map((message) =>
-              message.role === "user" ? (
-                <UserMessage key={message.id} message={message} />
-              ) : (
-                <AssistantMessage
-                  key={message.id}
-                  message={message}
-                  onCopy={() => onCopy(message.content)}
-                  onRegenerate={onRegenerate}
-                />
-              )
-            )}
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-white/10 bg-[#0a0a0a] p-4">
-        <ChatComposer
-          value={value}
-          attachedImage={attachedImage}
-          attachedFiles={attachedFiles}
-          isGenerating={isGenerating}
-          isListening={isListening}
-          isDragging={isDragging}
-          textareaRef={textareaRef}
-          fileInputRef={fileInputRef}
-          imageInputRef={imageInputRef}
-          onValueChange={onValueChange}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          onSend={onSend}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onFileInputChange={onFileInputChange}
-          onFileButtonClick={onFileButtonClick}
-          onImageInputChange={onImageInputChange}
-          onImageButtonClick={onImageButtonClick}
-          onVoiceInput={onVoiceInput}
-          onRemoveFile={onRemoveFile}
-          onRemoveImage={onRemoveImage}
-        />
+        <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
+          <ChatComposer
+            value={value}
+            attachedImage={attachedImage}
+            attachedFiles={attachedFiles}
+            isGenerating={isGenerating}
+            isListening={isListening}
+            isDragging={isDragging}
+            textareaRef={textareaRef}
+            fileInputRef={fileInputRef}
+            imageInputRef={imageInputRef}
+            onValueChange={onValueChange}
+            onKeyDown={onKeyDown}
+            onPaste={onPaste}
+            onSend={onSend}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onFileInputChange={onFileInputChange}
+            onFileButtonClick={onFileButtonClick}
+            onImageInputChange={onImageInputChange}
+            onImageButtonClick={onImageButtonClick}
+            onVoiceInput={onVoiceInput}
+            onRemoveFile={onRemoveFile}
+            onRemoveImage={onRemoveImage}
+          />
+        </div>
       </div>
     </>
   );
