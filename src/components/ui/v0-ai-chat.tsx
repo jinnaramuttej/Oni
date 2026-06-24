@@ -1696,7 +1696,7 @@ function ChatPanel({
             </div>
           ) : (
             <div className="flex flex-col justify-end space-y-8">
-              {messages.map((message) =>
+              {messages.map((message, index) =>
                 message.role === "user" ? (
                   <UserMessage key={message.id} message={message} chatFont={chatFont} compactMode={compactMode} />
                 ) : (
@@ -1707,6 +1707,7 @@ function ChatPanel({
                     compactMode={compactMode}
                     onCopy={() => onCopy(message.content)}
                     onRegenerate={onRegenerate}
+                    isStreaming={isGenerating && index === messages.length - 1}
                   />
                 )
               )}
@@ -1805,18 +1806,78 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
   );
 }
 
+function AnimatedStreamText({
+  text,
+  fontStyle,
+  className,
+}: {
+  text: string;
+  fontStyle: React.CSSProperties;
+  className: string;
+}) {
+  const [displayedText, setDisplayedText] = useState("");
+  const currentTextRef = useRef("");
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (text.length <= currentTextRef.current.length) {
+      currentTextRef.current = text;
+      setDisplayedText(text);
+      return;
+    }
+
+    const targetText = text;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    intervalRef.current = setInterval(() => {
+      const currentLen = currentTextRef.current.length;
+      if (currentLen < targetText.length) {
+        const nextChunk = targetText.slice(currentLen, currentLen + 3);
+        currentTextRef.current += nextChunk;
+        setDisplayedText(currentTextRef.current);
+      } else {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }
+    }, 15);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [text]);
+
+  const isFinished = displayedText.length === text.length;
+
+  return (
+    <p style={fontStyle} className={className}>
+      {displayedText}
+      {!isFinished && (
+        <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-primary/75 animate-[pulse_0.8s_infinite] align-middle" />
+      )}
+    </p>
+  );
+}
+
 function AssistantMessage({
   message,
   chatFont,
   compactMode,
   onCopy,
   onRegenerate,
+  isStreaming,
 }: {
   message: ChatMessage;
   chatFont?: string;
   compactMode?: boolean;
   onCopy: () => void;
   onRegenerate: () => void;
+  isStreaming?: boolean;
 }) {
   // thoughtOpen removed — model reasoning is never exposed to users
   const fontStyle = chatFont === "monospace"
@@ -1840,12 +1901,20 @@ function AssistantMessage({
 
       <div className="pl-8 space-y-2">
         {message.content ? (
-          <p
-            style={fontStyle}
-            className={cn("max-w-3xl whitespace-pre-wrap text-text-primary description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
-          >
-            {message.content}
-          </p>
+          isStreaming ? (
+            <AnimatedStreamText
+              text={message.content}
+              fontStyle={fontStyle}
+              className={cn("max-w-3xl whitespace-pre-wrap text-text-primary description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
+            />
+          ) : (
+            <p
+              style={fontStyle}
+              className={cn("max-w-3xl whitespace-pre-wrap text-text-primary description-fade", compactMode ? "text-xs leading-6" : "text-sm leading-7")}
+            >
+              {message.content}
+            </p>
+          )
         ) : (
           <div className="flex items-center gap-1.5 py-2">
             {[0, 1, 2].map((dot) => (
