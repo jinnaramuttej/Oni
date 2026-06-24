@@ -1932,16 +1932,23 @@ function AssistantMessage({
               {message.content}
             </p>
           )
-        ) : (
-          <div className="flex items-center gap-1.5 py-2">
-            {[0, 1, 2].map((dot) => (
-              <span
-                key={dot}
-                className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
-                style={{ animationDelay: `${dot * 150}ms` }}
-              />
-            ))}
+        ) : isStreaming ? (
+          <div className="flex flex-col gap-2 py-1 max-w-sm">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span className="text-xs text-text-secondary font-medium">Generating website code...</span>
+            </div>
+            <p className="text-[11px] text-text-tertiary leading-relaxed">
+              Applying layout designs and CSS rules. Watch the real-time preview load on the right.
+            </p>
           </div>
+        ) : (
+          <p className="text-sm text-text-tertiary italic">
+            Website generated successfully. Preview loaded on the right.
+          </p>
         )}
 
         <div className="flex items-center justify-between mt-2 pt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-200">
