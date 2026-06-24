@@ -3,6 +3,7 @@ import DOMPurify from "isomorphic-dompurify";
 import { z } from "zod";
 import { sanitizeText } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 
 // 10 AI generation requests per minute per IP
 const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
@@ -280,8 +281,14 @@ OUTPUT:
 - Single complete HTML file, with all CSS in <style> and all JS in <script>.
 - Custom CSS only, no Tailwind, no frameworks.
 - Minimum 800 lines of HTML/CSS/JS.
-- Always wrap the complete website in <ONI_CODE>...</ONI_CODE>.`;
+- Always wrap the complete website in <ONI_CODE>...</ONI_CODE>.
 
+---
+REFERENCE EXAMPLE — MATCH THIS QUALITY:
+The following is a real website generated to the exact standard expected. Study its structure, palette depth, typographic hierarchy, section richness, animation approach, and copy quality. Every website you build must reach this bar or exceed it:
+
+${VELARA_SAMPLE_HTML}
+---`;
 type GroqMessage = { role: string; content: string };
 
 function stripOniBlocks(content: string) {
