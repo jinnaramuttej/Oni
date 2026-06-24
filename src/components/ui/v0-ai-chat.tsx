@@ -96,7 +96,7 @@ function sanitizeGeneratedHtml(html: string): string {
 }
 
 function extractHtmlFromContent(content: string): { html: string; cleanText: string } {
-  // 1. Standard ONI_CODE tags
+  // 1. Standard ONI_CODE tags (primary and only accepted format)
   if (content.includes("<ONI_CODE>")) {
     const startIndex = content.indexOf("<ONI_CODE>") + 10;
     const endIndex = content.indexOf("</ONI_CODE>");
@@ -117,14 +117,9 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
     return { html, cleanText };
   }
 
-  // 3. Raw HTML code block fallback (starts with <!DOCTYPE html or <html)
-  const htmlStart = content.search(/<!DOCTYPE html|<html/i);
-  if (htmlStart !== -1) {
-    const html = content.slice(htmlStart).trim();
-    const cleanText = content.slice(0, htmlStart).trim();
-    return { html, cleanText };
-  }
-
+  // NOTE: No raw-HTML fallback — the system prompt instructs the model to always
+  // wrap output in <ONI_CODE> tags. A raw fallback causes false positives when
+  // the model echoes back the reference HTML from the system prompt.
   return { html: "", cleanText: content };
 }
 
@@ -564,6 +559,9 @@ export function OniChat({
     } catch { /* ignore */ }
     return VELARA_SAMPLE_HTML;
   });
+  // Track whether the iframe is showing the preloaded Velara sample (not user-generated).
+  // We use a ref so it never causes re-renders.
+  const isShowingSample = useRef(true);
   const [toast, setToast] = useState<string | null>(null);
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
@@ -1123,7 +1121,10 @@ export function OniChat({
             role: m.role,
             content: m.id === userMessage.id ? promptForApi : m.content
           })),
-          currentHtml: generatedHtml,
+          // Only send currentHtml if the user has already generated something this session.
+          // Never send the preloaded Velara sample as context — it would make Groq modify
+          // Velara instead of building a fresh site.
+          currentHtml: isShowingSample.current ? "" : generatedHtml,
           defaultModel: oniSettings.defaultModel
         }),
       });
@@ -1207,6 +1208,7 @@ export function OniChat({
       if (extractedHtml) {
         const sanitized = sanitizeGeneratedHtml(extractedHtml);
         setGeneratedHtml(sanitized);
+        isShowingSample.current = false; // user now has a real generated site
         setActiveFilePath("index.html");
       }
 
@@ -1271,7 +1273,7 @@ export function OniChat({
         body: JSON.stringify({
           prompt: prompt,
           messages: [{ role: "user", content: prompt }],
-          currentHtml: generatedHtml,
+          currentHtml: isShowingSample.current ? "" : generatedHtml,
           defaultModel: oniSettings.defaultModel
         }),
       });
@@ -1353,6 +1355,7 @@ export function OniChat({
       if (extractedHtml) {
         const sanitized = sanitizeGeneratedHtml(extractedHtml);
         setGeneratedHtml(sanitized);
+        isShowingSample.current = false;
         setActiveFilePath("index.html");
       }
 
