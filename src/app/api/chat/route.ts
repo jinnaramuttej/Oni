@@ -372,6 +372,26 @@ function prepareMessagesForGroq(
   };
 }
 
+async function getOllamaModel(): Promise<string | null> {
+  try {
+    const res = await fetch("http://127.0.0.1:11434/api/tags", { signal: AbortSignal.timeout(1000) });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    if (data && Array.isArray(data.models) && data.models.length > 0) {
+      const models = data.models.map((m: any) => m.name);
+      // Prefer coder models or llama, otherwise use the first one
+      const coderModel = models.find((name: string) => name.toLowerCase().includes("coder"));
+      if (coderModel) return coderModel;
+      const llamaModel = models.find((name: string) => name.toLowerCase().includes("llama"));
+      if (llamaModel) return llamaModel;
+      return models[0];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
   const ip = getClientIp(req);
@@ -423,6 +443,41 @@ export async function POST(req: Request) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
+  const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
+
+  // Try routing to local Ollama if it is running
+  const ollamaModel = await getOllamaModel();
+  if (ollamaModel) {
+    try {
+      console.log(`[Ollama] Routing local request to local Ollama model: ${ollamaModel}`);
+      const ollamaResponse = await fetch("http://127.0.0.1:11434/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: ollamaModel,
+          messages: messagesToSend,
+          temperature: 0.9,
+          max_tokens: maxTokens,
+          stream: true,
+        }),
+      });
+
+      if (ollamaResponse.ok) {
+        console.log('[Ollama] Request successful, streaming response!');
+        return new Response(ollamaResponse.body, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
+      }
+      console.warn(`[Ollama] status: ${ollamaResponse.status} ${ollamaResponse.statusText}, falling back to Groq.`);
+    } catch (ollamaErr) {
+      console.warn("[Ollama] failed to fetch from local endpoint, falling back to Groq:", ollamaErr);
+    }
+  }
+
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
@@ -435,7 +490,6 @@ export async function POST(req: Request) {
       modelToUse = "llama-3.1-8b-instant";
     }
 
-    const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
     const requestBody = JSON.stringify({
       model: modelToUse,
       messages: messagesToSend,
