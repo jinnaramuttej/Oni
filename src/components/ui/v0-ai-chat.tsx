@@ -121,6 +121,47 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
   return { html: "", cleanText: content };
 }
 
+function getBuildStatusText(html: string): string {
+  if (!html) return "Initializing layout generator...";
+  const lower = html.toLowerCase();
+  if (lower.includes("</html>")) return "Finalizing page markup rendering...";
+  if (lower.includes("</script>")) return "Structuring interactive layout scripting...";
+  if (lower.includes("<script")) return "Writing custom website behavior scripts...";
+  if (lower.includes("id=\"footer\"") || lower.includes("class=\"footer\"") || lower.includes("<footer")) {
+    return "Designing site footer navigation and links...";
+  }
+  if (lower.includes("id=\"contact\"") || lower.includes("class=\"contact\"") || lower.includes("<form") || lower.includes("newsletter") || lower.includes("cta")) {
+    return "Building contact form & submission inputs...";
+  }
+  if (lower.includes("faq") || lower.includes("frequently asked")) {
+    return "Crafting frequently asked questions...";
+  }
+  if (lower.includes("testimonials") || lower.includes("testimonial") || lower.includes("review")) {
+    return "Structuring customer feedback & reviews grid...";
+  }
+  if (lower.includes("team") || lower.includes("members")) {
+    return "Designing team profiles & member grid...";
+  }
+  if (lower.includes("services") || lower.includes("service") || lower.includes("menu") || lower.includes("pricing") || lower.includes("portfolio") || lower.includes("gallery")) {
+    return "Populating service listings & work samples...";
+  }
+  if (lower.includes("features") || lower.includes("feature") || lower.includes("highlights")) {
+    return "Crafting highlights sections & details grids...";
+  }
+  if (lower.includes("about")) {
+    return "Creating about us section & brand story...";
+  }
+  if (lower.includes("hero") || lower.includes("class=\"hero\"")) {
+    return "Designing showcase hero section & titles...";
+  }
+  if (lower.includes("navbar") || lower.includes("<nav") || lower.includes("navigation")) {
+    return "Building navigation bar & brand header...";
+  }
+  if (lower.includes("<style")) return "Compiling typography and page CSS styles...";
+  if (lower.includes("<head")) return "Setting up page headers and metadata...";
+  return "Scaffolding website layout framework...";
+}
+
 
 type BrowserSpeechRecognitionResult = {
   isFinal: boolean;
@@ -360,6 +401,7 @@ export function OniChat({
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [isWritingCode, setIsWritingCode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>("preview");
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
@@ -927,6 +969,7 @@ export function OniChat({
 
     setIsLoading(true);
     setGenerating(true);
+    setIsWritingCode(false);
 
     if (!hasStarted) setHasStarted(true);
 
@@ -1020,6 +1063,9 @@ export function OniChat({
               if (partialHtml) {
                 setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
               }
+              if (fullText.includes("<ONI_CODE>") || fullText.includes("```html") || fullText.toLowerCase().includes("<!doctype html") || fullText.toLowerCase().includes("<html")) {
+                setIsWritingCode(true);
+              }
             } catch { }
           }
         }
@@ -1054,8 +1100,9 @@ export function OniChat({
     } finally {
       setIsLoading(false);
       setGenerating(false);
+      setIsWritingCode(false);
     }
-  }, [adjustHeight, attachedFiles, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages]);
+  }, [adjustHeight, attachedFiles, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages, isWritingCode]);
 
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
   // Guard: don't re-fire on refresh if session already has messages
@@ -1081,6 +1128,7 @@ export function OniChat({
     const prompt = lastUserMessage.content || "Regenerate the website.";
     setIsLoading(true);
     setGenerating(true);
+    setIsWritingCode(false);
     setEditorTab("preview");
 
     const assistantId = createId();
@@ -1182,6 +1230,9 @@ export function OniChat({
               if (partialHtml) {
                 setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
               }
+              if (fullText.includes("<ONI_CODE>") || fullText.includes("```html") || fullText.toLowerCase().includes("<!doctype html") || fullText.toLowerCase().includes("<html")) {
+                setIsWritingCode(true);
+              }
             } catch { }
           }
         }
@@ -1217,8 +1268,9 @@ export function OniChat({
     } finally {
       setIsLoading(false);
       setGenerating(false);
+      setIsWritingCode(false);
     }
-  }, [generating, isLoading, messages, generatedHtml]);
+  }, [generating, isLoading, messages, generatedHtml, isWritingCode]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -1509,6 +1561,8 @@ export function OniChat({
             hasWebsite={Boolean(generatedHtml)}
             chatFont={oniSettings.chatFont}
             compactMode={oniSettings.compactMode}
+            isWritingCode={isWritingCode}
+            generatedHtml={generatedHtml}
           />
         </section>
 
@@ -1605,6 +1659,8 @@ interface ChatPanelProps {
   hasWebsite: boolean;
   chatFont?: string;
   compactMode?: boolean;
+  isWritingCode: boolean;
+  generatedHtml: string;
 }
 
 function ChatPanel({
@@ -1642,6 +1698,8 @@ function ChatPanel({
   hasWebsite,
   chatFont,
   compactMode,
+  isWritingCode,
+  generatedHtml,
 }: ChatPanelProps) {
   return (
     <>
@@ -1725,6 +1783,8 @@ function ChatPanel({
                     onCopy={() => onCopy(message.content)}
                     onRegenerate={onRegenerate}
                     isStreaming={isGenerating && index === messages.length - 1}
+                    isWritingCode={isWritingCode}
+                    buildStatusText={isGenerating && index === messages.length - 1 && isWritingCode ? getBuildStatusText(generatedHtml) : ""}
                   />
                 )
               )}
@@ -1888,6 +1948,8 @@ function AssistantMessage({
   onCopy,
   onRegenerate,
   isStreaming,
+  isWritingCode,
+  buildStatusText,
 }: {
   message: ChatMessage;
   chatFont?: string;
@@ -1895,6 +1957,8 @@ function AssistantMessage({
   onCopy: () => void;
   onRegenerate: () => void;
   isStreaming?: boolean;
+  isWritingCode?: boolean;
+  buildStatusText?: string;
 }) {
   // thoughtOpen removed — model reasoning is never exposed to users
   const fontStyle = chatFont === "monospace"
@@ -1917,7 +1981,7 @@ function AssistantMessage({
       </div>
 
       <div className="pl-8 space-y-2">
-        {message.content ? (
+        {message.content && (
           isStreaming ? (
             <AnimatedStreamText
               text={message.content}
@@ -1932,20 +1996,26 @@ function AssistantMessage({
               {message.content}
             </p>
           )
-        ) : isStreaming ? (
-          <div className="flex flex-col gap-2 py-1 max-w-sm">
+        )}
+
+        {isStreaming && isWritingCode && (
+          <div className="flex flex-col gap-1.5 py-1.5 max-w-md bg-surface-container-low/40 rounded-xl border border-surface-container-high/50 px-3 mt-2 backdrop-blur-sm animate-[pulse_3s_infinite]">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-500"></span>
               </span>
-              <span className="text-xs text-text-secondary font-medium">Generating website code...</span>
+              <span className="text-xs text-text-secondary font-medium">
+                {buildStatusText || "Generating website code..."}
+              </span>
             </div>
             <p className="text-[11px] text-text-tertiary leading-relaxed">
               Applying layout designs and CSS rules. Watch the real-time preview load on the right.
             </p>
           </div>
-        ) : (
+        )}
+
+        {!message.content && !isStreaming && (
           <p className="text-sm text-text-tertiary italic">
             Website generated successfully. Preview loaded on the right.
           </p>
