@@ -70,10 +70,6 @@ async function resolveOwnerId(req: NextRequest): Promise<{ id: string } | { erro
 
   if (sessionUser) {
     // Authenticated: the session user ID is the canonical owner.
-    // The supplied x-visitor-id MUST match to prevent cross-user access.
-    if (headerVisitorId !== sessionUser.id) {
-      return { error: "Forbidden — visitor ID does not match session identity", status: 403 };
-    }
     return { id: sessionUser.id };
   }
 
