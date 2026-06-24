@@ -1651,9 +1651,9 @@ function ChatPanel({
 
       <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface relative">
         {/* Ambient mesh background glow */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
-          <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-violet-500/10 to-indigo-500/10 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "8s" }} />
-          <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: "12s" }} />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-85">
+          <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-violet-500/25 to-indigo-500/15 blur-[140px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
+          <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/15 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "15s" }} />
         </div>
 
         <div className={cn("flex flex-1 flex-col justify-end w-full relative z-10", !hasWebsite && "max-w-3xl mx-auto")}>
@@ -1792,7 +1792,10 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
         {message.content && (
           <div
             style={fontStyle}
-            className={cn("rounded-2xl border border-surface-container-highest bg-surface-container-high hover:bg-surface-container-highest/80 transition-all text-text-primary shadow-sm", paddingClass)}
+            className={cn(
+              "rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/15 via-violet-500/5 to-transparent hover:border-indigo-500/30 transition-all text-text-primary shadow-md hover:shadow-indigo-500/5",
+              paddingClass
+            )}
           >
             {message.content}
           </div>
@@ -1825,7 +1828,7 @@ function AssistantMessage({
   const paddingClass = compactMode ? "p-2.5" : "p-4";
 
   return (
-    <div className={cn("animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
+    <div className={cn("group/msg animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
       <div className="flex items-center gap-2.5">
         <div className="relative flex h-6 w-6 items-center justify-center rounded-full overflow-hidden shadow-sm shadow-primary/20 select-none">
           {/* Animated spinning gradient background */}
@@ -1855,7 +1858,7 @@ function AssistantMessage({
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-2 pt-1">
+        <div className="flex items-center justify-between mt-2 pt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-200">
           <div className="flex items-center gap-1">
             <IconButton label="Copy response" onClick={onCopy}>
               <Copy className="h-3.5 w-3.5" />
@@ -1950,7 +1953,7 @@ function ChatComposer({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       className={cn(
-        "rounded-2xl border border-surface-container-high bg-surface-container-low transition-colors duration-200 ease-in-out",
+        "rounded-2xl border border-surface-container-high bg-surface-container-low/60 backdrop-blur-md transition-all duration-300 shadow-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20",
         isDragging && "border-primary/30 bg-primary/5"
       )}
     >
