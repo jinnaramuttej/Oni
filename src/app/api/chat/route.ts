@@ -8,7 +8,7 @@ import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
-const GROQ_MAX_TOKENS = 11000;
+const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_HISTORY_MESSAGES = 6;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
 const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
@@ -313,7 +313,7 @@ function prepareMessagesForGroq(
   currentHtml: string
 ): { messages: GroqMessage[]; maxTokens: number } {
   const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT);
-  const maxPromptTokensBudget = 6500; // Target prompt size to allow plenty of output space
+  const maxPromptTokensBudget = 40000; // Increased budget to allow full website context (e.g. up to 120k chars)
   const remainingBudget = maxPromptTokensBudget - systemTokens;
 
   // Process historical messages (everything except the last one), keeping them extremely compact
@@ -321,30 +321,30 @@ function prepareMessagesForGroq(
     role: m.role,
     content:
       m.role === "assistant"
-        ? truncateContent(stripOniBlocks(m.content) || "[Generated website]", 600)
-        : truncateContent(m.content, 600),
+        ? truncateContent(stripOniBlocks(m.content) || "[Generated website]", 1200)
+        : truncateContent(m.content, 1200),
   }));
 
   const lastMessage = messages[messages.length - 1];
   if (!lastMessage) {
     return {
       messages: [],
-      maxTokens: Math.max(4000, Math.min(16000, 11000 - systemTokens)),
+      maxTokens: 16000,
     };
   }
 
   // Budget remaining space for the last message
   const historyTokens = estimateTokens(JSON.stringify(history));
   let availableTokensForLastMessage = remainingBudget - historyTokens;
-  if (availableTokensForLastMessage < 2000) {
-    availableTokensForLastMessage = 2000; // Ensure minimal budget for user query
+  if (availableTokensForLastMessage < 10000) {
+    availableTokensForLastMessage = 10000; // Ensure robust budget for user query + HTML context
   }
 
   const availableChars = Math.floor(availableTokensForLastMessage * 3.0);
 
-  // Reserve up to 3000 chars for the user prompt/attachments
+  // Reserve up to 5000 chars for the user prompt/attachments
   const lastContentRaw = lastMessage.content;
-  const lastContentTruncated = truncateContent(lastContentRaw, Math.min(3000, availableChars));
+  const lastContentTruncated = truncateContent(lastContentRaw, 5000);
   const remainingCharsForHtml = Math.max(0, availableChars - lastContentTruncated.length);
 
   let finalLastContent = lastContentTruncated;
@@ -352,8 +352,8 @@ function prepareMessagesForGroq(
     if (isConversationalMessage(lastContentTruncated)) {
       finalLastContent = lastContentTruncated;
     } else {
-      // Slice currentHtml dynamically based on remaining character budget, capping at 24000 characters
-      const htmlSliceLimit = Math.max(2000, Math.min(24000, remainingCharsForHtml - 500));
+      // Slice currentHtml dynamically based on remaining character budget, capping at 100,000 characters
+      const htmlSliceLimit = Math.max(8000, Math.min(100000, remainingCharsForHtml - 1000));
       const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
       finalLastContent = `User request: ${lastContentTruncated}\n\nThe user might be asking for a change or addition to the existing website below, or they might just be chatting or asking a general question.\n\nIf the request is a general question, explanation, greeting, or any query NOT asking to change/modify the website, do NOT output any code or <ONI_CODE> tags. Just reply naturally and informatively in full detail.\n\nOnly if the user is requesting a modification, style change, or update to the website, return the updated FULL HTML file inside <ONI_CODE>...</ONI_CODE> tags.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
     }
@@ -366,15 +366,9 @@ function prepareMessagesForGroq(
 
   const finalMessages = [...history, processedLastMessage];
 
-  // Calculate final total prompt tokens
-  const totalPromptTokens = systemTokens + estimateTokens(JSON.stringify(finalMessages));
-
-  // Limit total requested tokens (prompt + output) to 11000 to fit under the 12000 TPM limit
-  const calculatedMaxTokens = Math.max(4000, Math.min(16000, 11000 - totalPromptTokens));
-
   return {
     messages: finalMessages,
-    maxTokens: calculatedMaxTokens,
+    maxTokens: 16000,
   };
 }
 
