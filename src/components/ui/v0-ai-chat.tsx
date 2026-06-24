@@ -88,6 +88,39 @@ function sanitizeGeneratedHtml(html: string): string {
   return html;
 }
 
+function extractHtmlFromContent(content: string): { html: string; cleanText: string } {
+  // 1. Standard ONI_CODE tags
+  if (content.includes("<ONI_CODE>")) {
+    const startIndex = content.indexOf("<ONI_CODE>") + 10;
+    const endIndex = content.indexOf("</ONI_CODE>");
+    const html = endIndex !== -1 ? content.slice(startIndex, endIndex).trim() : content.slice(startIndex).trim();
+    
+    const cleanText = content
+      .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+      .replace(/<ONI_CODE>[\s\S]*/g, '')
+      .trim();
+    return { html, cleanText };
+  }
+
+  // 2. Markdown html code blocks fallback (```html ... ```)
+  const mdMatch = content.match(/```html([\s\S]*?)(?:```|$)/);
+  if (mdMatch) {
+    const html = mdMatch[1].trim();
+    const cleanText = content.replace(/```html[\s\S]*?(?:```|$)/g, '').trim();
+    return { html, cleanText };
+  }
+
+  // 3. Raw HTML code block fallback (starts with <!DOCTYPE html or <html)
+  const htmlStart = content.search(/<!DOCTYPE html|<html/i);
+  if (htmlStart !== -1) {
+    const html = content.slice(htmlStart).trim();
+    const cleanText = content.slice(0, htmlStart).trim();
+    return { html, cleanText };
+  }
+
+  return { html: "", cleanText: content };
+}
+
 
 type BrowserSpeechRecognitionResult = {
   isFinal: boolean;
@@ -970,23 +1003,8 @@ export function OniChat({
                 displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
               }
 
-              // Extract partial code block in real-time
-              let partialHtml = "";
-              if (displayContent.includes("<ONI_CODE>")) {
-                const startIndex = displayContent.indexOf("<ONI_CODE>") + 10;
-                const endIndex = displayContent.indexOf("</ONI_CODE>");
-                if (endIndex !== -1) {
-                  partialHtml = displayContent.slice(startIndex, endIndex).trim();
-                } else {
-                  partialHtml = displayContent.slice(startIndex).trim();
-                }
-              }
-
-              // Strip completed/partial ONI_CODE from displayContent
-              const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(displayContent);
-              const cleanDisplay = hasCompleteBlock
-                ? displayContent.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
-                : displayContent.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
+              // Extract partial code block and clean text
+              const { html: partialHtml, cleanText: cleanDisplay } = extractHtmlFromContent(displayContent);
 
               setMessages(prev => {
                 const updated = [...prev];
@@ -1009,16 +1027,15 @@ export function OniChat({
 
       setIsLoading(false);
 
-      const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
-      if (match && match[1]) {
-        const extractedHtml = sanitizeGeneratedHtml(match[1].trim());
-        setGeneratedHtml(extractedHtml);
+      const { html: extractedHtml, cleanText: cleanContent } = extractHtmlFromContent(fullText);
+      if (extractedHtml) {
+        const sanitized = sanitizeGeneratedHtml(extractedHtml);
+        setGeneratedHtml(sanitized);
         setActiveFilePath("index.html");
       }
 
-      const cleanContent = fullText
+      const cleanDisplayContent = cleanContent
         .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
-        .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
         .trim();
 
       setMessages(prev => {
@@ -1026,7 +1043,7 @@ export function OniChat({
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
-          content: cleanContent,
+          content: cleanDisplayContent,
         };
         return updated;
       });
