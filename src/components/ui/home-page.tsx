@@ -270,17 +270,8 @@ export function HomePage() {
     }, 50);
   };
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("oni_session");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.id && Array.isArray(parsed?.messages) && parsed.messages.length > 0) {
-          setChatStarted(true);
-        }
-      }
-    } catch { /* ignore */ }
-  }, []);
+
+
 
   const handleSend = () => {
     const text = promptText.trim();
