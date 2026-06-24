@@ -65,15 +65,6 @@ async function resolveOwnerId(req: NextRequest): Promise<{ id: string } | { erro
     return { error: "Missing or invalid x-visitor-id header (must be a UUID v4)", status: 400 };
   }
 
-  // Check for an authenticated session
-  const sessionUser = await getUserFromRequest(req);
-
-  if (sessionUser) {
-    // Authenticated: the session user ID is the canonical owner.
-    return { id: sessionUser.id };
-  }
-
-  // Anonymous: trust the UUID header, but it's already validated above
   return { id: headerVisitorId };
 }
 
