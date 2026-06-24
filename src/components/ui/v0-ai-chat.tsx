@@ -27,6 +27,12 @@ import {
   Smartphone,
   Tablet,
   X,
+  Palette,
+  Type,
+  Check,
+  Loader2,
+  Sparkles,
+  LayoutGrid,
 } from "lucide-react";
 import {
   useCallback,
@@ -44,6 +50,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 
 /**
  * Sanitize AI-generated HTML before rendering in the sandboxed iframe.
@@ -119,6 +126,112 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
   }
 
   return { html: "", cleanText: content };
+}
+
+interface ParsedThought {
+  paletteName?: string;
+  colors: string[];
+  displayFont?: string;
+  bodyFont?: string;
+  fontExplanation?: string;
+  signature?: string;
+  layout?: string;
+  sections: string[];
+  rawText: string;
+}
+
+function parseThought(thoughtText: string): ParsedThought {
+  const result: ParsedThought = {
+    colors: [],
+    sections: [],
+    rawText: thoughtText
+  };
+
+  if (!thoughtText) return result;
+
+  const lines = thoughtText.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const upper = trimmed.toUpperCase();
+    if (upper.startsWith("PALETTE:")) {
+      const parts = trimmed.substring(8).split('|');
+      if (parts.length > 1) {
+        result.paletteName = parts[0].trim();
+        result.colors = parts[1].split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
+      } else {
+        result.colors = parts[0].split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
+      }
+    } else if (upper.startsWith("FONTS:")) {
+      const parts = trimmed.substring(6).split('|');
+      if (parts.length >= 2) {
+        result.displayFont = parts[0].trim();
+        result.bodyFont = parts[1].trim();
+        if (parts[2]) result.fontExplanation = parts[2].trim();
+      } else {
+        result.fontExplanation = parts[0].trim();
+      }
+    } else if (upper.startsWith("SIGNATURE:")) {
+      result.signature = trimmed.substring(10).trim();
+    } else if (upper.startsWith("LAYOUT:")) {
+      result.layout = trimmed.substring(7).trim();
+    } else if (upper.startsWith("SECTIONS:")) {
+      result.sections = trimmed.substring(9).split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }
+
+  // Heuristic fallbacks
+  if (result.colors.length === 0) {
+    const hexMatches = thoughtText.match(/#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})/g);
+    if (hexMatches) {
+      result.colors = Array.from(new Set(hexMatches));
+    }
+  }
+
+  if (!result.displayFont || !result.bodyFont) {
+    const commonFonts = ["Playfair Display", "Inter", "Cormorant Garamond", "Jost", "Roboto", "Montserrat", "Outfit", "Lora", "Merriweather", "Poppins", "Lato"];
+    const foundFonts = commonFonts.filter(f => new RegExp(f, 'i').test(thoughtText));
+    if (foundFonts.length > 0) {
+      result.displayFont = foundFonts[0];
+      if (foundFonts.length > 1) {
+        result.bodyFont = foundFonts[1];
+      }
+    }
+  }
+
+  if (result.sections.length === 0) {
+    const bullets = lines
+      .map(l => l.trim())
+      .filter(l => l.startsWith('-') || l.startsWith('*') || /^\d+\./.test(l))
+      .map(l => l.replace(/^[-*\d.]+\s*/, '').trim());
+    if (bullets.length > 0) {
+      result.sections = bullets;
+    }
+  }
+
+  return result;
+}
+
+function extractThoughtAndHtml(content: string): { thought: string; html: string; cleanText: string } {
+  let thought = "";
+  let tempContent = content;
+
+  // Extract ONI_THOUGHT
+  if (tempContent.includes("<ONI_THOUGHT>")) {
+    const startIndex = tempContent.indexOf("<ONI_THOUGHT>") + 13;
+    const endIndex = tempContent.indexOf("</ONI_THOUGHT>");
+    if (endIndex !== -1) {
+      thought = tempContent.slice(startIndex, endIndex).trim();
+      tempContent = tempContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
+    } else {
+      thought = tempContent.slice(startIndex).trim();
+      tempContent = "";
+    }
+  }
+
+  // Extract html and clean text using extractHtmlFromContent
+  const { html, cleanText } = extractHtmlFromContent(tempContent);
+
+  return { thought, html, cleanText };
 }
 
 function getBuildStatusText(html: string): string {
@@ -210,6 +323,8 @@ type ChatMessage = {
   content: string;
   image?: ImageAttachment;
   files?: FileAttachment[];
+  thought?: string;
+  rawContent?: string;
 };
 
 type StoredConversation = {
@@ -262,7 +377,28 @@ type ProjectFile = {
   content: string;
 };
 
-const initialMessages: ChatMessage[] = [];
+const VELARA_SAMPLE_THOUGHT = `PALETTE: Deep Ocean Gold | #0A0F1E, #F5F0E8, #C9A96E, #4A5568, #8A9B8E
+FONTS: Cormorant Garamond | Jost | Cormorant Garamond (display - dramatic, editorial) + Jost (body - clean, modern contrast)
+SIGNATURE: A clifftop hero with a slow Ken Burns animation, an oversized 'V' watermark, and elegant gold borders.
+LAYOUT: Dark luxury editorial - dark sections alternating with ivory, gold accents used sparingly
+SECTIONS: navbar, hero, intro, rooms, experience, testimonial, dining, location, booking, footer`;
+
+const VELARA_SAMPLE_CONTENT = `Here is Velara — a bespoke five-star clifftop retreat on the Amalfi Coast. It represents the elite quality you can expect from the Oni generator: balanced typography, hand-curated colors, responsive grids, and clean custom styling.`;
+
+const initialMessages: ChatMessage[] = [
+  {
+    id: "welcome-msg",
+    role: "assistant",
+    content: "Welcome to Oni! Describe a website you want to design, and I'll generate it for you in real time. Below is a sample design to showcase the level of detail and quality I can produce.",
+  },
+  {
+    id: "sample-velara",
+    role: "assistant",
+    content: VELARA_SAMPLE_CONTENT,
+    thought: VELARA_SAMPLE_THOUGHT,
+    rawContent: `<ONI_THOUGHT>${VELARA_SAMPLE_THOUGHT}</ONI_THOUGHT>${VELARA_SAMPLE_CONTENT}<ONI_CODE>${VELARA_SAMPLE_HTML}</ONI_CODE>`,
+  }
+];
 
 const previewSizeClasses: Record<PreviewSize, string> = {
   desktop: "w-full",
@@ -426,7 +562,7 @@ export function OniChat({
         if (parsed?.generatedHtml) return parsed.generatedHtml;
       }
     } catch { /* ignore */ }
-    return "";
+    return VELARA_SAMPLE_HTML;
   });
   const [toast, setToast] = useState<string | null>(null);
   const [oniSettings, setOniSettings] = useState({
@@ -1038,16 +1174,7 @@ export function OniChat({
               const token = parsed.choices?.[0]?.delta?.content || '';
               fullText += token;
 
-              // Strip ONI_THOUGHT — never expose model reasoning to the client
-              let displayContent = fullText;
-              if (displayContent.includes('</ONI_THOUGHT>')) {
-                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
-              } else {
-                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
-              }
-
-              // Extract partial code block and clean text
-              const { html: partialHtml, cleanText: cleanDisplay } = extractHtmlFromContent(displayContent);
+              const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
 
               setMessages(prev => {
                 const updated = [...prev];
@@ -1055,6 +1182,8 @@ export function OniChat({
                   id: assistantId,
                   role: 'assistant',
                   content: cleanDisplay,
+                  thought: thought,
+                  rawContent: fullText
                 };
                 return updated;
               });
@@ -1073,23 +1202,21 @@ export function OniChat({
 
       setIsLoading(false);
 
-      const { html: extractedHtml, cleanText: cleanContent } = extractHtmlFromContent(fullText);
+      const { thought: finalThought, html: extractedHtml, cleanText: cleanContent } = extractThoughtAndHtml(fullText);
       if (extractedHtml) {
         const sanitized = sanitizeGeneratedHtml(extractedHtml);
         setGeneratedHtml(sanitized);
         setActiveFilePath("index.html");
       }
 
-      const cleanDisplayContent = cleanContent
-        .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
-        .trim();
-
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
-          content: cleanDisplayContent,
+          content: cleanContent,
+          thought: finalThought,
+          rawContent: fullText
         };
         return updated;
       });
@@ -1190,31 +1317,7 @@ export function OniChat({
               const token = parsed.choices?.[0]?.delta?.content || '';
               fullText += token;
 
-              // Strip ONI_THOUGHT — never expose model reasoning to the client
-              let displayContent = fullText;
-              if (displayContent.includes('</ONI_THOUGHT>')) {
-                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
-              } else {
-                displayContent = displayContent.replace(/<ONI_THOUGHT>[\s\S]*/g, '').trim();
-              }
-
-              // Extract partial code block in real-time
-              let partialHtml = "";
-              if (displayContent.includes("<ONI_CODE>")) {
-                const startIndex = displayContent.indexOf("<ONI_CODE>") + 10;
-                const endIndex = displayContent.indexOf("</ONI_CODE>");
-                if (endIndex !== -1) {
-                  partialHtml = displayContent.slice(startIndex, endIndex).trim();
-                } else {
-                  partialHtml = displayContent.slice(startIndex).trim();
-                }
-              }
-
-              // Strip completed/partial ONI_CODE from displayContent
-              const hasCompleteBlock = /\<ONI_CODE\>[\s\S]*?\<\/ONI_CODE\>/.test(displayContent);
-              const cleanDisplay = hasCompleteBlock
-                ? displayContent.replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '').trim()
-                : displayContent.replace(/<ONI_CODE>[\s\S]*/g, '').trim();
+              const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
 
               setMessages(prev => {
                 const updated = [...prev];
@@ -1222,6 +1325,8 @@ export function OniChat({
                   id: assistantId,
                   role: 'assistant',
                   content: cleanDisplay,
+                  thought: thought,
+                  rawContent: fullText
                 };
                 return updated;
               });
@@ -1240,17 +1345,12 @@ export function OniChat({
 
       setIsLoading(false);
 
-      const match = fullText.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
-      if (match && match[1]) {
-        const extractedHtml = sanitizeGeneratedHtml(match[1].trim());
-        setGeneratedHtml(extractedHtml);
+      const { thought: finalThought, html: extractedHtml, cleanText: cleanContent } = extractThoughtAndHtml(fullText);
+      if (extractedHtml) {
+        const sanitized = sanitizeGeneratedHtml(extractedHtml);
+        setGeneratedHtml(sanitized);
         setActiveFilePath("index.html");
       }
-
-      const cleanContent = fullText
-        .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
-        .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
-        .trim();
 
       setMessages(prev => {
         const updated = [...prev];
@@ -1258,6 +1358,8 @@ export function OniChat({
           id: assistantId,
           role: 'assistant',
           content: cleanContent,
+          thought: finalThought,
+          rawContent: fullText
         };
         return updated;
       });
@@ -1785,6 +1887,7 @@ function ChatPanel({
                     isStreaming={isGenerating && index === messages.length - 1}
                     isWritingCode={isWritingCode}
                     buildStatusText={isGenerating && index === messages.length - 1 && isWritingCode ? getBuildStatusText(generatedHtml) : ""}
+                    generatedHtml={generatedHtml}
                   />
                 )
               )}
@@ -1941,6 +2044,238 @@ function AnimatedStreamText({
   );
 }
 
+interface InteractiveDesignPlanProps {
+  thoughtText: string;
+  generatedHtml?: string;
+  isStreaming?: boolean;
+  isWritingCode?: boolean;
+}
+
+function InteractiveDesignPlan({
+  thoughtText,
+  generatedHtml = "",
+  isStreaming = false,
+  isWritingCode = false,
+}: InteractiveDesignPlanProps) {
+  const [copiedColor, setCopiedColor] = useState<string | null>(null);
+
+  // Parse the thoughtText
+  const parsed = parseThought(thoughtText);
+
+  // Check which sections are built based on generatedHtml
+  const checkSectionBuilt = (sectionName: string) => {
+    if (!isStreaming && !isWritingCode) return true; // All done when streaming completes
+    if (!generatedHtml) return false;
+    
+    const cleanId = sectionName.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    
+    const regexPatterns = [
+      new RegExp(`id=["']${cleanId}["']`, 'i'),
+      new RegExp(`class=["'][^"']*${cleanId}[^"']*["']`, 'i'),
+      new RegExp(`id=["'][^"']*${cleanId}[^"']*["']`, 'i'),
+      new RegExp(`<section[^>]*${cleanId}`, 'i')
+    ];
+    
+    return regexPatterns.some(r => r.test(generatedHtml));
+  };
+
+  const sectionsStatus = parsed.sections.map((section, idx) => {
+    const isBuilt = checkSectionBuilt(section);
+    return { name: section, isBuilt };
+  });
+
+  // Find the active section (the first non-built one if we are writing code)
+  let activeIndex = -1;
+  if (isWritingCode) {
+    activeIndex = sectionsStatus.findIndex(s => !s.isBuilt);
+  }
+
+  const copyToClipboard = (hex: string) => {
+    navigator.clipboard.writeText(hex);
+    setCopiedColor(hex);
+    setTimeout(() => setCopiedColor(null), 2000);
+  };
+
+  // If there's no thought text at all yet, show a starting loader
+  if (!thoughtText.trim()) {
+    return (
+      <div className="bg-surface-container-low/40 border border-surface-container-high/50 rounded-2xl p-4 mt-2 backdrop-blur-sm animate-[pulse_2s_infinite] max-w-xl">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <span className="text-sm font-semibold text-text-primary">Oni Design Engine is planning your website...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-container-low/60 border border-surface-container-high/60 rounded-2xl p-4 mt-3 max-w-2xl shadow-xl backdrop-blur-md overflow-hidden relative group transition-all duration-300 hover:border-primary/30">
+      {/* Glow Effect */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-surface-container-high/50 pb-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/10 p-1.5 rounded-lg text-primary">
+            <Sparkles className="h-4 w-4 animate-pulse" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-text-primary tracking-wider uppercase">Oni Design Engine</h4>
+            <p className="text-[10px] text-text-tertiary">Real-time design synthesis</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="relative flex h-2 w-2">
+            <span className={cn(
+              "absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping",
+              isStreaming ? "bg-primary" : "bg-emerald-500"
+            )}></span>
+            <span className={cn(
+              "relative inline-flex rounded-full h-2 w-2",
+              isStreaming ? "bg-primary" : "bg-emerald-500"
+            )}></span>
+          </span>
+          <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">
+            {isStreaming ? "Synthesizing" : "Ready"}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {/* Color Palette */}
+        {parsed.colors.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Palette className="h-3.5 w-3.5 text-primary/80" />
+              <span>Color Palette {parsed.paletteName ? `— ${parsed.paletteName}` : ''}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {parsed.colors.map((color, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => copyToClipboard(color)}
+                  className="flex items-center gap-1.5 bg-surface/50 border border-surface-container-high hover:border-primary/40 rounded-full pl-1.5 pr-3 py-1 text-[11px] font-medium transition-all hover:scale-105 active:scale-95 group/swatch"
+                  title="Click to copy hex code"
+                >
+                  <span
+                    className="h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="font-mono text-text-secondary group-hover/swatch:text-primary">{color}</span>
+                  {copiedColor === color ? (
+                    <span className="text-[9px] text-emerald-500 font-semibold ml-1">Copied!</span>
+                  ) : (
+                    <Copy className="h-2.5 w-2.5 text-text-tertiary group-hover/swatch:text-primary ml-1 opacity-0 group-hover/swatch:opacity-100 transition-opacity" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Typography */}
+        {(parsed.displayFont || parsed.bodyFont) && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Type className="h-3.5 w-3.5 text-primary/80" />
+              <span>Typography Pairing</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 bg-surface/30 border border-surface-container-high/40 rounded-xl p-2.5">
+              {parsed.displayFont && (
+                <div className="border-r border-surface-container-high/50 pr-2">
+                  <span className="text-[9px] text-text-tertiary uppercase tracking-wider block mb-1">Display / Headings</span>
+                  <span className="text-xs font-bold text-text-primary block truncate" style={{ fontFamily: parsed.displayFont }}>
+                    {parsed.displayFont}
+                  </span>
+                  <span className="text-[10px] text-text-secondary block mt-0.5" style={{ fontFamily: parsed.displayFont }}>
+                    Aa Bb Cc 123
+                  </span>
+                </div>
+              )}
+              {parsed.bodyFont && (
+                <div className="pl-2">
+                  <span className="text-[9px] text-text-tertiary uppercase tracking-wider block mb-1">Body Text</span>
+                  <span className="text-xs font-medium text-text-primary block truncate" style={{ fontFamily: parsed.bodyFont }}>
+                    {parsed.bodyFont}
+                  </span>
+                  <span className="text-[10px] text-text-secondary block mt-0.5" style={{ fontFamily: parsed.bodyFont }}>
+                    Aa Bb Cc 123
+                  </span>
+                </div>
+              )}
+            </div>
+            {parsed.fontExplanation && (
+              <p className="text-[10px] text-text-tertiary leading-relaxed italic px-1">
+                {parsed.fontExplanation}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Signature & Layout Row */}
+        {(parsed.signature || parsed.layout) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {parsed.signature && (
+              <div className="bg-surface/30 border border-surface-container-high/40 rounded-xl p-3 space-y-1.5">
+                <span className="text-[9px] text-primary uppercase font-bold tracking-wider block">Signature Element</span>
+                <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
+                  {parsed.signature}
+                </p>
+              </div>
+            )}
+            {parsed.layout && (
+              <div className="bg-surface/30 border border-surface-container-high/40 rounded-xl p-3 space-y-1.5">
+                <span className="text-[9px] text-primary uppercase font-bold tracking-wider block">Layout Strategy</span>
+                <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
+                  {parsed.layout}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sections Checklist */}
+        {parsed.sections.length > 0 && (
+          <div className="space-y-2 border-t border-surface-container-high/30 pt-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <LayoutGrid className="h-3.5 w-3.5 text-primary/80" />
+              <span>Section Architecture & Construction</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {sectionsStatus.map((section, idx) => {
+                const isActive = idx === activeIndex;
+                const isCompleted = section.isBuilt || (!isStreaming && !isWritingCode);
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex items-center justify-between border rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors",
+                      isCompleted
+                        ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
+                        : isActive
+                        ? "bg-primary/5 border-primary/20 text-primary animate-pulse"
+                        : "bg-surface/20 border-surface-container-high text-text-tertiary"
+                    )}
+                  >
+                    <span className="capitalize">{section.name}</span>
+                    {isCompleted ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    ) : isActive ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />
+                    ) : (
+                      <div className="h-1.5 w-1.5 rounded-full bg-text-tertiary/40 shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AssistantMessage({
   message,
   chatFont,
@@ -1950,6 +2285,7 @@ function AssistantMessage({
   isStreaming,
   isWritingCode,
   buildStatusText,
+  generatedHtml = "",
 }: {
   message: ChatMessage;
   chatFont?: string;
@@ -1959,6 +2295,7 @@ function AssistantMessage({
   isStreaming?: boolean;
   isWritingCode?: boolean;
   buildStatusText?: string;
+  generatedHtml?: string;
 }) {
   // thoughtOpen removed — model reasoning is never exposed to users
   const fontStyle = chatFont === "monospace"
@@ -1981,6 +2318,15 @@ function AssistantMessage({
       </div>
 
       <div className="pl-8 space-y-2">
+        {((message.thought && message.thought.trim()) || (isStreaming && message.rawContent && message.rawContent.includes("<ONI_THOUGHT>"))) && (
+          <InteractiveDesignPlan
+            thoughtText={message.thought || ""}
+            generatedHtml={generatedHtml}
+            isStreaming={isStreaming}
+            isWritingCode={isWritingCode}
+          />
+        )}
+
         {message.content && (
           isStreaming ? (
             <AnimatedStreamText
