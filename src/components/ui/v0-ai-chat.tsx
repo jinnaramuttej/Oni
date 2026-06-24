@@ -394,7 +394,7 @@ const initialMessages: ChatMessage[] = [
   {
     id: "sample-velara",
     role: "assistant",
-    content: VELARA_SAMPLE_CONTENT,
+    content: `${VELARA_SAMPLE_THOUGHT}\n\n${VELARA_SAMPLE_CONTENT}`,
     thought: VELARA_SAMPLE_THOUGHT,
     rawContent: `<ONI_THOUGHT>${VELARA_SAMPLE_THOUGHT}</ONI_THOUGHT>${VELARA_SAMPLE_CONTENT}<ONI_CODE>${VELARA_SAMPLE_HTML}</ONI_CODE>`,
   }
@@ -1175,13 +1175,14 @@ export function OniChat({
               fullText += token;
 
               const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
+              const combinedDisplay = thought ? `${thought}\n\n${cleanDisplay}`.trim() : cleanDisplay;
 
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
                   id: assistantId,
                   role: 'assistant',
-                  content: cleanDisplay,
+                  content: combinedDisplay,
                   thought: thought,
                   rawContent: fullText
                 };
@@ -1209,12 +1210,14 @@ export function OniChat({
         setActiveFilePath("index.html");
       }
 
+      const combinedContent = finalThought ? `${finalThought}\n\n${cleanContent}`.trim() : cleanContent;
+
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
-          content: cleanContent,
+          content: combinedContent,
           thought: finalThought,
           rawContent: fullText
         };
@@ -1318,13 +1321,14 @@ export function OniChat({
               fullText += token;
 
               const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
+              const combinedDisplay = thought ? `${thought}\n\n${cleanDisplay}`.trim() : cleanDisplay;
 
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
                   id: assistantId,
                   role: 'assistant',
-                  content: cleanDisplay,
+                  content: combinedDisplay,
                   thought: thought,
                   rawContent: fullText
                 };
@@ -1352,12 +1356,14 @@ export function OniChat({
         setActiveFilePath("index.html");
       }
 
+      const combinedContent = finalThought ? `${finalThought}\n\n${cleanContent}`.trim() : cleanContent;
+
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: assistantId,
           role: 'assistant',
-          content: cleanContent,
+          content: combinedContent,
           thought: finalThought,
           rawContent: fullText
         };
@@ -1887,7 +1893,6 @@ function ChatPanel({
                     isStreaming={isGenerating && index === messages.length - 1}
                     isWritingCode={isWritingCode}
                     buildStatusText={isGenerating && index === messages.length - 1 && isWritingCode ? getBuildStatusText(generatedHtml) : ""}
-                    generatedHtml={generatedHtml}
                   />
                 )
               )}
@@ -2285,7 +2290,6 @@ function AssistantMessage({
   isStreaming,
   isWritingCode,
   buildStatusText,
-  generatedHtml = "",
 }: {
   message: ChatMessage;
   chatFont?: string;
@@ -2295,7 +2299,6 @@ function AssistantMessage({
   isStreaming?: boolean;
   isWritingCode?: boolean;
   buildStatusText?: string;
-  generatedHtml?: string;
 }) {
   // thoughtOpen removed — model reasoning is never exposed to users
   const fontStyle = chatFont === "monospace"
@@ -2318,14 +2321,6 @@ function AssistantMessage({
       </div>
 
       <div className="pl-8 space-y-2">
-        {((message.thought && message.thought.trim()) || (isStreaming && message.rawContent && message.rawContent.includes("<ONI_THOUGHT>"))) && (
-          <InteractiveDesignPlan
-            thoughtText={message.thought || ""}
-            generatedHtml={generatedHtml}
-            isStreaming={isStreaming}
-            isWritingCode={isWritingCode}
-          />
-        )}
 
         {message.content && (
           isStreaming ? (
