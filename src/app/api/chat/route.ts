@@ -308,6 +308,16 @@ function isConversationalMessage(text: string): boolean {
   return casualPhrases.has(clean);
 }
 
+function isLikelyBuildRequest(text: string): boolean {
+  const clean = text.toLowerCase();
+  const buildKeywords = [
+    "build", "create", "make", "design", "generate", "code", "website", "page", "html", "css", 
+    "button", "navbar", "section", "hero", "footer", "card", "layout", "template", "portfolio", 
+    "dashboard", "blog", "landing", "style", "change", "modify", "update", "add", "remove", "fix"
+  ];
+  return buildKeywords.some(kw => clean.includes(kw));
+}
+
 function prepareMessagesForGroq(
   messages: GroqMessage[],
   currentHtml: string
@@ -347,9 +357,11 @@ function prepareMessagesForGroq(
   const lastContentTruncated = truncateContent(lastContentRaw, 5000);
   const remainingCharsForHtml = Math.max(0, availableChars - lastContentTruncated.length);
 
+  const isConversational = isConversationalMessage(lastContentTruncated) || !isLikelyBuildRequest(lastContentTruncated);
+
   let finalLastContent = lastContentTruncated;
   if (currentHtml && lastMessage.role === "user") {
-    if (isConversationalMessage(lastContentTruncated)) {
+    if (isConversational) {
       finalLastContent = lastContentTruncated;
     } else {
       // Slice currentHtml dynamically based on remaining character budget, capping at 100,000 characters
@@ -368,7 +380,7 @@ function prepareMessagesForGroq(
 
   return {
     messages: finalMessages,
-    maxTokens: 16000,
+    maxTokens: isConversational ? 2000 : 16000,
   };
 }
 
