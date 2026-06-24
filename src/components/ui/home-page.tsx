@@ -344,17 +344,17 @@ export function HomePage() {
         />
       ) : (
         <div className="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-surface w-full h-full">
-          {/* Ambient mesh background glow */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
-            <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-violet-500/10 to-indigo-500/10 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "8s" }} />
-            <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: "12s" }} />
+          {/* Ambient monochrome background glow */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
+            <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-white/5 to-transparent blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
+            <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-white/3 to-transparent blur-[110px] mix-blend-screen animate-pulse" style={{ animationDuration: "15s" }} />
           </div>
 
           <div className="relative z-10 flex flex-col items-center justify-center px-4 md:px-8 max-w-4xl mx-auto w-full mt-[-5vh]">
             {/* Greeting */}
             <div className="flex flex-col items-center text-center gap-2 mb-8 select-none relative z-10 animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]">
               <h1 className="text-3xl md:text-4xl font-sans font-semibold tracking-tight text-text-primary">
-                {getGreeting()}, <span className="bg-gradient-to-r from-cyan-400 via-indigo-500 to-violet-500 bg-clip-text text-transparent">{user?.name || "User"}</span>
+                {getGreeting()}, <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">{user?.name || "User"}</span>
               </h1>
               <p className="text-xs text-text-tertiary max-w-sm">
                 Describe a website or pick a template card below to generate a custom design instantly.

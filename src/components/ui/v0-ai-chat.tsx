@@ -1650,18 +1650,18 @@ function ChatPanel({
       )}
 
       <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface relative">
-        {/* Ambient mesh background glow */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-85">
-          <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-violet-500/25 to-indigo-500/15 blur-[140px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
-          <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/15 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "15s" }} />
+        {/* Ambient monochrome background glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
+          <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-gradient-to-r from-white/5 to-transparent blur-[140px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
+          <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-white/3 to-transparent blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "15s" }} />
         </div>
 
         <div className={cn("flex flex-1 flex-col justify-end w-full relative z-10", !hasWebsite && "max-w-3xl mx-auto")}>
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
               <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-surface-container-high bg-surface-container-low shadow-inner">
-                {/* Neon blur ring */}
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500 opacity-20 blur-md" />
+                {/* Monochrome blur ring */}
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-white/20 via-zinc-500/10 to-white/10 opacity-30 blur-md" />
                 <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-surface">
                   <Laptop className="h-5 w-5 text-primary" />
                 </div>
@@ -1793,7 +1793,7 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
           <div
             style={fontStyle}
             className={cn(
-              "rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/15 via-violet-500/5 to-transparent hover:border-indigo-500/30 transition-all text-text-primary shadow-md hover:shadow-indigo-500/5",
+              "rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent hover:border-white/20 transition-all text-text-primary shadow-md",
               paddingClass
             )}
           >
@@ -1831,8 +1831,8 @@ function AssistantMessage({
     <div className={cn("group/msg animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
       <div className="flex items-center gap-2.5">
         <div className="relative flex h-6 w-6 items-center justify-center rounded-full overflow-hidden shadow-sm shadow-primary/20 select-none">
-          {/* Animated spinning gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 via-indigo-500 to-violet-600 animate-spin" style={{ animationDuration: "6s" }} />
+          {/* Animated spinning monochrome gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-zinc-950 via-zinc-500 to-white animate-spin" style={{ animationDuration: "8s" }} />
           <span className="relative text-[10px] font-bold text-white tracking-wider">O</span>
         </div>
         <span className="text-xs text-text-secondary font-medium tracking-wide uppercase select-none">Oni</span>
