@@ -1280,7 +1280,7 @@ export function OniChat({
       {!hideSidebar && (
       <aside
         className={cn(
-          "h-full shrink-0 flex flex-col bg-surface border-r border-surface-container-high transition-all duration-300 overflow-hidden",
+          "h-full shrink-0 flex flex-col bg-surface-container-lowest/70 backdrop-blur-md border-r border-surface-container-high transition-all duration-300 overflow-hidden",
           navOpen ? "w-[240px]" : "w-0"
         )}
       >
@@ -1649,13 +1649,22 @@ function ChatPanel({
       </header>
       )}
 
-      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface">
-        <div className={cn("flex flex-1 flex-col justify-end w-full", !hasWebsite && "max-w-3xl mx-auto")}>
+      <div className="min-h-0 flex-1 flex flex-col overflow-y-auto px-5 py-6 scrollbar-hidden bg-surface relative">
+        {/* Ambient mesh background glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+          <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-violet-500/10 to-indigo-500/10 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: "8s" }} />
+          <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: "12s" }} />
+        </div>
+
+        <div className={cn("flex flex-1 flex-col justify-end w-full relative z-10", !hasWebsite && "max-w-3xl mx-auto")}>
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center gap-8 py-12">
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-surface-container-high bg-surface-container-low shadow-sm">
-                <Laptop className="h-6 w-6 text-text-secondary" />
-                <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 opacity-40 blur" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-surface-container-high bg-surface-container-low shadow-inner">
+                {/* Neon blur ring */}
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500 opacity-20 blur-md" />
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-surface">
+                  <Laptop className="h-5 w-5 text-primary" />
+                </div>
               </div>
               <div className="space-y-2 max-w-sm">
                 <h2 className="text-xl font-semibold tracking-tight text-text-primary">What are we building today?</h2>
@@ -1663,15 +1672,24 @@ function ChatPanel({
                   Describe a site, paste a screenshot, or pick one of the suggestions to generate a fully custom build.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 max-w-md">
-                {["Portfolio site", "Restaurant landing page", "SaaS dashboard", "Personal blog"].map((s) => (
+              <div className="flex flex-wrap items-center justify-center gap-3 max-w-xl">
+                {[
+                  { label: "Portfolio site", desc: "For designers & developers", icon: "✨" },
+                  { label: "Restaurant landing page", desc: "With menu & bookings", icon: "🍕" },
+                  { label: "SaaS dashboard", desc: "Interactive charts & data", icon: "📈" },
+                  { label: "Personal blog", desc: "Clean reading layout", icon: "✍️" }
+                ].map((s) => (
                   <button
-                    key={s}
+                    key={s.label}
                     type="button"
-                    onClick={() => onValueChange(s)}
-                    className="rounded-full border border-surface-container-high bg-surface-container-low px-3.5 py-2 text-xs text-text-secondary transition-all hover:border-primary hover:bg-surface-container hover:text-primary hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    onClick={() => onValueChange(s.label)}
+                    className="flex items-center gap-3 rounded-xl border border-surface-container-high bg-surface-container-low/60 hover:bg-surface-container/80 px-4 py-3 text-left transition-all hover:border-primary/50 hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-sm hover:shadow-md max-w-[220px]"
                   >
-                    {s}
+                    <span className="text-lg select-none">{s.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-text-primary group-hover:text-primary transition-colors">{s.label}</p>
+                      <p className="text-[10px] text-text-tertiary truncate">{s.desc}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1808,14 +1826,16 @@ function AssistantMessage({
 
   return (
     <div className={cn("animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]", compactMode ? "space-y-1.5" : "space-y-2.5")}>
-      <div className="flex items-center gap-2">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-[10px] select-none">
-          O
+      <div className="flex items-center gap-2.5">
+        <div className="relative flex h-6 w-6 items-center justify-center rounded-full overflow-hidden shadow-sm shadow-primary/20 select-none">
+          {/* Animated spinning gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500 via-indigo-500 to-violet-600 animate-spin" style={{ animationDuration: "6s" }} />
+          <span className="relative text-[10px] font-bold text-white tracking-wider">O</span>
         </div>
-        <span className="text-xs text-text-tertiary font-semibold tracking-wide uppercase select-none">Oni</span>
+        <span className="text-xs text-text-secondary font-medium tracking-wide uppercase select-none">Oni</span>
       </div>
 
-      <div className={cn("space-y-2 bg-surface-container-low border border-surface-container-high rounded-xl", paddingClass)}>
+      <div className="pl-8 space-y-2">
         {message.content ? (
           <p
             style={fontStyle}

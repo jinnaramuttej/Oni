@@ -283,7 +283,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "h-full flex flex-col bg-surface-container-lowest border-r border-surface-container-high shrink-0 transition-all duration-300 z-30",
+          "h-full flex flex-col bg-surface-container-lowest/70 backdrop-blur-md border-r border-surface-container-high shrink-0 transition-all duration-300 z-30",
           sidebarOpen ? "w-[240px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
         )}
       >
