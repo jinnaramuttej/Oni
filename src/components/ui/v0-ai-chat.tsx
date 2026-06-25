@@ -474,12 +474,14 @@ export function OniChat({
   initialFiles = [],
   chatId,
   hideSidebar = false,
+  forceNewSession = false,
 }: {
   initialPrompt?: string;
   initialImage?: ImageAttachment | null;
   initialFiles?: FileAttachment[];
   chatId?: string;
   hideSidebar?: boolean;
+  forceNewSession?: boolean;
 }) {
   const [input, setInput] = useState("");
   // Restore messages and conversationId from sessionStorage or localStorage so refresh/navigation stays in same chat
@@ -493,6 +495,11 @@ export function OniChat({
         }
       } catch { /* ignore */ }
       return chatId;
+    }
+    // When launched from the home page, always create a fresh session
+    if (forceNewSession) {
+      const newId = createId();
+      return newId;
     }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -515,6 +522,10 @@ export function OniChat({
         }
       } catch { /* ignore */ }
       return [];
+    }
+    // When launched from the home page, always start with fresh messages
+    if (forceNewSession) {
+      return initialMessages;
     }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -549,6 +560,10 @@ export function OniChat({
         }
       } catch { /* ignore */ }
       return "";
+    }
+    // Home page launch: always show the Velara sample fresh, no old session
+    if (forceNewSession) {
+      return VELARA_SAMPLE_HTML;
     }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);

@@ -332,6 +332,7 @@ export function HomePage() {
           initialImage={initialImage}
           initialFiles={initialFiles}
           hideSidebar
+          forceNewSession
         />
       ) : (
         <div className="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-surface w-full h-full">
