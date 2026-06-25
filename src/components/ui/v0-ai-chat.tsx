@@ -523,9 +523,9 @@ export function OniChat({
       } catch { /* ignore */ }
       return [];
     }
-    // When launched from the home page, always start with fresh messages
+    // Home page launch: start empty so the initialPrompt auto-send fires immediately
     if (forceNewSession) {
-      return initialMessages;
+      return [];
     }
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -1255,7 +1255,8 @@ export function OniChat({
   // Guard: don't re-fire on refresh if session already has messages
   const didAutoSend = useRef(false);
   useEffect(() => {
-    if (initialPrompt && !didAutoSend.current && messages.length === 0) {
+    // Fire immediately on forceNewSession (home page launch) or when chat is empty
+    if (initialPrompt && !didAutoSend.current && (forceNewSession || messages.length === 0)) {
       didAutoSend.current = true;
       void handleSend(initialPrompt);
     } else if (initialPrompt) {
