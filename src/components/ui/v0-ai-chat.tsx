@@ -661,6 +661,21 @@ export function OniChat({
     compactMode: false,
     defaultModel: "oni-pro"
   });
+
+  const getActiveModel = useCallback(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("oni_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.defaultModel) return parsed.defaultModel as string;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return oniSettings.defaultModel;
+  }, [oniSettings.defaultModel]);
   const [pinnedChatsList, setPinnedChatsList] = useState<string[]>([]);
   const [sortMethod, setSortMethod] = useState("date_desc");
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -1227,7 +1242,7 @@ export function OniChat({
           // Never send the preloaded Velara sample as context — it would make Groq modify
           // Velara instead of building a fresh site.
           currentHtml: isShowingSample.current ? "" : generatedHtml,
-          defaultModel: oniSettings.defaultModel,
+          defaultModel: getActiveModel(),
           userImage: base64Image,
         }),
       });
@@ -1378,7 +1393,7 @@ export function OniChat({
           prompt: prompt,
           messages: [{ role: "user", content: prompt }],
           currentHtml: isShowingSample.current ? "" : generatedHtml,
-          defaultModel: oniSettings.defaultModel
+          defaultModel: getActiveModel()
         }),
       });
 
