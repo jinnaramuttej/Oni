@@ -287,18 +287,18 @@ CONTENT RULES:
 - For backgrounds use:
   background-image: url('https://images.unsplash.com/photo-[ID]?w=1920&q=80&fit=crop');
 - Use these specific photo IDs by business type:
-  * Restaurant food: 1565299624
-  * Restaurant interior: 1414235077
-  * Hotel lobby: 1542314831
-  * Hotel room: 1631049307
-  * Fitness gym: 1534438327
-  * Beauty salon: 1560066263
-  * Real estate: 1560518883
-  * Medical clinic: 1519494026
-  * Tech office: 1497366216
-  * Coffee shop: 1495474472
-  * Hero dark abstract: 1557804506
-  * Team people: 1522071820
+  * Restaurant food: 1504674900247-0877df9cc836
+  * Restaurant interior: 1514933651103-005eec06c04b
+  * Hotel lobby: 1566073771259-6a8506099945
+  * Hotel room: 1590490360182-c33d57733427
+  * Fitness gym: 1534438327276-14e5300c3a48
+  * Beauty salon: 1562322140-8baeececf3df
+  * Real estate: 1580587771525-78b9dba3b914
+  * Medical clinic: 1629909613654-28e377c37b09
+  * Tech office: 1497366811353-6870744d04b2
+  * Coffee shop: 1495474472287-4d71bcdd2085
+  * Hero dark abstract: 1507525428034-b723cf961d3e
+  * Team people: 1556761175-b413da4baf72
 - Never Font Awesome.
 - No mention of Oni or AI anywhere in the generated HTML.
 - Use tasteful decorative symbols such as stars, diamonds, arrows, checks, and sparkles.
