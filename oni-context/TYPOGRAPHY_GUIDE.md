@@ -1,78 +1,47 @@
-# Typography Hierarchy & CSS Font Scales
+# Typography That Looks Premium
 
-A comprehensive developer guide detailing professional font settings, scales, and integration rules for Oni.
-
----
-
-## 1. Font Imports (Google Fonts)
-Always import two high-contrast Google Fonts at the top of the `<style>` block:
+“Expensive” typography often combines high-quality fonts with thoughtful scale, spacing, and hierarchy. Premium designs usually use **contrast** (e.g. pairing a serif heading with a sans-serif body) and generous spacing. In general: select a **serif or elegant display font** for headlines (it signals luxury or refinement) and a **clean sans-serif** for body text. The **type scale** (font-size progression) should be systematic (e.g. 1rem, 1.25rem, 1.5rem, 2rem, etc.) to maintain rhythm. In CSS you can implement a type scale using custom properties and CSS `clamp()` for fluid sizing. For example:
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --fs-base: 1rem; 
+  /* Example fluid heading */
+  --fs-h1: clamp(2rem, 5vw + 1rem, 4rem);
+  --ff-heading: 'Merriweather', serif;
+  --ff-body: 'Lato', sans-serif;
+  --lh-body: 1.6;
+  --lh-heading: 1.2;
+  --tracking-heading: -0.02em; 
+}
+
+h1 { font-size: var(--fs-h1); font-family: var(--ff-heading); letter-spacing: var(--tracking-heading); }
+p  { font-size: var(--fs-base);   font-family: var(--ff-body);    line-height: var(--lh-body); }
 ```
+This uses `clamp()` to let headings grow on larger screens, and sets line-height ~1.6 for body and a bit tighter (~1.2) for headings. Premium sites often add slight letter-spacing (tracking) to headings for a refined look, or even negative tracking on very large display text. (For example, many luxury brand websites and print layouts use increased whitespace between letters in logos and headings.)
 
-*   **Display Font**: *Playfair Display* (used for dramatic, large editorial titles and section headings)
-*   **Body Font**: *Inter* (used for highly readable paragraph texts, details, and forms)
+**Font pairings by industry**: Some Google Font examples – import these with `<link>` or `@import`:
 
-## 2. Global Typography Setup
-Establish structural typography presets in the `body` tag:
+- *Restaurant:* ‘Playfair Display’ (serif heading) + ‘Roboto’ (sans body).  
+- *Hotel/Luxury:* ‘Libre Baskerville’ + ‘Nunito Sans’.  
+- *Tech SaaS:* ‘Inter’ (or ‘Space Grotesk’) + ‘Source Sans Pro’.  
+- *Fitness:* ‘Montserrat’ (for headings) + ‘Open Sans’.  
+- *Beauty:* ‘Lora’ + ‘Montserrat’.  
+- *Medical:* ‘IBM Plex Sans’ + ‘Merriweather’.  
+- *Real Estate:* ‘Playfair Display’ + ‘Lato’.  
+- *Education:* ‘EB Garamond’ + ‘Roboto’.  
+- *E-commerce:* ‘Poppins’ + ‘Open Sans’.  
+- *Portfolio/Agency:* ‘Figtree’ + ‘Lexend Deca’.
 
+Example import and root font CSS for one pairing:
 ```css
-body {
-  font-family: 'Inter', sans-serif;
-  font-weight: 300;
-  line-height: 1.75;
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
+/* Google Fonts import */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+:root {
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Roboto', sans-serif;
 }
+h1, h2, h3 { font-family: var(--font-heading); }
+body, p, li   { font-family: var(--font-body); }
 ```
 
-## 3. Responsive Scaling (`clamp()`)
-To ensure headlines adapt perfectly on mobile screen viewports without breaking into messy overlaps, use `clamp()` for font sizes:
-
-```css
-h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(3rem, 8vw, 6.5rem);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-}
-
-h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-}
-
-h3 {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-```
-
-## 4. Text Spacing Rules
-Give text elements explicit margins and structures to build neat reading vertical grids:
-
-```css
-p {
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: var(--text-muted);
-  margin-bottom: 1.5rem;
-}
-
-.sub-label {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--p);
-  margin-bottom: 0.5rem;
-  display: inline-block;
-}
-```
+Using **`font-size: clamp()`** (as above) ensures responsive scaling. Premium sites also carefully choose letter-spacing and line-height: e.g. a line-height ~1.5–1.6 for bodies, and tighter spacing for shorter headlines. Typography-driven sites like Linear’s blog indeed “mostly worked with opacities of black and white” (monochrome) and let hierarchy and spacing define structure, showing how typography alone can provide contrast and interest without much color.
