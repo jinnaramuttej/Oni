@@ -581,6 +581,15 @@ export async function POST(req: Request) {
       ...groqMessages
     ];
 
+    // Find the last user message index and append formatting rules directly to it
+    const lastUserMsgIdx = localMessagesToSend.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
+    if (lastUserMsgIdx !== -1) {
+      localMessagesToSend[lastUserMsgIdx] = {
+        ...localMessagesToSend[lastUserMsgIdx],
+        content: localMessagesToSend[lastUserMsgIdx].content + "\n\nCRITICAL FORMATTING RULES:\n1. You MUST generate the complete website in a SINGLE HTML file.\n2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.\n3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.\n4. Output exactly one sentence before <ONI_CODE> (e.g. \"Here's your website.\"). Do NOT explain, tutorialize, or write introductions.\n5. All references to fonts must use var(--font-display) and var(--font-body) variables as defined in :root."
+      };
+    }
+
     try {
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
