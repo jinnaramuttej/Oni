@@ -67,6 +67,7 @@ export function SettingsCapabilities() {
     let label = "Oni Pro";
     if (model === "oni-flash") label = "Oni Flash";
     if (model === "oni-creative") label = "Oni Creative";
+    if (model === "local-ollama") label = "Local Ollama (qwen2.5-coder)";
     
     updateSetting("defaultModel", model, `Default model changed to ${label}`);
   };
@@ -236,6 +237,7 @@ export function SettingsCapabilities() {
                 <option value="oni-pro">Oni Pro (Recommended)</option>
                 <option value="oni-flash">Oni Flash (Speed-optimized)</option>
                 <option value="oni-creative">Oni Creative (Expanded Context)</option>
+                <option value="local-ollama">Local Ollama (qwen2.5-coder)</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-text-secondary">
                 <span className="material-symbols-outlined text-[18px]">expand_more</span>
@@ -243,7 +245,7 @@ export function SettingsCapabilities() {
             </div>
             <p className="mt-2 text-xs text-text-tertiary flex items-center gap-1.5 font-normal tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-              {defaultModel === "oni-flash" ? "Speed-optimized model is currently active." : "Pro plan models are currently active."}
+              {defaultModel === "local-ollama" ? "Local Ollama model is currently active." : defaultModel === "oni-flash" ? "Speed-optimized model is currently active." : "Pro plan models are currently active."}
             </p>
           </div>
         </section>

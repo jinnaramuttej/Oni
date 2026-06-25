@@ -544,32 +544,40 @@ export async function POST(req: Request) {
 
   console.log(`Estimated input tokens: ${estimatedInputTokens}, available tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
 
-  // 1. Attempt to call local Ollama first
-  try {
-    console.log("Attempting local Ollama connection on http://localhost:11434...");
+  const defaultModelInput = body?.defaultModel || "oni-pro";
+  const isExplicitOllama = defaultModelInput === "local-ollama";
+
+  // Helper function to call Ollama
+  const callOllama = async (timeoutMs: number) => {
+    console.log("Attempting local Ollama connection on http://127.0.0.1:11434...");
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2-second timeout to fail-fast if offline or hosted
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const ollamaRequestBody = JSON.stringify({
-      model: "qwen2.5-coder:latest",
-      messages: messagesToSend,
-      temperature: 0.9,
-      max_tokens: adjustedMaxTokens,
-      stream: true,
-    });
+    try {
+      const ollamaRequestBody = JSON.stringify({
+        model: "qwen2.5-coder:latest",
+        messages: messagesToSend,
+        temperature: 0.9,
+        max_tokens: adjustedMaxTokens,
+        stream: true,
+      });
 
-    const ollamaResponse = await fetch("http://localhost:11434/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: ollamaRequestBody,
-      signal: controller.signal,
-    });
+      const ollamaResponse = await fetch("http://127.0.0.1:11434/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: ollamaRequestBody,
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-    if (ollamaResponse.ok) {
+      if (!ollamaResponse.ok) {
+        const errorText = await ollamaResponse.text().catch(() => "");
+        throw new Error(`Ollama returned status ${ollamaResponse.status}: ${errorText}`);
+      }
+
       console.log("Local Ollama connection successful! Streaming response from Ollama qwen2.5-coder.");
       return new Response(ollamaResponse.body, {
         headers: {
@@ -578,21 +586,34 @@ export async function POST(req: Request) {
           Connection: "keep-alive",
         },
       });
-    } else {
-      console.warn(`Local Ollama returned status ${ollamaResponse.status}. Falling back to Groq.`);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
     }
-  } catch (err) {
-    console.log("Local Ollama not available or timed out. Falling back to Groq API.");
+  };
+
+  // If explicit local Ollama is chosen:
+  if (isExplicitOllama) {
+    try {
+      // 30 seconds timeout to give Ollama time to load the model into memory
+      return await callOllama(30000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("Local Ollama connection failed:", err);
+      return new NextResponse(
+        `Ollama connection failed: ${message}. Make sure Ollama is running ('ollama run qwen2.5-coder') and accessible on http://127.0.0.1:11434.`,
+        { status: 503 }
+      );
+    }
   }
 
-  // 2. Fall back to Groq API
+  // Otherwise, try Groq first, and use Ollama as a fallback if Groq fails
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
   }
 
   try {
-    const defaultModelInput = body?.defaultModel || "oni-pro";
     let modelToUse = GROQ_MODEL;
     if (defaultModelInput === "oni-flash") {
       modelToUse = "llama-3.1-8b-instant";
@@ -636,13 +657,30 @@ export async function POST(req: Request) {
       statusText: groqResponse.statusText,
       body: errorBody
     });
-    return new NextResponse(
-      `Groq error ${groqResponse.status} ${groqResponse.statusText}: ${errorBody}`,
-      { status: groqResponse.status }
-    );
+
+    // Groq failed (e.g. rate limit) -> Attempt fallback to Ollama
+    console.log("Groq API returned an error. Attempting fallback to local Ollama...");
+    try {
+      // 3 seconds timeout for fallback so we fail fast if Ollama isn't running
+      return await callOllama(3000);
+    } catch (ollamaErr) {
+      console.warn("Ollama fallback failed as well:", ollamaErr);
+      return new NextResponse(
+        `Groq error ${groqResponse.status} ${groqResponse.statusText}: ${errorBody}`,
+        { status: groqResponse.status }
+      );
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Groq error:', err);
-    return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
+    console.error('Groq connection/request failed:', err);
+
+    // Groq connection/network failed -> Attempt fallback to Ollama
+    console.log("Groq connection failed. Attempting fallback to local Ollama...");
+    try {
+      return await callOllama(3000);
+    } catch (ollamaErr) {
+      console.warn("Ollama fallback failed as well:", ollamaErr);
+      return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
+    }
   }
 }
