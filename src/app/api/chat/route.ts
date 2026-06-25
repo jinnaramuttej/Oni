@@ -533,6 +533,27 @@ export async function POST(req: Request) {
     }
   }
 
+  const lastUserMsgIdxForQuality = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
+  if (lastUserMsgIdxForQuality !== -1) {
+    groqMessages[lastUserMsgIdxForQuality].content += `
+
+CRITICAL FORMATTING & QUALITY RULES:
+1. You MUST generate a complete, high-fidelity, and fully detailed website of AT LEAST 400 lines of HTML/CSS/JS. Do NOT output a simple, basic, or lazy placeholder structure.
+2. Use modern, premium visual elements: glassmorphism cards (backdrop-filter: blur), linear gradient text overlays, glowing primary accents, floating background orb animations (divs with absolute positioning and translate/rotate animations), and custom scroll-reveal animations.
+3. The typography system must be elegant (e.g. Cormorant Garamond headings and Jost body text, or Playfair Display and Inter). Setup custom CSS variables for --font-display and --font-body in :root, and import both from Google Fonts at the top of <style>.
+4. Build all 7 essential sections with real, detailed, sector-specific copywriting (NO lorem ipsum, NO simple placeholders):
+   - Navigation: sticky/fixed navbar, logo, custom styled link list, CTA buttons.
+   - Hero: minimum 100vh height, large dramatic headings, subtext, primary/secondary action buttons, and background design (e.g. animated orbs or Ken Burns background).
+   - Features: grid layout showing distinct items with icons, headings, and detailed 3-sentence descriptions.
+   - Services/Menu: pricing card listings, descriptions, hover scale-up effects.
+   - Testimonials: citation, author details, stylish quote decorations.
+   - Contact Form: floating labels, customized input groups, styled submit button.
+   - Footer: multi-column layout with quick links, contacts, social media.
+5. All CSS custom variables used (like --shadow, --shadow-lg, transitions) MUST be explicitly declared in :root.
+6. The entire website code must be wrapped in a single <ONI_CODE>...</ONI_CODE> block.
+7. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT write explanations, instructions, or tutorials outside the code block.`;
+  }
+
   const defaultModelInput = body?.defaultModel || "oni-pro";
   const isExplicitOllama = defaultModelInput === "local-ollama";
 
@@ -580,15 +601,6 @@ export async function POST(req: Request) {
       { role: "system", content: finalSystemPrompt },
       ...groqMessages
     ];
-
-    // Find the last user message index and append formatting rules directly to it
-    const lastUserMsgIdx = localMessagesToSend.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
-    if (lastUserMsgIdx !== -1) {
-      localMessagesToSend[lastUserMsgIdx] = {
-        ...localMessagesToSend[lastUserMsgIdx],
-        content: localMessagesToSend[lastUserMsgIdx].content + "\n\nCRITICAL FORMATTING RULES:\n1. You MUST generate the complete website in a SINGLE HTML file.\n2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.\n3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.\n4. Output exactly one sentence before <ONI_CODE> (e.g. \"Here's your website.\"). Do NOT explain, tutorialize, or write introductions.\n5. All references to fonts must use var(--font-display) and var(--font-body) variables as defined in :root."
-      };
-    }
 
     try {
       const ollamaRequestBody = JSON.stringify({
