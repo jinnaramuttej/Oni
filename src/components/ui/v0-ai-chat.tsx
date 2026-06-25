@@ -1008,10 +1008,6 @@ export function OniChat({
     });
   }, [conversationTitle, conversationId]);
 
-  const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
-  const activeFile = projectFiles.find((file) => file.path === activeFilePath) ?? projectFiles[0];
-  const previewHtml = generatedHtml;
-
   const showToast = useCallback((message: string) => {
     setToast(message);
 
@@ -1024,6 +1020,44 @@ export function OniChat({
       toastTimerRef.current = null;
     }, 2400);
   }, []);
+
+  const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const handleEnhancePrompt = useCallback(async () => {
+    if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
+    setIsEnhancing(true);
+    try {
+      const response = await fetch("/api/enhance-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: input,
+          defaultModel: getActiveModel(),
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.enhancedPrompt) {
+          setInput(data.enhancedPrompt);
+          showToast("Prompt enhanced!");
+          window.requestAnimationFrame(() => adjustHeight());
+        }
+      } else {
+        const errText = await response.text();
+        console.error("Enhancement failed:", errText);
+        showToast("Failed to enhance prompt");
+      }
+    } catch (err) {
+      console.error("Enhancement error:", err);
+      showToast("Error enhancing prompt");
+    } finally {
+      setIsEnhancing(false);
+    }
+  }, [input, isEnhancing, generating, isLoading, getActiveModel, showToast, adjustHeight]);
+
+  const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
+  const activeFile = projectFiles.find((file) => file.path === activeFilePath) ?? projectFiles[0];
+  const previewHtml = generatedHtml;
 
   useEffect(() => {
     return () => {
@@ -1757,6 +1791,7 @@ export function OniChat({
             attachedFiles={attachedFiles}
             isGenerating={generating}
             isListening={isListening}
+            isEnhancing={isEnhancing}
             isLoading={isLoading}
             isDragging={isDragging}
             textareaRef={textareaRef}
@@ -1780,6 +1815,7 @@ export function OniChat({
             onImageInputChange={handleImageInputChange}
             onImageButtonClick={() => imageInputRef.current?.click()}
             onVoiceInput={handleVoiceInput}
+            onEnhancePrompt={handleEnhancePrompt}
             onRemoveFile={removeAttachedFile}
             onRemoveImage={removeAttachedImage}
             onCopy={handleCopyText}
@@ -1861,6 +1897,7 @@ interface ChatPanelProps {
   attachedFiles: FileAttachment[];
   isGenerating: boolean;
   isListening: boolean;
+  isEnhancing: boolean;
   isLoading: boolean;
   isDragging: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -1879,6 +1916,7 @@ interface ChatPanelProps {
   onImageInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImageButtonClick: () => void;
   onVoiceInput: () => void;
+  onEnhancePrompt: () => void;
   onRemoveFile: (fileId: string) => void;
   onRemoveImage: () => void;
   onCopy: (text: string) => void;
@@ -1900,6 +1938,7 @@ function ChatPanel({
   attachedFiles,
   isGenerating,
   isListening,
+  isEnhancing,
   isLoading,
   isDragging,
   textareaRef,
@@ -1918,6 +1957,7 @@ function ChatPanel({
   onImageInputChange,
   onImageButtonClick,
   onVoiceInput,
+  onEnhancePrompt,
   onRemoveFile,
   onRemoveImage,
   onCopy,
@@ -2032,6 +2072,7 @@ function ChatPanel({
             attachedFiles={attachedFiles}
             isGenerating={isGenerating}
             isListening={isListening}
+            isEnhancing={isEnhancing}
             isDragging={isDragging}
             textareaRef={textareaRef}
             fileInputRef={fileInputRef}
@@ -2048,6 +2089,7 @@ function ChatPanel({
             onImageInputChange={onImageInputChange}
             onImageButtonClick={onImageButtonClick}
             onVoiceInput={onVoiceInput}
+            onEnhancePrompt={onEnhancePrompt}
             onRemoveFile={onRemoveFile}
             onRemoveImage={onRemoveImage}
           />
@@ -2525,6 +2567,7 @@ type ChatComposerProps = {
   attachedFiles: FileAttachment[];
   isGenerating: boolean;
   isListening: boolean;
+  isEnhancing: boolean;
   isDragging: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -2541,6 +2584,7 @@ type ChatComposerProps = {
   onImageInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImageButtonClick: () => void;
   onVoiceInput: () => void;
+  onEnhancePrompt: () => void;
   onRemoveFile: (fileId: string) => void;
   onRemoveImage: () => void;
 };
@@ -2551,6 +2595,7 @@ function ChatComposer({
   attachedFiles,
   isGenerating,
   isListening,
+  isEnhancing,
   isDragging,
   textareaRef,
   fileInputRef,
@@ -2567,6 +2612,7 @@ function ChatComposer({
   onImageInputChange,
   onImageButtonClick,
   onVoiceInput,
+  onEnhancePrompt,
   onRemoveFile,
   onRemoveImage,
 }: ChatComposerProps) {
@@ -2705,6 +2751,26 @@ function ChatComposer({
             title={isListening ? "Stop voice input" : "Voice input"}
           >
             <Mic className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onEnhancePrompt}
+            disabled={isGenerating || isEnhancing || value.trim().length < 3}
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200 ease-in-out cursor-pointer",
+              isEnhancing
+                ? "bg-primary text-primary-foreground"
+                : "bg-surface-container text-text-secondary hover:bg-surface-container-high hover:text-primary",
+              (isGenerating || isEnhancing || value.trim().length < 3) && "cursor-not-allowed opacity-30"
+            )}
+            aria-label="Enhance prompt"
+            title="Enhance prompt"
+          >
+            {isEnhancing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>
