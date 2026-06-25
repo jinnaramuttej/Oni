@@ -39,8 +39,8 @@ RESPONSE FORMAT & SYSTEM MODES:
   - Never describe the design before outputting it.
   - Never write more than one sentence before <ONI_CODE>.
 
-FONTS - always import both at the top of <style>:
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600&display=swap');
+FONTS - Import Google Fonts at the top of <style> matching the theme of the business (e.g. Playfair Display & Inter, Cormorant Garamond & Jost, Syne & Space Grotesk, Outfit & Plus Jakarta Sans, etc.). E.g.:
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
 
 COLORS BY BUSINESS TYPE:
 - Restaurant/Food: bg:#1A0A0A, primary:#D4AF37, secondary:#7B1E1E, light:#FDF8F0
@@ -61,6 +61,8 @@ CSS STRUCTURE - always use:
   --light: [light bg hex];
   --text: #ffffff;
   --text-muted: rgba(255,255,255,0.6);
+  --font-display: [display font family name, e.g. 'Cormorant Garamond' or 'Playfair Display'];
+  --font-body: [body font family name, e.g. 'Jost' or 'Inter'];
   --grad: linear-gradient(135deg, var(--p), var(--s));
   --shadow: 0 10px 40px rgba(0,0,0,0.12);
   --shadow-lg: 0 25px 60px rgba(0,0,0,0.22);
@@ -71,7 +73,7 @@ CSS STRUCTURE - always use:
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; font-size:16px; }
 body {
-  font-family:'Inter',sans-serif;
+  font-family: var(--font-body), sans-serif;
   font-weight:300;
   line-height:1.7;
   background:var(--bg);
@@ -80,10 +82,10 @@ body {
 }
 
 TYPE SCALE - always use:
-h1 { font-family:'Playfair Display',serif; font-size:clamp(3.5rem,9vw,7rem); font-weight:900; line-height:1.05; letter-spacing:-0.03em; }
-h2 { font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.5rem); font-weight:700; line-height:1.15; }
-h3 { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; }
-p  { font-size:1.05rem; line-height:1.8; color:rgba(255,255,255,0.72); }
+h1 { font-family: var(--font-display), serif; font-size:clamp(3.5rem,9vw,7rem); font-weight:300; line-height:1.05; letter-spacing:-0.03em; }
+h2 { font-family: var(--font-display), serif; font-size:clamp(2rem,5vw,3.5rem); font-weight:300; line-height:1.15; }
+h3 { font-family: var(--font-display), serif; font-size:1.5rem; font-weight:400; }
+p  { font-size:1.05rem; line-height:1.8; color:var(--text-muted); }
 
 GRADIENT TEXT - use on all major headings:
 .gradient-text {
@@ -126,8 +128,8 @@ BUILD ALL 7 SECTIONS:
 - background:rgba(10,10,10,0.88); backdrop-filter:blur(20px);
 - border-bottom:1px solid rgba(255,255,255,0.06);
 - Layout: logo left, links center, CTA button right.
-- Logo: Playfair Display italic, gradient color, 1.6rem.
-- Links: Inter 400, rgba(255,255,255,0.7), hover white plus underline ::after.
+- Logo: var(--font-display) italic, gradient color, 1.6rem.
+- Links: var(--font-body) 400, rgba(255,255,255,0.7), hover white plus underline ::after.
 - CTA: gradient background, border-radius:50px, padding:0.7rem 1.8rem, glow shadow.
 
 2. HERO min-height:100vh
@@ -147,21 +149,21 @@ BUILD ALL 7 SECTIONS:
 - Section label: uppercase muted "WHY CHOOSE US", letter-spacing:0.15em.
 - H2: gradient text adapted for light background.
 - 3 cards in CSS grid repeat(auto-fit,minmax(300px,1fr)), gap:2rem.
-- Each card: 64px gradient icon circle, Playfair H3, 3 sentence paragraph, padding:2.5rem, border-radius:var(--r), box-shadow:var(--shadow), class="reveal".
+- Each card: 64px gradient icon circle, var(--font-display) H3, 3 sentence paragraph, padding:2.5rem, border-radius:var(--r), box-shadow:var(--shadow), class="reveal".
 - Hover: translateY(-14px), shadow-lg, border-color:var(--p), transition:var(--t).
 
 4. SERVICES/MENU/PORTFOLIO - dark background var(--bg)
 - 6 items minimum, CSS grid repeat(auto-fit,minmax(280px,1fr)).
 - Each item class="glass reveal", padding:2rem, border-radius:var(--r).
-- H3 color var(--p), Playfair, 1.3rem.
-- Paragraph rgba(255,255,255,0.65), Inter 300, line-height:1.7.
+- H3 color var(--p), var(--font-display), 1.3rem.
+- Paragraph rgba(255,255,255,0.65), var(--font-body) 300, line-height:1.7.
 - Price/detail: gradient text, 1.6rem, font-weight:700, margin-top:1rem.
 - Hover: border-color using primary at 0.4 alpha, background using primary at 0.08 alpha, translateY(-8px), deep shadow.
 
 5. TESTIMONIALS - light background
 - 3 cards, class="reveal", position:relative, overflow:hidden.
-- Large decorative quote mark with Playfair, var(--p), opacity:0.12.
-- Stars in var(--p), quote in italic Inter 300, author name plus title.
+- Large decorative quote mark with var(--font-display), var(--p), opacity:0.12.
+- Stars in var(--p), quote in italic var(--font-body) 300, author name plus title.
 - Card: white background, padding:2.5rem, border-radius:var(--r), box-shadow:var(--shadow).
 - Hover: translateY(-10px), shadow-lg.
 
@@ -178,7 +180,7 @@ BUILD ALL 7 SECTIONS:
     border-radius:var(--r);
     color:white;
     font-size:1rem;
-    font-family:'Inter',sans-serif;
+    font-family: var(--font-body), sans-serif;
     transition:var(--t);
   }
   input:focus, textarea:focus {
