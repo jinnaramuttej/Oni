@@ -558,8 +558,11 @@ export async function POST(req: Request) {
         model: "qwen2.5-coder:latest",
         messages: messagesToSend,
         temperature: 0.9,
-        max_tokens: adjustedMaxTokens,
+        max_tokens: 16000,
         stream: true,
+        options: {
+          num_ctx: 32768,
+        },
       });
 
       const ollamaResponse = await fetch("http://127.0.0.1:11434/v1/chat/completions", {
