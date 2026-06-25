@@ -544,6 +544,48 @@ export async function POST(req: Request) {
 
   console.log(`Estimated input tokens: ${estimatedInputTokens}, available tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
 
+  // 1. Attempt to call local Ollama first
+  try {
+    console.log("Attempting local Ollama connection on http://localhost:11434...");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2-second timeout to fail-fast if offline or hosted
+
+    const ollamaRequestBody = JSON.stringify({
+      model: "qwen2.5-coder:latest",
+      messages: messagesToSend,
+      temperature: 0.9,
+      max_tokens: adjustedMaxTokens,
+      stream: true,
+    });
+
+    const ollamaResponse = await fetch("http://localhost:11434/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: ollamaRequestBody,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (ollamaResponse.ok) {
+      console.log("Local Ollama connection successful! Streaming response from Ollama qwen2.5-coder.");
+      return new Response(ollamaResponse.body, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    } else {
+      console.warn(`Local Ollama returned status ${ollamaResponse.status}. Falling back to Groq.`);
+    }
+  } catch (err) {
+    console.log("Local Ollama not available or timed out. Falling back to Groq API.");
+  }
+
+  // 2. Fall back to Groq API
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
