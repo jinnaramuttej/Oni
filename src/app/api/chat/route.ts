@@ -348,7 +348,7 @@ function prepareMessagesForGroq(
   if (!lastMessage) {
     return {
       messages: [],
-      maxTokens: 16000,
+      maxTokens: 7500,
     };
   }
 
@@ -387,9 +387,21 @@ function prepareMessagesForGroq(
 
   const finalMessages = [...history, processedLastMessage];
 
+  // Filter out the boilerplate initial welcome/sample messages — they inflate
+  // the token count without adding meaningful context for generation.
+  const meaningfulMessages = finalMessages.filter((m) => {
+    const c = m.content.trim();
+    return (
+      c !== "" &&
+      !c.startsWith("Welcome to Oni!") &&
+      !c.includes("Velara — a bespoke five-star") &&
+      !c.includes("PALETTE: Deep Ocean Gold")
+    );
+  });
+
   return {
-    messages: finalMessages,
-    maxTokens: isConversational ? 2000 : 16000,
+    messages: meaningfulMessages,
+    maxTokens: isConversational ? 1500 : 7500,
   };
 }
 
