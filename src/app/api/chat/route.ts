@@ -531,8 +531,22 @@ export async function POST(req: Request) {
     }
   }
 
+  const defaultModelInput = body?.defaultModel || "oni-pro";
+  const isExplicitOllama = defaultModelInput === "local-ollama";
+
   const lastUserMsg = body.prompt || (body.messages && body.messages[body.messages.length - 1]?.content) || "";
-  const systemPrompt = getSystemPromptWithContext(lastUserMsg);
+  let systemPrompt = getSystemPromptWithContext(lastUserMsg);
+
+  if (isExplicitOllama) {
+    systemPrompt = `CRITICAL FORMATTING RULES FOR LOCAL OLLAMA MODEL:
+1. You MUST generate the complete website in a SINGLE HTML file.
+2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.
+3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.
+4. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT explain or write introduction tutorials.
+
+` + systemPrompt;
+  }
+
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   // Estimate input token size to dynamically adjust maxTokens and avoid exceeding Groq's 12,000 TPM limit
@@ -543,9 +557,6 @@ export async function POST(req: Request) {
   const adjustedMaxTokens = Math.min(maxTokens, availableTokens);
 
   console.log(`Estimated input tokens: ${estimatedInputTokens}, available tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
-
-  const defaultModelInput = body?.defaultModel || "oni-pro";
-  const isExplicitOllama = defaultModelInput === "local-ollama";
 
   // Helper function to call Ollama
   const callOllama = async (timeoutMs: number) => {
