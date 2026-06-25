@@ -96,25 +96,55 @@ function sanitizeGeneratedHtml(html: string): string {
 }
 
 function extractHtmlFromContent(content: string): { html: string; cleanText: string } {
-  // 1. Standard ONI_CODE tags (primary and only accepted format)
-  if (content.includes("<ONI_CODE>")) {
-    const startIndex = content.indexOf("<ONI_CODE>") + 10;
-    const endIndex = content.indexOf("</ONI_CODE>");
-    const html = endIndex !== -1 ? content.slice(startIndex, endIndex).trim() : content.slice(startIndex).trim();
+  // 1. Case-insensitive standard ONI_CODE tags (handles HTML entities too)
+  const openRegex = /(?:<|&lt;)oni_code(?:\s+[^>]*)?(?:>|&gt;)/i;
+  const closeRegex = /(?:<|&lt;)\/oni_code(?:>|&gt;)/i;
+
+  const openMatch = content.match(openRegex);
+  if (openMatch && openMatch.index !== undefined) {
+    const startIndex = openMatch.index + openMatch[0].length;
+    const closeMatch = content.match(closeRegex);
+    let html = "";
     
+    if (closeMatch && closeMatch.index !== undefined) {
+      html = content.slice(startIndex, closeMatch.index).trim();
+    } else {
+      html = content.slice(startIndex).trim();
+    }
+
+    // Decode basic HTML entities if necessary
+    if (html.includes("&lt;") || html.includes("&gt;")) {
+      html = html
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"');
+    }
+
     const cleanText = content
-      .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
-      .replace(/<ONI_CODE>[\s\S]*/g, '')
+      .replace(new RegExp(openRegex.source + "[\\s\\S]*?" + closeRegex.source, "gi"), "")
+      .replace(new RegExp(openRegex.source + "[\\s\\S]*", "gi"), "")
       .trim();
     return { html, cleanText };
   }
 
   // 2. Markdown html code blocks fallback (```html ... ```)
-  const mdMatch = content.match(/```html([\s\S]*?)(?:```|$)/);
+  const mdMatch = content.match(/```html([\s\S]*?)(?:```|$)/i);
   if (mdMatch) {
     const html = mdMatch[1].trim();
-    const cleanText = content.replace(/```html[\s\S]*?(?:```|$)/g, '').trim();
+    const cleanText = content.replace(/```html[\s\S]*?(?:```|$)/gi, '').trim();
     return { html, cleanText };
+  }
+
+  // 3. Generic markdown code block fallback if it contains HTML structure
+  const genericMdMatch = content.match(/```([\s\S]*?)(?:```|$)/);
+  if (genericMdMatch) {
+    const codeContent = genericMdMatch[1].trim();
+    const lowerCode = codeContent.toLowerCase();
+    if (lowerCode.includes("<!doctype html") || lowerCode.includes("<html")) {
+      const cleanText = content.replace(/```[\s\S]*?(?:```|$)/g, '').trim();
+      return { html: codeContent, cleanText };
+    }
   }
 
   // NOTE: No raw-HTML fallback — the system prompt instructs the model to always
@@ -210,13 +240,17 @@ function extractThoughtAndHtml(content: string): { thought: string; html: string
   let thought = "";
   let tempContent = content;
 
-  // Extract ONI_THOUGHT
-  if (tempContent.includes("<ONI_THOUGHT>")) {
-    const startIndex = tempContent.indexOf("<ONI_THOUGHT>") + 13;
-    const endIndex = tempContent.indexOf("</ONI_THOUGHT>");
-    if (endIndex !== -1) {
-      thought = tempContent.slice(startIndex, endIndex).trim();
-      tempContent = tempContent.replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '').trim();
+  // Extract ONI_THOUGHT case-insensitively and support HTML entities
+  const openThoughtRegex = /(?:<|&lt;)oni_thought(?:\s+[^>]*)?(?:>|&gt;)/i;
+  const closeThoughtRegex = /(?:<|&lt;)\/oni_thought(?:>|&gt;)/i;
+
+  const openMatch = tempContent.match(openThoughtRegex);
+  if (openMatch && openMatch.index !== undefined) {
+    const startIndex = openMatch.index + openMatch[0].length;
+    const closeMatch = tempContent.match(closeThoughtRegex);
+    if (closeMatch && closeMatch.index !== undefined) {
+      thought = tempContent.slice(startIndex, closeMatch.index).trim();
+      tempContent = tempContent.replace(new RegExp(openThoughtRegex.source + "[\\s\\S]*?" + closeThoughtRegex.source, "gi"), "").trim();
     } else {
       thought = tempContent.slice(startIndex).trim();
       tempContent = "";
