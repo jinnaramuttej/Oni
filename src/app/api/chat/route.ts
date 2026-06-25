@@ -402,10 +402,9 @@ function prepareMessagesForGroq(
     if (isConversational) {
       finalLastContent = lastContentTruncated;
     } else {
-      // Slice currentHtml dynamically based on remaining character budget, capping at 100,000 characters
       const htmlSliceLimit = Math.max(8000, Math.min(100000, remainingCharsForHtml - 1000));
       const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
-      finalLastContent = `User request: ${lastContentTruncated}\n\nThe user might be asking for a change or addition to the existing website below, or they might just be chatting or asking a general question.\n\nIf the request is a general question, explanation, greeting, or any query NOT asking to change/modify the website, do NOT output any code or <ONI_CODE> tags. Just reply naturally and informatively in full detail.\n\nOnly if the user is requesting a modification, style change, or update to the website, return the updated FULL HTML file inside <ONI_CODE>...</ONI_CODE> tags.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+      finalLastContent = `User request: ${lastContentTruncated}\n\nThe user is requesting an update, modification, or style change to the existing website below.\n\nCRITICAL DESIGN & REFINEMENT RULES:\n1. Do NOT make a lazy search-and-replace tweak. If the current HTML is simple, basic, or unstyled, you MUST completely upgrade and redesign the sections to make it look like a premium, $50,000 agency site.\n2. Ensure you have at least 6-7 complete, beautifully styled sections: navbar, hero, features grid, services/menu, testimonials, contact form, and footer.\n3. Every element must use var(--font-display) and var(--font-body) custom properties. Import modern Google Fonts at the top of <style>.\n4. All CSS custom variables used (like --shadow, --shadow-lg, transitions, custom gradients) MUST be explicitly declared in :root.\n5. Do NOT write explanations, chat tutorials, or markdown code blocks outside of <ONI_CODE>. Only write exactly one sentence before the code block.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
     }
   }
 
