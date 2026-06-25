@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,23 +64,25 @@ function isReadableTextFile(file: File) {
     ".rtf",
   ]);
 
-  return file.type.startsWith("text/") || readableExtensions.has(extension) || file.type === "application/json";
+  return readableExtensions.has(extension);
 }
 
 function isPdfFile(file: File) {
-  return file.type === "application/pdf" || getFileExtension(file.name) === ".pdf";
+  return getFileExtension(file.name) === ".pdf";
 }
 
-function getFileExtension(fileName: string) {
-  const lastDot = fileName.lastIndexOf(".");
-  return lastDot === -1 ? "" : fileName.slice(lastDot).toLowerCase();
+function getFileExtension(filename: string) {
+  const parts = filename.split(".");
+  return parts.length > 1 ? `.${parts[parts.length - 1].toLowerCase()}` : "";
 }
 
-function formatBytes(bytes: number) {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+function formatBytes(bytes: number, decimals = 2) {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
 }
 
 function createId() {
@@ -106,6 +108,20 @@ export function HomePage() {
   const recognitionRef = useRef<any>(null);
   const toastTimerRef = useRef<number | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
+
+  // Auto-resize textarea on home page as text changes
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "24px";
+    const scrollHeight = textarea.scrollHeight;
+    const nextHeight = Math.max(24, Math.min(scrollHeight, 200));
+    textarea.style.height = `${nextHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [promptText, adjustTextareaHeight]);
 
   useEffect(() => {
     return () => {
