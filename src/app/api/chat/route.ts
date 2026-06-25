@@ -564,10 +564,25 @@ export async function POST(req: Request) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    const finalSystemPrompt = isExplicitOllama
+      ? systemPrompt
+      : `CRITICAL FORMATTING RULES FOR LOCAL OLLAMA MODEL:
+1. You MUST generate the complete website in a SINGLE HTML file.
+2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.
+3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.
+4. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT explain or write introduction tutorials.
+
+` + systemPrompt;
+
+    const localMessagesToSend = [
+      { role: "system", content: finalSystemPrompt },
+      ...groqMessages
+    ];
+
     try {
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
-        messages: messagesToSend,
+        messages: localMessagesToSend,
         temperature: 0.9,
         max_tokens: 16000,
         stream: true,
