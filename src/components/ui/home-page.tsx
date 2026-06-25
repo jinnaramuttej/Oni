@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { X, FileText } from "lucide-react";
+import { X, FileText, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppShell } from "./app-shell";
 import { OniChat } from "./v0-ai-chat";
@@ -306,6 +306,55 @@ export function HomePage() {
     setAttachedFiles([]);
   };
 
+  const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const handleEnhancePrompt = async () => {
+    if (isEnhancing || !promptText.trim() || promptText.trim().length < 3) return;
+    setIsEnhancing(true);
+
+    let activeModel = "oni-pro";
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("oni_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.defaultModel) {
+            activeModel = parsed.defaultModel;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    try {
+      const response = await fetch("/api/enhance-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: promptText,
+          defaultModel: activeModel,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.enhancedPrompt) {
+          setPromptText(data.enhancedPrompt);
+          showToast("Prompt enhanced!");
+          window.requestAnimationFrame(() => adjustTextareaHeight());
+        }
+      } else {
+        const errText = await response.text();
+        console.error("Enhancement failed:", errText);
+        showToast("Failed to enhance prompt");
+      }
+    } catch (err) {
+      console.error("Enhancement error:", err);
+      showToast("Error enhancing prompt");
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -475,6 +524,25 @@ export function HomePage() {
                   </svg>
                 </button>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleEnhancePrompt}
+                    disabled={isEnhancing || !promptText.trim() || promptText.trim().length < 3}
+                    aria-label="Enhance prompt"
+                    className={cn(
+                      "p-1.5 rounded-md transition-colors cursor-pointer flex items-center justify-center",
+                      isEnhancing
+                        ? "text-primary bg-surface-container-high"
+                        : "text-text-secondary hover:text-primary hover:bg-surface-container",
+                      (!promptText.trim() || promptText.trim().length < 3) && "cursor-not-allowed opacity-30"
+                    )}
+                    title="Enhance prompt"
+                  >
+                    {isEnhancing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                  </button>
                   <button
                     onClick={() => showToast("Voice mode coming soon")}
                     aria-label="Voice mode info"
