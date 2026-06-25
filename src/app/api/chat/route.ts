@@ -3,6 +3,8 @@ import DOMPurify from "isomorphic-dompurify";
 import { z } from "zod";
 import { sanitizeText } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import fs from "fs";
+import path from "path";
 
 // 10 AI generation requests per minute per IP
 const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
@@ -430,6 +432,44 @@ function prepareMessagesForGroq(
   };
 }
 
+function getSystemPromptWithContext(promptText: string): string {
+  const cleanPrompt = promptText.toLowerCase();
+  let contextText = "\n\n=== WORKSPACE DESIGN SYSTEM GUIDELINES ===\n";
+
+  try {
+    const contextDir = path.join(process.cwd(), "oni-context");
+    
+    // Essential files containing styling, photography, typography rules
+    const essentialFiles = [
+      "COLOR_PALETTES.md",
+      "TYPOGRAPHY_GUIDE.md",
+      "REFERENCE_SITES.md",
+      "DESIGN_PRINCIPLES.md"
+    ];
+
+    // Conditionally load example categories to save tokens and stay within Groq limits
+    if (cleanPrompt.includes("restaurant") || cleanPrompt.includes("food") || cleanPrompt.includes("cafe") || cleanPrompt.includes("bistro") || cleanPrompt.includes("dining")) {
+      essentialFiles.push("RESTAURANT_EXAMPLES.md");
+    } else if (cleanPrompt.includes("hotel") || cleanPrompt.includes("resort") || cleanPrompt.includes("stay") || cleanPrompt.includes("suite") || cleanPrompt.includes("room")) {
+      essentialFiles.push("HOTEL_EXAMPLES.md");
+    } else if (cleanPrompt.includes("saas") || cleanPrompt.includes("tech") || cleanPrompt.includes("software") || cleanPrompt.includes("dashboard") || cleanPrompt.includes("app")) {
+      essentialFiles.push("TECH_SAAS_EXAMPLES.md");
+    }
+
+    for (const filename of essentialFiles) {
+      const filePath = path.join(contextDir, filename);
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, "utf8");
+        contextText += `\n--- FILE: ${filename} ---\n${content}\n`;
+      }
+    }
+  } catch (err) {
+    console.error("Error loading design context from workspace:", err);
+  }
+
+  return ONI_SYSTEM_PROMPT + contextText;
+}
+
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
   const ip = getClientIp(req);
@@ -489,7 +529,9 @@ export async function POST(req: Request) {
     }
   }
 
-  const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
+  const lastUserMsg = body.prompt || (body.messages && body.messages[body.messages.length - 1]?.content) || "";
+  const systemPrompt = getSystemPromptWithContext(lastUserMsg);
+  const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
