@@ -441,10 +441,7 @@ function getSystemPromptWithContext(promptText: string): string {
     
     // Essential files containing styling, photography, typography rules
     const essentialFiles = [
-      "COLOR_PALETTES.md",
-      "TYPOGRAPHY_GUIDE.md",
-      "REFERENCE_SITES.md",
-      "DESIGN_PRINCIPLES.md"
+      "REFERENCE_SITES.md"
     ];
 
     // Conditionally load example categories to save tokens and stay within Groq limits
@@ -533,6 +530,15 @@ export async function POST(req: Request) {
   const systemPrompt = getSystemPromptWithContext(lastUserMsg);
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
+  // Estimate input token size to dynamically adjust maxTokens and avoid exceeding Groq's 12,000 TPM limit
+  const estimatedInputTokens = estimateTokens(JSON.stringify(messagesToSend));
+  const safetyBuffer = 600;
+  const maxTpmLimit = 12000;
+  const availableTokens = Math.max(2000, maxTpmLimit - estimatedInputTokens - safetyBuffer);
+  const adjustedMaxTokens = Math.min(maxTokens, availableTokens);
+
+  console.log(`Estimated input tokens: ${estimatedInputTokens}, available tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
+
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
@@ -549,7 +555,7 @@ export async function POST(req: Request) {
       model: modelToUse,
       messages: messagesToSend,
       temperature: 0.9,
-      max_tokens: maxTokens,
+      max_tokens: adjustedMaxTokens,
       stream: true,
     });
     console.log('Request body length:', requestBody.length, 'Model used:', modelToUse);
