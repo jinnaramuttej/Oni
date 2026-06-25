@@ -441,7 +441,12 @@ function getSystemPromptWithContext(promptText: string): string {
     
     // Essential files containing styling, photography, typography rules
     const essentialFiles = [
-      "REFERENCE_SITES.md"
+      "COLOR_PALETTES.md",
+      "TYPOGRAPHY_GUIDE.md",
+      "REFERENCE_SITES.md",
+      "DESIGN_PRINCIPLES.md",
+      "CSS_TECHNIQUES.md",
+      "COMPONENT_PATTERNS.md"
     ];
 
     // Conditionally load example categories to save tokens and stay within Groq limits
