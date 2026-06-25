@@ -213,6 +213,7 @@ export function HomePage() {
       id: createId(),
       name: file.name || "pasted-image.png",
       url: imageUrl,
+      file: file,
     });
   };
 

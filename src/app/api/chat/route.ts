@@ -271,7 +271,24 @@ CONTENT RULES:
 - Real menu items, prices, addresses, phone numbers, hours, service details, and local-feeling copy.
 - Real testimonial full names and detailed 2-3 sentence quotes.
 - Never lorem ipsum.
-- Never broken image src attributes.
+- Never broken image src attributes. Always use high quality Unsplash photos.
+- For images use Unsplash Source URLs in this exact format:
+  <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">
+- For backgrounds use:
+  background-image: url('https://images.unsplash.com/photo-[ID]?w=1920&q=80&fit=crop');
+- Use these specific photo IDs by business type:
+  * Restaurant food: 1565299624
+  * Restaurant interior: 1414235077
+  * Hotel lobby: 1542314831
+  * Hotel room: 1631049307
+  * Fitness gym: 1534438327
+  * Beauty salon: 1560066263
+  * Real estate: 1560518883
+  * Medical clinic: 1519494026
+  * Tech office: 1497366216
+  * Coffee shop: 1495474472
+  * Hero dark abstract: 1557804506
+  * Team people: 1522071820
 - Never Font Awesome.
 - No mention of Oni or AI anywhere in the generated HTML.
 - Use tasteful decorative symbols such as stars, diamonds, arrows, checks, and sparkles.
@@ -454,6 +471,14 @@ export async function POST(req: Request) {
     maxTokens = result.maxTokens;
   } else {
     return new NextResponse("Bad request", { status: 400 });
+  }
+
+  if (body.userImage && typeof body.userImage === "string" && body.userImage.trim().length > 0) {
+    const lastUserMsgIndex = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
+    if (lastUserMsgIndex !== -1) {
+      const userImageInstruction = `\n\nThe user has uploaded an image to use in the website. Use this exact base64 string as the src for the hero background or main image:\n<img src="${body.userImage}" style="width:100%;height:100%;object-fit:cover">\nor as CSS: background-image: url('${body.userImage}');`;
+      groqMessages[lastUserMsgIndex].content += userImageInstruction;
+    }
   }
 
   const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];

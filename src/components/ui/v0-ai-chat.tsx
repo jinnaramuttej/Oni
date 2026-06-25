@@ -52,6 +52,47 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 
+async function resizeImageToBase64(file: File, maxWidth = 800, maxHeight = 800): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const img = new globalThis.Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+      img.src = readerEvent.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Sanitize AI-generated HTML before rendering in the sandboxed iframe.
  *
@@ -335,6 +376,7 @@ type ImageAttachment = {
   id: string;
   name: string;
   url: string;
+  file?: File;
 };
 
 type FileAttachment = {
@@ -998,6 +1040,7 @@ export function OniChat({
         id: createId(),
         name: file.name || "pasted-image.png",
         url: imageUrl,
+        file: file,
       });
       setMobilePanel("chat");
     },
@@ -1159,6 +1202,16 @@ export function OniChat({
     const assistantId = createId();
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
+    // Compress & convert user attached image to base64 if present
+    let base64Image: string | null = null;
+    if (imageForMessage && imageForMessage.file) {
+      try {
+        base64Image = await resizeImageToBase64(imageForMessage.file);
+      } catch (err) {
+        console.error("Failed to convert image to base64:", err);
+      }
+    }
+
     try {
       const messagesForApi = [...messages, userMessage];
       const response = await fetch("/api/chat", {
@@ -1174,7 +1227,8 @@ export function OniChat({
           // Never send the preloaded Velara sample as context — it would make Groq modify
           // Velara instead of building a fresh site.
           currentHtml: isShowingSample.current ? "" : generatedHtml,
-          defaultModel: oniSettings.defaultModel
+          defaultModel: oniSettings.defaultModel,
+          userImage: base64Image,
         }),
       });
 
