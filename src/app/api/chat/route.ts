@@ -555,8 +555,12 @@ export async function POST(req: Request) {
     }
   }
 
+  // Only append the quality rules suffix for Groq. For Ollama, the rules are already in the
+  // system prompt (finalSystemPrompt in callOllama). Appending them again to the user message
+  // adds ~1200 tokens to the prefill, wasting ~6 seconds before the first token is generated.
   const lastUserMsgIdxForQuality = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
-  if (lastUserMsgIdxForQuality !== -1) {
+  const qualitySuffixTargetModel = body?.defaultModel || "oni-pro";
+  if (qualitySuffixTargetModel !== "local-ollama" && lastUserMsgIdxForQuality !== -1) {
     groqMessages[lastUserMsgIdxForQuality].content += `
 
 CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
@@ -633,8 +637,10 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
         messages: localMessagesToSend,
-        temperature: 0.5,   // lower = fewer hallucinated frameworks/icons
-        max_tokens: 12000,  // ~13k input + 12k output = 25k total, well within 32768 window
+        temperature: 0.5,
+        // 2500 tokens = ~10,000 chars at 50 chars/sec = ~200s generation
+        // + ~49s prefill = ~249s total → safely under 480s timeout
+        max_tokens: 2500,
         stream: true,
         options: {
           num_ctx: 32768,
@@ -674,8 +680,9 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
   // If explicit local Ollama is chosen:
   if (isExplicitOllama) {
     try {
-      // 300 seconds timeout (5 min) — qwen2.5-coder generates ~50 chars/sec, so a 800-line site takes ~4 min
-      return await callOllama(300000);
+      // 480s timeout: at 2500 max_tokens, generation takes ~200s + ~49s prefill = ~249s
+      // Extra buffer handles slower hardware or initial model load
+      return await callOllama(480000);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("Local Ollama connection failed:", err);
