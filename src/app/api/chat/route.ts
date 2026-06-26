@@ -554,7 +554,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
 2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
 3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
 4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
-5. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
+5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined, non-empty style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries). Do NOT refer to any class or ID in the HTML markup that has not been completely styled in the CSS block.
+6. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
    a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
    b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
    c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
@@ -562,10 +563,10 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
    e. #testimonials — light bg, 3 white cards, large decorative quote mark, stars, italic quote, author + title.
    f. #contact — dark gradient bg, 2-column grid: left info panel + right form with floating labels.
    g. footer — dark bg, 4-column grid, bottom copyright bar.
-6. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
-7. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
-8. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
-9. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.`;
+7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
+8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
+9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
+10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.`;
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
@@ -618,7 +619,7 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
         messages: localMessagesToSend,
-        temperature: 0.9,
+        temperature: 0.7,
         max_tokens: 16000,
         stream: true,
         options: {
@@ -686,7 +687,7 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     const requestBody = JSON.stringify({
       model: modelToUse,
       messages: messagesToSend,
-      temperature: 0.9,
+      temperature: 0.7,
       max_tokens: adjustedMaxTokens,
       stream: true,
     });
