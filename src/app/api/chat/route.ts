@@ -433,49 +433,60 @@ function prepareMessagesForGroq(
   };
 }
 
-function getSystemPromptWithContext(promptText: string, maxContextChars = 30000): string {
+function getSystemPromptWithContext(promptText: string, maxContextChars = 30000, isOllama = false): string {
   const cleanPrompt = promptText.toLowerCase();
   let contextText = "\n\n=== WORKSPACE DESIGN SYSTEM GUIDELINES ===\n";
 
   try {
     const contextDir = path.join(process.cwd(), "oni-context");
 
-    // Light-weight core files only — COMPONENT_PATTERNS.md (58 KB ≈ 19k tokens)
-    // is intentionally excluded: its patterns are already encoded in the system prompt
-    // above, and including it starves Groq of output token budget.
+    // Standard context files (ordered by priority)
     const essentialFiles = [
-      "COLOR_PALETTES.md",      // ~5.5k tokens — color theory & palettes
-      "TYPOGRAPHY_GUIDE.md",    // ~1k tokens   — font pairings
-      "CSS_TECHNIQUES.md",      // ~1.5k tokens — key CSS tricks
-      "DESIGN_PRINCIPLES.md",   // ~2.8k tokens — spacing & layout rules
+      "COLOR_PALETTES.md",
+      "TYPOGRAPHY_GUIDE.md",
+      "CSS_TECHNIQUES.md",
+      "DESIGN_PRINCIPLES.md",
+      "ANIMATION_TECHNIQUES.md",
+      "REFERENCE_SITES.md"
     ];
 
-    // Conditionally load one industry-specific example file
-    if (cleanPrompt.includes("restaurant") || cleanPrompt.includes("food") || cleanPrompt.includes("cafe") || cleanPrompt.includes("bistro") || cleanPrompt.includes("dining")) {
-      essentialFiles.push("RESTAURANT_EXAMPLES.md");
-    } else if (cleanPrompt.includes("hotel") || cleanPrompt.includes("resort") || cleanPrompt.includes("stay") || cleanPrompt.includes("suite") || cleanPrompt.includes("room")) {
-      essentialFiles.push("HOTEL_EXAMPLES.md");
-    } else if (cleanPrompt.includes("saas") || cleanPrompt.includes("tech") || cleanPrompt.includes("software") || cleanPrompt.includes("dashboard") || cleanPrompt.includes("app")) {
-      essentialFiles.push("TECH_SAAS_EXAMPLES.md");
+    if (isOllama) {
+      essentialFiles.push("COMPONENT_PATTERNS.md");
     }
 
-    // Hard budget: keep total context additions under maxContextChars
-    const MAX_FILE_CHARS    = 12000; // per-file cap to prevent any single file dominating
+    // Conditionally load industry-specific example files first
+    if (cleanPrompt.includes("restaurant") || cleanPrompt.includes("food") || cleanPrompt.includes("cafe") || cleanPrompt.includes("bistro") || cleanPrompt.includes("dining")) {
+      essentialFiles.unshift("RESTAURANT_EXAMPLES.md");
+    } else if (cleanPrompt.includes("hotel") || cleanPrompt.includes("resort") || cleanPrompt.includes("stay") || cleanPrompt.includes("suite") || cleanPrompt.includes("room")) {
+      essentialFiles.unshift("HOTEL_EXAMPLES.md");
+    } else if (cleanPrompt.includes("saas") || cleanPrompt.includes("tech") || cleanPrompt.includes("software") || cleanPrompt.includes("dashboard") || cleanPrompt.includes("app")) {
+      essentialFiles.unshift("TECH_SAAS_EXAMPLES.md");
+    }
+
+    const availableFiles = essentialFiles.filter(f => fs.existsSync(path.join(contextDir, f)));
+    const numFiles = availableFiles.length;
+
+    // For Groq: divide maxContextChars by the number of files so each gets an equal snippet,
+    // rather than letting one file consume the entire budget.
+    // For Ollama: load all files completely (up to 80k chars per file).
+    const maxFileChars = isOllama ? 80000 : (numFiles > 0 ? Math.max(800, Math.floor(maxContextChars / numFiles)) : 1000);
     let totalChars = 0;
 
-    for (const filename of essentialFiles) {
-      if (totalChars >= maxContextChars) break;
+    for (const filename of availableFiles) {
+      if (isOllama && totalChars >= maxContextChars) break;
+      
       const filePath = path.join(contextDir, filename);
-      if (!fs.existsSync(filePath)) continue;
       let content = fs.readFileSync(filePath, "utf8");
-      if (content.length > MAX_FILE_CHARS) {
-        content = content.slice(0, MAX_FILE_CHARS) + "\n...[truncated for token budget]";
+      
+      if (content.length > maxFileChars) {
+        content = content.slice(0, maxFileChars) + "\n...[truncated for token budget]";
       }
+      
       contextText += `\n--- ${filename} ---\n${content}\n`;
       totalChars += content.length;
     }
 
-    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${essentialFiles.length} files (budget: ${maxContextChars} chars).`);
+    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${numFiles} files (budget: ${maxContextChars} chars, model: ${isOllama ? 'Ollama' : 'Groq'}).`);
   } catch (err) {
     console.error("Error loading design context from workspace:", err);
   }
@@ -564,7 +575,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
 7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
 8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
 9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
-10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.`;
+10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.
+11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.`;
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
@@ -575,8 +587,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
   // For Groq: strict token limits (12k TPM ceiling). Keep context small (3k chars max) to avoid 413 Payload Too Large
   const groqSystemPrompt = getSystemPromptWithContext(lastUserMsg, 3000);
 
-  // For Ollama: no TPM ceiling, load full context (40k chars)
-  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 40000);
+  // For Ollama: no TPM ceiling, load full context (80k chars)
+  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 80000, true);
 
   const messagesToSend = [{ role: "system", content: groqSystemPrompt }, ...groqMessages];
 
@@ -595,13 +607,12 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const finalSystemPrompt = isExplicitOllama
-      ? ollamaSystemPrompt
-      : `CRITICAL FORMATTING RULES FOR LOCAL OLLAMA MODEL:
-1. You MUST generate the complete website in a SINGLE HTML file.
-2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.
-3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.
-4. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT explain or write introduction tutorials.
+    const finalSystemPrompt = `CRITICAL FORMATTING RULES — YOU MUST FOLLOW THESE EXACTLY:
+1. Output ONLY ONE short sentence (max 12 words) before <ONI_CODE>. Example: "Here's your luxury restaurant website."
+2. IMMEDIATELY after that sentence, output <ONI_CODE> on a new line. NO markdown headers, NO bullet points, NO explanations, NO "let's create", NO "### One Sentence" labels.
+3. All CSS MUST be inside <style> tags. All JS MUST be inside <script> tags. Single complete HTML file only.
+4. Wrap the ENTIRE HTML document inside <ONI_CODE>...</ONI_CODE>. Nothing after </ONI_CODE>.
+5. Do NOT use markdown code fences (\`\`\`html or \`\`\`). Output raw HTML only inside <ONI_CODE>.
 
 ` + ollamaSystemPrompt;
 
@@ -655,8 +666,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
   // If explicit local Ollama is chosen:
   if (isExplicitOllama) {
     try {
-      // 30 seconds timeout to give Ollama time to load the model into memory
-      return await callOllama(30000);
+      // 300 seconds timeout (5 min) — qwen2.5-coder generates ~50 chars/sec, so a 800-line site takes ~4 min
+      return await callOllama(300000);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("Local Ollama connection failed:", err);
@@ -721,8 +732,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     // Groq failed (e.g. rate limit) -> Attempt fallback to Ollama
     console.log("Groq API returned an error. Attempting fallback to local Ollama...");
     try {
-      // 3 seconds timeout for fallback so we fail fast if Ollama isn't running
-      return await callOllama(3000);
+      // 5 seconds timeout for fallback so we fail fast if Ollama isn't running
+      return await callOllama(5000);
     } catch (ollamaErr) {
       console.warn("Ollama fallback failed as well:", ollamaErr);
       return new NextResponse(
@@ -737,7 +748,7 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     // Groq connection/network failed -> Attempt fallback to Ollama
     console.log("Groq connection failed. Attempting fallback to local Ollama...");
     try {
-      return await callOllama(3000);
+      return await callOllama(5000);
     } catch (ollamaErr) {
       console.warn("Ollama fallback failed as well:", ollamaErr);
       return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
