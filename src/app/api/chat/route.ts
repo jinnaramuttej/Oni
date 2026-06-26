@@ -359,7 +359,7 @@ function isLikelyBuildRequest(text: string): boolean {
 function prepareMessagesForGroq(
   messages: GroqMessage[],
   currentHtml: string
-): { messages: GroqMessage[]; maxTokens: number } {
+): { messages: GroqMessage[]; maxTokens: number; isConversational: boolean } {
   const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT);
   const maxPromptTokensBudget = 40000; // Increased budget to allow full website context (e.g. up to 120k chars)
   const remainingBudget = maxPromptTokensBudget - systemTokens;
@@ -378,6 +378,7 @@ function prepareMessagesForGroq(
     return {
       messages: [],
       maxTokens: 7500,
+      isConversational: false,
     };
   }
 
@@ -430,6 +431,7 @@ function prepareMessagesForGroq(
   return {
     messages: meaningfulMessages,
     maxTokens: isConversational ? 1500 : 16000,
+    isConversational,
   };
 }
 
@@ -492,7 +494,7 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
     console.error("Error loading design context from workspace:", err);
   }
 
-  return ONI_SYSTEM_PROMPT + contextText;
+  return isOllama ? contextText : ONI_SYSTEM_PROMPT + contextText;
 }
 
 
@@ -518,6 +520,7 @@ export async function POST(req: Request) {
 
   let groqMessages: GroqMessage[] = [];
   let maxTokens = 16000;
+  let isConversational = false;
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
     const rawMessages = body.messages.map((m: { role: string; content: string }) => ({
@@ -527,6 +530,7 @@ export async function POST(req: Request) {
     const result = prepareMessagesForGroq(rawMessages, currentHtml);
     groqMessages = result.messages;
     maxTokens = result.maxTokens;
+    isConversational = !!result.isConversational;
   } else if (body.prompt) {
     const clean = sanitizeText(
       DOMPurify.sanitize(body.prompt, { ALLOWED_TAGS: [] })
@@ -543,6 +547,7 @@ export async function POST(req: Request) {
     const result = prepareMessagesForGroq([{ role: "user", content: clean }], currentHtml);
     groqMessages = result.messages;
     maxTokens = result.maxTokens;
+    isConversational = !!result.isConversational;
   } else {
     return new NextResponse("Bad request", { status: 400 });
   }
@@ -619,14 +624,36 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const finalSystemPrompt = `CRITICAL FORMATTING RULES — YOU MUST FOLLOW THESE EXACTLY:
-1. Output ONLY ONE short sentence (max 12 words) before <ONI_CODE>. Example: "Here's your luxury restaurant website."
-2. IMMEDIATELY after that sentence, output <ONI_CODE> on a new line. NO markdown headers, NO bullet points, NO explanations, NO "let's create", NO "### One Sentence" labels.
-3. All CSS MUST be inside <style> tags. All JS MUST be inside <script> tags. Single complete HTML file only.
-4. Wrap the ENTIRE HTML document inside <ONI_CODE>...</ONI_CODE>. Nothing after </ONI_CODE>.
-5. Do NOT use markdown code fences (\`\`\`html or \`\`\`). Output raw HTML only inside <ONI_CODE>.
+    const finalSystemPrompt = isConversational
+      ? `You are Oni, a helpful AI assistant.
+Conversational Mode:
+Reply naturally, informatively, and in full detail in 1-2 sentences. Do NOT output any website HTML, CSS, JS or <ONI_CODE> or <ONI_THOUGHT> tags.`
+      : `You are Oni, an elite AI website designer and builder.
+Every website you generate must be beautiful, mobile-responsive, production-ready, and styled to look premium.
 
-` + ollamaSystemPrompt;
+${ollamaSystemPrompt}
+
+=== IMPORTANT INSTRUCTIONS FOR BUILD MODE ===
+You are in BUILD MODE. Follow these output formatting steps precisely:
+
+Step 1: Write your planning and design thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> tags using this exact format:
+<ONI_THOUGHT>
+PALETTE: [A beautiful design palette name] | [color 1 hex code], [color 2 hex code], [color 3 hex code], [color 4 hex code], [color 5 hex code]
+FONTS: [display font family name] | [body font family name] | [explanation of how these fonts fit the business tone]
+SIGNATURE: [one-sentence description of unique signature layout or interactive element]
+LAYOUT: [one-sentence description of layout design strategy]
+SECTIONS: [comma-separated list of section names/IDs to be built, e.g. navbar, hero, features, services, testimonials, contact, footer]
+</ONI_THOUGHT>
+
+Step 2: Output exactly ONE short sentence of maximum 12 words (e.g., "Here is your luxury hotel website.").
+
+Step 3: Output the complete single HTML file (with all CSS in <style> and all JS in <script>) wrapped inside <ONI_CODE>...</ONI_CODE> tags.
+
+CRITICAL CONSTRAINTS:
+- Do NOT output any markdown headers, bullet points, explanations, or step-by-step guides outside the XML tags.
+- Do NOT use markdown code blocks (\`\`\`html or \`\`\`) to display the website code. Use raw HTML directly inside the <ONI_CODE>...</ONI_CODE> tags.
+- Keep the chat response (text outside of XML tags) to exactly ONE sentence.
+- Minimum 300 lines of HTML/CSS/JS.`;
 
     const localMessagesToSend = [
       { role: "system", content: finalSystemPrompt },
@@ -637,10 +664,10 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
         messages: localMessagesToSend,
-        temperature: 0.5,
+        temperature: isConversational ? 0.7 : 0.3,
         // 2500 tokens = ~10,000 chars at 50 chars/sec = ~200s generation
         // + ~49s prefill = ~249s total → safely under 480s timeout
-        max_tokens: 2500,
+        max_tokens: isConversational ? 1500 : 2500,
         stream: true,
         options: {
           num_ctx: 32768,
