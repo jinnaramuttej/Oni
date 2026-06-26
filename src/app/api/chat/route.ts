@@ -576,7 +576,13 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
 8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
 9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
 10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.
-11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.`;
+11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.
+12. BANNED FRAMEWORKS: NEVER use Bootstrap classes (.col-md-4, .row, .container, .col-*). NEVER use Font Awesome or any icon CDN. Bootstrap is not imported and will break the layout. Use CSS Grid with grid-template-columns instead. For icons, use Unicode symbols only: ★ ✦ ◆ ✓ → ✉ ☎ ◎ or decorative text characters.
+13. LIGHT SECTION TEXT COLORS: Sections with a light background (#features, #testimonials) MUST override text to dark: set color: #111 on the section itself, h2/h3 { color: #111 }, p { color: #444 }. White text on a white/light card is completely unreadable — this is a CRITICAL bug.
+14. ORBS IN HTML: The hero section HTML MUST physically contain these exact three divs as direct children inside the hero element: <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>. Without them in the HTML the orb CSS has nothing to apply to.
+15. NAV LINKS: The <nav> element inside the navbar MUST have class="nav-links" so the flex layout CSS applies. Without this class the links stack vertically. Each link inside uses class="nav-link".
+16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
+17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.`;
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
