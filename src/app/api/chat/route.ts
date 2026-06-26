@@ -429,7 +429,7 @@ function prepareMessagesForGroq(
 
   return {
     messages: meaningfulMessages,
-    maxTokens: isConversational ? 1500 : 7500,
+    maxTokens: isConversational ? 1500 : 16000,
   };
 }
 
@@ -439,6 +439,8 @@ function getSystemPromptWithContext(promptText: string): string {
 
   try {
     const contextDir = path.join(process.cwd(), "oni-context");
+    console.log(`[Oni Context] process.cwd() resolves to: ${process.cwd()}`);
+    console.log(`[Oni Context] Reading design system guidelines from directory: ${contextDir}`);
     
     // Essential files containing styling, photography, typography rules
     const essentialFiles = [
@@ -461,9 +463,12 @@ function getSystemPromptWithContext(promptText: string): string {
 
     for (const filename of essentialFiles) {
       const filePath = path.join(contextDir, filename);
-      if (fs.existsSync(filePath)) {
+      const exists = fs.existsSync(filePath);
+      console.log(`[Oni Context] Checking file: ${filename} -> Path: ${filePath} -> Exists: ${exists}`);
+      if (exists) {
         const content = fs.readFileSync(filePath, "utf8");
         contextText += `\n--- FILE: ${filename} ---\n${content}\n`;
+        console.log(`[Oni Context] Successfully loaded context file: ${filename} (${content.length} chars)`);
       }
     }
   } catch (err) {
@@ -494,7 +499,7 @@ export async function POST(req: Request) {
       : "";
 
   let groqMessages: GroqMessage[] = [];
-  let maxTokens = 8000;
+  let maxTokens = 16000;
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
     const rawMessages = body.messages.map((m: { role: string; content: string }) => ({
@@ -571,14 +576,12 @@ CRITICAL FORMATTING & QUALITY RULES:
 
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
-  // Estimate input token size to dynamically adjust maxTokens and avoid exceeding Groq's 12,000 TPM limit
+  // Log estimated input size for diagnostics — no output cap applied here.
+  // llama-3.3-70b-versatile supports up to 32,768 output tokens; we request up to 16,000 for build mode.
   const estimatedInputTokens = estimateTokens(JSON.stringify(messagesToSend));
-  const safetyBuffer = 600;
-  const maxTpmLimit = 12000;
-  const availableTokens = Math.max(2000, maxTpmLimit - estimatedInputTokens - safetyBuffer);
-  const adjustedMaxTokens = Math.min(maxTokens, availableTokens);
+  const adjustedMaxTokens = Math.min(maxTokens, GROQ_MAX_TOKENS);
 
-  console.log(`Estimated input tokens: ${estimatedInputTokens}, available tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
+  console.log(`Estimated input tokens: ${estimatedInputTokens}, requested max_tokens: ${adjustedMaxTokens}`);
 
   // Helper function to call Ollama
   const callOllama = async (timeoutMs: number) => {
