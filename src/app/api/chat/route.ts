@@ -439,20 +439,18 @@ function getSystemPromptWithContext(promptText: string): string {
 
   try {
     const contextDir = path.join(process.cwd(), "oni-context");
-    console.log(`[Oni Context] process.cwd() resolves to: ${process.cwd()}`);
-    console.log(`[Oni Context] Reading design system guidelines from directory: ${contextDir}`);
-    
-    // Essential files containing styling, photography, typography rules
+
+    // Light-weight core files only — COMPONENT_PATTERNS.md (58 KB ≈ 19k tokens)
+    // is intentionally excluded: its patterns are already encoded in the system prompt
+    // above, and including it starves Groq of output token budget.
     const essentialFiles = [
-      "COLOR_PALETTES.md",
-      "TYPOGRAPHY_GUIDE.md",
-      "REFERENCE_SITES.md",
-      "DESIGN_PRINCIPLES.md",
-      "CSS_TECHNIQUES.md",
-      "COMPONENT_PATTERNS.md"
+      "COLOR_PALETTES.md",      // ~5.5k tokens — color theory & palettes
+      "TYPOGRAPHY_GUIDE.md",    // ~1k tokens   — font pairings
+      "CSS_TECHNIQUES.md",      // ~1.5k tokens — key CSS tricks
+      "DESIGN_PRINCIPLES.md",   // ~2.8k tokens — spacing & layout rules
     ];
 
-    // Conditionally load example categories to save tokens and stay within Groq limits
+    // Conditionally load one industry-specific example file
     if (cleanPrompt.includes("restaurant") || cleanPrompt.includes("food") || cleanPrompt.includes("cafe") || cleanPrompt.includes("bistro") || cleanPrompt.includes("dining")) {
       essentialFiles.push("RESTAURANT_EXAMPLES.md");
     } else if (cleanPrompt.includes("hotel") || cleanPrompt.includes("resort") || cleanPrompt.includes("stay") || cleanPrompt.includes("suite") || cleanPrompt.includes("room")) {
@@ -461,22 +459,32 @@ function getSystemPromptWithContext(promptText: string): string {
       essentialFiles.push("TECH_SAAS_EXAMPLES.md");
     }
 
+    // Hard budget: keep total context additions under ~30k chars (~10k tokens)
+    // so there is plenty of room for a 16k-token website output.
+    const MAX_CONTEXT_CHARS = 30000;
+    const MAX_FILE_CHARS    = 12000; // per-file cap to prevent any single file dominating
+    let totalChars = 0;
+
     for (const filename of essentialFiles) {
+      if (totalChars >= MAX_CONTEXT_CHARS) break;
       const filePath = path.join(contextDir, filename);
-      const exists = fs.existsSync(filePath);
-      console.log(`[Oni Context] Checking file: ${filename} -> Path: ${filePath} -> Exists: ${exists}`);
-      if (exists) {
-        const content = fs.readFileSync(filePath, "utf8");
-        contextText += `\n--- FILE: ${filename} ---\n${content}\n`;
-        console.log(`[Oni Context] Successfully loaded context file: ${filename} (${content.length} chars)`);
+      if (!fs.existsSync(filePath)) continue;
+      let content = fs.readFileSync(filePath, "utf8");
+      if (content.length > MAX_FILE_CHARS) {
+        content = content.slice(0, MAX_FILE_CHARS) + "\n...[truncated for token budget]";
       }
+      contextText += `\n--- ${filename} ---\n${content}\n`;
+      totalChars += content.length;
     }
+
+    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${essentialFiles.length} files (budget: ${MAX_CONTEXT_CHARS} chars).`);
   } catch (err) {
     console.error("Error loading design context from workspace:", err);
   }
 
   return ONI_SYSTEM_PROMPT + contextText;
 }
+
 
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
