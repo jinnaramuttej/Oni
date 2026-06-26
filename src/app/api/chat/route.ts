@@ -440,7 +440,8 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
   try {
     const contextDir = path.join(process.cwd(), "oni-context");
 
-    // Standard context files (ordered by priority)
+    // Standard context files (ordered by priority — COMPONENT_PATTERNS excluded: 60k chars alone
+    // would exceed qwen2.5-coder's 32k token context window when combined with the system prompt)
     const essentialFiles = [
       "COLOR_PALETTES.md",
       "TYPOGRAPHY_GUIDE.md",
@@ -450,11 +451,7 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
       "REFERENCE_SITES.md"
     ];
 
-    if (isOllama) {
-      essentialFiles.push("COMPONENT_PATTERNS.md");
-    }
-
-    // Conditionally load industry-specific example files first
+    // Conditionally prepend the industry-specific example file (highest priority)
     if (cleanPrompt.includes("restaurant") || cleanPrompt.includes("food") || cleanPrompt.includes("cafe") || cleanPrompt.includes("bistro") || cleanPrompt.includes("dining")) {
       essentialFiles.unshift("RESTAURANT_EXAMPLES.md");
     } else if (cleanPrompt.includes("hotel") || cleanPrompt.includes("resort") || cleanPrompt.includes("stay") || cleanPrompt.includes("suite") || cleanPrompt.includes("room")) {
@@ -466,22 +463,26 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
     const availableFiles = essentialFiles.filter(f => fs.existsSync(path.join(contextDir, f)));
     const numFiles = availableFiles.length;
 
-    // For Groq: divide maxContextChars by the number of files so each gets an equal snippet,
-    // rather than letting one file consume the entire budget.
-    // For Ollama: load all files completely (up to 80k chars per file).
-    const maxFileChars = isOllama ? 80000 : (numFiles > 0 ? Math.max(800, Math.floor(maxContextChars / numFiles)) : 1000);
+    // Divide total budget evenly across all files so no single file starves the rest.
+    // For Ollama (20k budget, ~7 files) each file gets ~2857 chars.
+    // For Groq (3k budget, ~7 files) each file gets ~428 chars.
+    const maxFileChars = numFiles > 0 ? Math.max(600, Math.floor(maxContextChars / numFiles)) : 1000;
     let totalChars = 0;
 
     for (const filename of availableFiles) {
-      if (isOllama && totalChars >= maxContextChars) break;
-      
+      // Hard stop — never exceed total budget
+      if (totalChars >= maxContextChars) break;
+
       const filePath = path.join(contextDir, filename);
       let content = fs.readFileSync(filePath, "utf8");
-      
-      if (content.length > maxFileChars) {
-        content = content.slice(0, maxFileChars) + "\n...[truncated for token budget]";
+
+      // Per-file cap: also ensure the remaining budget isn't blown by one large file
+      const remaining = maxContextChars - totalChars;
+      const cap = Math.min(maxFileChars, remaining);
+      if (content.length > cap) {
+        content = content.slice(0, cap) + "\n...[truncated for token budget]";
       }
-      
+
       contextText += `\n--- ${filename} ---\n${content}\n`;
       totalChars += content.length;
     }
@@ -593,8 +594,9 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
   // For Groq: strict token limits (12k TPM ceiling). Keep context small (3k chars max) to avoid 413 Payload Too Large
   const groqSystemPrompt = getSystemPromptWithContext(lastUserMsg, 3000);
 
-  // For Ollama: no TPM ceiling, load full context (80k chars)
-  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 80000, true);
+  // For Ollama: context capped at 20k chars (~5k tokens) so total input stays well within
+  // qwen2.5-coder's 32,768 token context window (sys prompt ~7.5k + context ~5k + user ~0.5k = ~13k input, ~16k output budget)
+  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 20000, true);
 
   const messagesToSend = [{ role: "system", content: groqSystemPrompt }, ...groqMessages];
 
@@ -631,8 +633,8 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
       const ollamaRequestBody = JSON.stringify({
         model: "qwen2.5-coder:latest",
         messages: localMessagesToSend,
-        temperature: 0.7,
-        max_tokens: 16000,
+        temperature: 0.5,   // lower = fewer hallucinated frameworks/icons
+        max_tokens: 12000,  // ~13k input + 12k output = 25k total, well within 32768 window
         stream: true,
         options: {
           num_ctx: 32768,
