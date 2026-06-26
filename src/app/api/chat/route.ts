@@ -549,21 +549,23 @@ export async function POST(req: Request) {
   if (lastUserMsgIdxForQuality !== -1) {
     groqMessages[lastUserMsgIdxForQuality].content += `
 
-CRITICAL FORMATTING & QUALITY RULES:
-1. You MUST generate a complete, high-fidelity, and fully detailed website of AT LEAST 400 lines of HTML/CSS/JS. Do NOT output a simple, basic, or lazy placeholder structure.
-2. Use modern, premium visual elements: glassmorphism cards (backdrop-filter: blur), linear gradient text overlays, glowing primary accents, floating background orb animations (divs with absolute positioning and translate/rotate animations), and custom scroll-reveal animations.
-3. The typography system must be elegant (e.g. Cormorant Garamond headings and Jost body text, or Playfair Display and Inter). Setup custom CSS variables for --font-display and --font-body in :root, and import both from Google Fonts at the top of <style>.
-4. Build all 7 essential sections with real, detailed, sector-specific copywriting (NO lorem ipsum, NO simple placeholders):
-   - Navigation: sticky/fixed navbar, logo, custom styled link list, CTA buttons.
-   - Hero: minimum 100vh height, large dramatic headings, subtext, primary/secondary action buttons, and background design (e.g. animated orbs or Ken Burns background).
-   - Features: grid layout showing distinct items with icons, headings, and detailed 3-sentence descriptions.
-   - Services/Menu: pricing card listings, descriptions, hover scale-up effects.
-   - Testimonials: citation, author details, stylish quote decorations.
-   - Contact Form: floating labels, customized input groups, styled submit button.
-   - Footer: multi-column layout with quick links, contacts, social media.
-5. All CSS custom variables used (like --shadow, --shadow-lg, transitions) MUST be explicitly declared in :root.
-6. The entire website code must be wrapped in a single <ONI_CODE>...</ONI_CODE> block.
-7. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT write explanations, instructions, or tutorials outside the code block.`;
+CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
+1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
+2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
+3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
+4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
+5. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
+   a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
+   b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
+   c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
+   d. #services — dark bg, 6 glass cards with H3 in var(--p), price/detail line, hover translateY(-8px).
+   e. #testimonials — light bg, 3 white cards, large decorative quote mark, stars, italic quote, author + title.
+   f. #contact — dark gradient bg, 2-column grid: left info panel + right form with floating labels.
+   g. footer — dark bg, 4-column grid, bottom copyright bar.
+6. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
+7. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
+8. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
+9. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.`;
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
