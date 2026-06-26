@@ -313,6 +313,33 @@ OUTPUT:
 
 QUALITY BAR:
 Every site you build must feel like it cost $10,000+ to make — think Cormorant Garamond or Playfair Display for headlines, Inter or Jost for body copy, dark luxury colour palettes with a strong primary accent, alternating dark/light sections, scroll-reveal animations, glassmorphism cards, floating orb backgrounds, and real specific copy (names, prices, addresses, hours). Never use placeholders or lorem ipsum. Never use generic business names like "Luxury Restaurant".`;
+
+const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
+1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
+2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
+3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
+4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
+5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined, non-empty style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries). Do NOT refer to any class or ID in the HTML markup that has not been completely styled in the CSS block.
+6. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
+   a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
+   b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
+   c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
+   d. #services — dark bg, 6 glass cards with H3 in var(--p), price/detail line, hover translateY(-8px).
+   e. #testimonials — light bg, 3 white cards, large decorative quote mark, stars, italic quote, author + title.
+   f. #contact — dark gradient bg, 2-column grid: left info panel + right form with floating labels.
+   g. footer — dark bg, 4-column grid, bottom copyright bar.
+7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
+8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
+9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
+10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.
+11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.
+12. BANNED FRAMEWORKS: NEVER use Bootstrap classes (.col-md-4, .row, .container, .col-*). NEVER use Font Awesome or any icon CDN. Bootstrap is not imported and will break the layout. Use CSS Grid with grid-template-columns instead. For icons, use Unicode symbols only: ★ ✦ ◆ ✓ → ✉ ☎ ◎ or decorative text characters.
+13. LIGHT SECTION TEXT COLORS: Sections with a light background (#features, #testimonials) MUST override text to dark: set color: #111 on the section itself, h2/h3 { color: #111 }, p { color: #444 }. White text on a white/light card is completely unreadable — this is a CRITICAL bug.
+14. ORBS IN HTML: The hero section HTML MUST physically contain these exact three divs as direct children inside the hero element: <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>. Without them in the HTML the orb CSS has nothing to apply to.
+15. NAV LINKS: The <nav> element inside the navbar MUST have class="nav-links" so the flex layout CSS applies. Without this class the links stack vertically. Each link inside uses class="nav-link".
+16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
+17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.`;
+
 type GroqMessage = { role: string; content: string };
 
 function stripOniBlocks(content: string) {
@@ -566,33 +593,7 @@ export async function POST(req: Request) {
   const lastUserMsgIdxForQuality = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
   const qualitySuffixTargetModel = body?.defaultModel || "oni-pro";
   if (qualitySuffixTargetModel !== "local-ollama" && lastUserMsgIdxForQuality !== -1) {
-    groqMessages[lastUserMsgIdxForQuality].content += `
-
-CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
-1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
-2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
-3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
-4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
-5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined, non-empty style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries). Do NOT refer to any class or ID in the HTML markup that has not been completely styled in the CSS block.
-6. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
-   a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
-   b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
-   c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
-   d. #services — dark bg, 6 glass cards with H3 in var(--p), price/detail line, hover translateY(-8px).
-   e. #testimonials — light bg, 3 white cards, large decorative quote mark, stars, italic quote, author + title.
-   f. #contact — dark gradient bg, 2-column grid: left info panel + right form with floating labels.
-   g. footer — dark bg, 4-column grid, bottom copyright bar.
-7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
-8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
-9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
-10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.
-11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.
-12. BANNED FRAMEWORKS: NEVER use Bootstrap classes (.col-md-4, .row, .container, .col-*). NEVER use Font Awesome or any icon CDN. Bootstrap is not imported and will break the layout. Use CSS Grid with grid-template-columns instead. For icons, use Unicode symbols only: ★ ✦ ◆ ✓ → ✉ ☎ ◎ or decorative text characters.
-13. LIGHT SECTION TEXT COLORS: Sections with a light background (#features, #testimonials) MUST override text to dark: set color: #111 on the section itself, h2/h3 { color: #111 }, p { color: #444 }. White text on a white/light card is completely unreadable — this is a CRITICAL bug.
-14. ORBS IN HTML: The hero section HTML MUST physically contain these exact three divs as direct children inside the hero element: <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>. Without them in the HTML the orb CSS has nothing to apply to.
-15. NAV LINKS: The <nav> element inside the navbar MUST have class="nav-links" so the flex layout CSS applies. Without this class the links stack vertically. Each link inside uses class="nav-link".
-16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
-17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.`;
+    groqMessages[lastUserMsgIdxForQuality].content += `\n\n` + ONI_QUALITY_RULES;
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
@@ -653,7 +654,8 @@ CRITICAL CONSTRAINTS:
 - Do NOT output any markdown headers, bullet points, explanations, or step-by-step guides outside the XML tags.
 - Do NOT use markdown code blocks (\`\`\`html or \`\`\`) to display the website code. Use raw HTML directly inside the <ONI_CODE>...</ONI_CODE> tags.
 - Keep the chat response (text outside of XML tags) to exactly ONE sentence.
-- Minimum 300 lines of HTML/CSS/JS.`;
+
+${ONI_QUALITY_RULES}`;
 
     const localMessagesToSend = [
       { role: "system", content: finalSystemPrompt },
@@ -665,9 +667,8 @@ CRITICAL CONSTRAINTS:
         model: "qwen2.5-coder:latest",
         messages: localMessagesToSend,
         temperature: isConversational ? 0.7 : 0.3,
-        // 2500 tokens = ~10,000 chars at 50 chars/sec = ~200s generation
-        // + ~49s prefill = ~249s total → safely under 480s timeout
-        max_tokens: isConversational ? 1500 : 2500,
+        // 6000 tokens gives ample room for 800+ lines of dense code, completing in ~150-300 seconds on normal local setups
+        max_tokens: isConversational ? 1500 : 6000,
         stream: true,
         options: {
           num_ctx: 32768,
@@ -707,9 +708,9 @@ CRITICAL CONSTRAINTS:
   // If explicit local Ollama is chosen:
   if (isExplicitOllama) {
     try {
-      // 480s timeout: at 2500 max_tokens, generation takes ~200s + ~49s prefill = ~249s
-      // Extra buffer handles slower hardware or initial model load
-      return await callOllama(480000);
+      // 720s timeout: at 6000 max_tokens, generation takes ~480s + ~49s prefill = ~529s
+      // Extra 190s buffer handles slower hardware or cold model load
+      return await callOllama(720000);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("Local Ollama connection failed:", err);
