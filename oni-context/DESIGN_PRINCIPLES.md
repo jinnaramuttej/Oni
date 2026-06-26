@@ -1,100 +1,374 @@
-# Layout, Spacing, and Responsive Design Principles
+# Design Principles — Oni Knowledge Base
 
-This guide details premium strategies for layout structure, spacing systems, conversion rate optimization (CRO) heuristics, and responsive layout scaling.
+## Core Philosophy
+Every website must feel premium, intentional, and polished.
+Think Stripe, Linear, Apple, Vercel — that level of quality.
+Not a template. A real website a business would actually use.
+Whitespace is not wasted space — it creates elegance and breathing room.
+Maximum 3 fonts, 3 colors. Restraint is premium.
 
 ---
 
-## 1. Layout and Spacing Systems
-
-Premium layouts use consistent spacing (often an **8-point grid**). The principle is simple: all dimensions, paddings, and margins are multiples of 8px (8, 16, 24, 32, …). This provides a harmonious rhythm. In CSS you can define a spacing scale using custom properties:
+## Spacing System (8pt Grid)
+All spacing is a multiple of 8px. Never deviate from this.
 
 ```css
 :root {
-  --space-1: 8px;   --space-2: 16px;  --space-3: 24px;
-  --space-4: 32px;  --space-5: 40px;  --space-6: 48px;
-  /* etc. */
+  --s-1: 0.5rem;   /* 8px */
+  --s-2: 1rem;     /* 16px */
+  --s-3: 1.5rem;   /* 24px */
+  --s-4: 2rem;     /* 32px */
+  --s-5: 2.5rem;   /* 40px */
+  --s-6: 3rem;     /* 48px */
+  --s-8: 4rem;     /* 64px */
+  --s-10: 5rem;    /* 80px */
+  --s-12: 6rem;    /* 96px */
+  --s-16: 8rem;    /* 128px */
 }
-
-/* Example usage */
-.container { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-3); }
-.section { padding-top: var(--space-4); padding-bottom: var(--space-4); }
-.column + .column { margin-left: var(--space-3); }
 ```
 
-Using a scale like this ensures consistency. Premium sites often leave *more* whitespace than amateurs; generous padding and margin (e.g. ≥24px on desktop) gives a clean, uncluttered look. As NN/g notes, whitespace (the space around elements) is “an effective principle to achieve a balanced design, making it easier for users to scan and read”. Well-spaced layouts feel more “premium” because the content can breathe.
+Section padding minimum: 6rem top and bottom
+Card padding: 2.5rem
+Gap between grid items: 2rem
+Container max-width: 1280px centered with margin:auto
+Side padding on container: 0 8%
 
-Modern layouts commonly use CSS **Grid** and **Flexbox**. Examples of premium patterns:
-- **Hero:** full-viewport height, centered headline + CTA.  
-- **Features:** multi-column card grid (3–4 columns on desktop) with consistent gaps (`gap: var(--space-3)`).  
-- **Services:** alternating image/text rows (CSS Grid with image left/text right, then reversed).  
-- **Testimonials:** horizontal scroll or responsive grid of quote cards with large quote marks.  
-- **CTA (Call-To-Action):** full-width band with contrasting background and centered text/button.  
-- **Footer:** multi-column (often 4) layout on desktop, each column with vertical nav links.
+---
 
-Use `max-width` containers (typically 1200–1440px) and center them (`margin: 0 auto`). E.g.: 
+## Shadow System (4 levels)
+
 ```css
-.container { 
-  width: 100%; 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 0 var(--space-3); 
+:root {
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-md: 0 10px 40px rgba(0,0,0,0.12);
+  --shadow-lg: 0 25px 60px rgba(0,0,0,0.20);
+  --shadow-xl: 0 40px 80px rgba(0,0,0,0.28);
+  /* Colored glow shadow — replace PRIMARY with actual color */
+  --shadow-glow: 0 0 30px rgba(PRIMARY, 0.35);
+  --shadow-glow-lg: 0 0 60px rgba(PRIMARY, 0.25);
 }
 ```
-This ensures content isn’t too wide on large screens. Inside, use `display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-3);` for responsive grids.
 
-In summary, premium layouts use a clear hierarchy (big headings, ample padding) and consistent **whitespace**. Stick to your 8px (or 4px/spacing) rhythm for all elements, and let generous margins guide the eye without crowding content.
-
----
-
-## 2. UX Principles for Conversion
-
-High-converting landing pages follow established UX heuristics:
-
-- **Visual hierarchy:** Arrange elements so the eye naturally flows from most to least important. Use size, color, and whitespace to emphasize headings and CTAs. CSS: larger `font-size` or `font-weight` for headings; higher contrast or vivid color for primary buttons. Group related elements and use `z-index` or overlapping cards to create depth.
-- **F-pattern / Z-pattern:** People read web pages scanning in an F- or Z-shaped pattern. Key content (logo, navigation) goes top-left; primary CTA in the top-right or center; additional information along the top “bar” and bottom. Balance this by placing your hero/CTA where eyes land first (center or top-left) and repeating CTAs at end of content.
-- **The fold:** “Above the fold” content must grab attention. Use a strong headline, supporting subhead, and a clear CTA in the hero section. Below the fold provides detail (features, testimonials). On modern responsive sites, don’t obsess over an exact pixel fold, but keep key CTA visible early.
-- **Trust signals:** Include logos of clients/partners, security badges, testimonials, and “About us” info to build credibility. Design-wise, trust signals often appear as monochrome icons/logos to avoid clashing colors.
-- **Common UX mistakes:** Cluttering, inconsistent spacing, and unclear CTAs. Beginners often underuse whitespace, overuse trendy fonts, or neglect responsive tweaks. Ensure clickable elements (buttons/links) are clearly styled and have enough padding (44px high/buttons).
-- **Mobile-first design:** Start by designing for the smallest screen. Ensure tap targets are large, fonts readable, and navigation collapses into a hamburger or bottom bar. Avoid fixed-width units; use flexible containers and mobile-specific breakpoints.
-- **Form conversion:** Short, simple forms convert better. Use fieldsets and labels, mark required fields, and use descriptive placeholders. Validations and error messages should appear inline. In CSS, use clear label animations and highlight inputs on focus.
-- **Reducing cognitive load:** Limit each page’s focus. Use one primary CTA (highlight it in accent color), and one main message. Use bullet points or icons to make info scannable. A consistent color scheme and typography reduces visual noise. Animations should not distract from content but guide the eye (e.g. gently moving orbs in the background, but keep text animations quick and purposeful).
-
-In essence, a landing page that **converts** feels uncluttered, guides the eye to the CTA, and reassures the user through consistent design and trust markers. Use CSS to enforce hierarchy: e.g. `font-size: clamp()` for responsive headlines, and utility classes in your system to keep spacing and alignment consistent.
+Use layered shadows for depth:
+```css
+.deep-card {
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.06),
+    0 8px 20px rgba(0,0,0,0.10),
+    0 20px 40px rgba(0,0,0,0.08);
+}
+```
 
 ---
 
-## 3. Responsive Design Mastery
+## Border Radius System
 
-Modern responsive design uses flexible units and CSS features:
+```css
+:root {
+  --r-sm: 8px;    /* small elements, tags */
+  --r-md: 12px;   /* inputs, small cards */
+  --r-lg: 16px;   /* cards, modals */
+  --r-xl: 24px;   /* large cards, sections */
+  --r-2xl: 32px;  /* hero cards */
+  --r-full: 9999px; /* pills, badges, buttons */
+}
+```
 
-- **Breakpoints in 2025:** Instead of fixed breakpoints, use responsive units: `min-width: 48rem` (~768px) for tablets, `min-width: 64rem` (~1024px) for desktops, etc. The exact values depend on content, but common ones are 640px, 768px, 1024px, 1280px.
-- **CSS Grid + clamp():** You can create fluid layouts without explicit breakpoints. For example, a two-column grid that flows to one column:  
-  ```css
-  .content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(clamp(200px, 50%, 400px), 1fr));
-    gap: var(--space-4);
-  }
-  ```
-  This makes columns shrink/stack as needed without media queries.
-- **Responsive typography:** Use `clamp()` for all text sizes, as shown above. For example:  
-  ```css
-  h2 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
-  p  { font-size: clamp(0.9rem, 2.5vw, 1.2rem); }
-  ```
-  This ensures text scales between a min and max as viewport changes.
-- **Mobile navbar pattern:** A common pattern is a hamburger menu that expands into a drawer or dropdown. E.g., using a checkbox hack or JS toggling, with `.nav-menu { display: none; } .menu-toggle:checked + .nav-menu { display: block; }` for small screens.
-- **Complete responsive CSS system:** Combine fluid grids, spacing variables, and typography clamps. E.g.:  
-  ```css
-  @media (min-width: 768px) {
-    .layout { max-width: 720px; }
-  }
-  @media (min-width: 1024px) {
-    .layout { max-width: 960px; }
-  }
-  body { margin: 0; padding: 0; }
-  img, video { max-width: 100%; height: auto; }
-  ```
-  Use `flex-wrap`, `auto-fit` grids, and relative units (%, vw, etc.) throughout.
+Never use border-radius above 32px on cards.
+Buttons always use --r-full (pill shape).
+Inputs use --r-md (12px).
+Badges and tags use --r-full.
 
-Overall, aim for **mobile-first**: design for a narrow viewport (mobile) first, then use media queries (`@media (min-width: ...px)`) to expand and adapt your layout for tablet and desktop screen sizes. This ensures styling is lightweight and performs exceptionally well on mobile networks.
+---
+
+## Transition System
+
+```css
+:root {
+  /* Standard UI interactions */
+  --t-fast: all 0.15s ease;
+  --t-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-slow: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-spring: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  /* Property-specific */
+  --t-transform: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-opacity: opacity 0.3s ease;
+  --t-shadow: box-shadow 0.3s ease;
+  --t-color: color 0.15s ease, background-color 0.15s ease;
+  --t-border: border-color 0.2s ease;
+}
+```
+
+Duration guidelines:
+- Hover effects: 150-200ms
+- Card lifts: 250-300ms
+- Scroll reveals: 600-800ms
+- Page transitions: 400-500ms
+- Stagger between children: 80-120ms delay each
+
+Best easing values:
+- Standard: cubic-bezier(0.4, 0, 0.2, 1)
+- Entrance: cubic-bezier(0, 0, 0.2, 1)
+- Exit: cubic-bezier(0.4, 0, 1, 1)
+- Spring/bounce: cubic-bezier(0.34, 1.56, 0.64, 1)
+
+---
+
+## Z-Index System
+
+```css
+:root {
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+}
+```
+
+---
+
+## Container System
+
+```css
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 8%;
+}
+
+.container-narrow {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 8%;
+}
+
+.container-wide {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 5%;
+}
+```
+
+---
+
+## The Master :root Block
+Every premium website should start with this:
+
+```css
+:root {
+  /* Colors — fill based on business type */
+  --bg: #0A0A0A;
+  --bg-2: #111111;
+  --bg-3: #1A1A1A;
+  --primary: #FFFFFF;
+  --secondary: #AAAAAA;
+  --accent: #7C3AED;
+  --light: #F8F8F8;
+  --text: #FFFFFF;
+  --text-muted: rgba(255,255,255,0.55);
+  --text-subtle: rgba(255,255,255,0.25);
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.15);
+  --border-active: rgba(255,255,255,0.25);
+  --grad: linear-gradient(135deg, var(--accent), var(--secondary));
+
+  /* Spacing */
+  --s-1: 0.5rem; --s-2: 1rem; --s-3: 1.5rem;
+  --s-4: 2rem; --s-6: 3rem; --s-8: 4rem;
+  --s-10: 5rem; --s-12: 6rem; --s-16: 8rem;
+
+  /* Typography */
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --r-xl: 24px; --r-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-md: 0 10px 40px rgba(0,0,0,0.12);
+  --shadow-lg: 0 25px 60px rgba(0,0,0,0.20);
+
+  /* Transitions */
+  --t-base: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  --t-fast: all 0.15s ease;
+  --t-slow: all 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video { max-width: 100%; height: auto; display: block; }
+ul { list-style: none; }
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: inherit; border: none; }
+```
+
+---
+
+## Section Structure Rules
+
+Every section must have:
+1. Minimum padding: 6rem 0
+2. A section label above the h2 (small uppercase muted text)
+3. H2 in Playfair Display with gradient text
+4. Subtitle paragraph below h2, max-width 560px, centered
+5. Content (cards, grid, etc.)
+6. class="reveal" on all animatable elements
+
+```html
+<section class="features">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-label">WHY CHOOSE US</span>
+      <h2 class="gradient-text">Built for Excellence</h2>
+      <p>We combine passion, expertise, and innovation to deliver 
+         results that exceed expectations every single time.</p>
+    </div>
+    <!-- content -->
+  </div>
+</section>
+```
+
+```css
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.section-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(ACCENT, 0.3);
+  border-radius: var(--r-full);
+}
+
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+}
+
+.section-header p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+```
+
+---
+
+## Gradient Text — Always Use This
+
+```css
+.gradient-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+```
+
+---
+
+## Glassmorphism — Exact Values
+
+Light glassmorphism (on dark backgrounds):
+```css
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+```
+
+Dark glassmorphism (on light backgrounds):
+```css
+.glass-dark {
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+}
+```
+
+Frosted navbar (most common):
+```css
+nav {
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+```
+
+---
+
+## Visual Hierarchy Rules
+
+1. H1 must be at least 3.5rem, ideally 5-7rem on desktop
+2. Only ONE primary CTA per viewport — make it obvious
+3. Accent color used on max 10% of the page
+4. Dark sections alternate with light sections for rhythm
+5. Never place two similar sections next to each other
+6. Every interactive element must have a visible hover state
+7. Line length for body text: max 65-70 characters (max-width ~680px)
+8. Paragraph spacing: margin-bottom 1.5rem minimum
+
+---
+
+## Mobile Rules
+
+```css
+@media (max-width: 768px) {
+  nav ul { display: none; }
+  .hamburger { display: flex; }
+  h1 { font-size: clamp(2.5rem, 8vw, 4rem); }
+  h2 { font-size: clamp(1.8rem, 6vw, 2.5rem); }
+  section { padding: 4rem 0; }
+  .container { padding: 0 1.5rem; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .hero-buttons { flex-direction: column; align-items: stretch; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr; }
+  .stats-row { flex-direction: column; gap: 2rem; }
+}
+```
