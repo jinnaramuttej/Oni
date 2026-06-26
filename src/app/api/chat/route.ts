@@ -433,7 +433,7 @@ function prepareMessagesForGroq(
   };
 }
 
-function getSystemPromptWithContext(promptText: string): string {
+function getSystemPromptWithContext(promptText: string, maxContextChars = 30000): string {
   const cleanPrompt = promptText.toLowerCase();
   let contextText = "\n\n=== WORKSPACE DESIGN SYSTEM GUIDELINES ===\n";
 
@@ -459,14 +459,12 @@ function getSystemPromptWithContext(promptText: string): string {
       essentialFiles.push("TECH_SAAS_EXAMPLES.md");
     }
 
-    // Hard budget: keep total context additions under ~30k chars (~10k tokens)
-    // so there is plenty of room for a 16k-token website output.
-    const MAX_CONTEXT_CHARS = 30000;
+    // Hard budget: keep total context additions under maxContextChars
     const MAX_FILE_CHARS    = 12000; // per-file cap to prevent any single file dominating
     let totalChars = 0;
 
     for (const filename of essentialFiles) {
-      if (totalChars >= MAX_CONTEXT_CHARS) break;
+      if (totalChars >= maxContextChars) break;
       const filePath = path.join(contextDir, filename);
       if (!fs.existsSync(filePath)) continue;
       let content = fs.readFileSync(filePath, "utf8");
@@ -477,7 +475,7 @@ function getSystemPromptWithContext(promptText: string): string {
       totalChars += content.length;
     }
 
-    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${essentialFiles.length} files (budget: ${MAX_CONTEXT_CHARS} chars).`);
+    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${essentialFiles.length} files (budget: ${maxContextChars} chars).`);
   } catch (err) {
     console.error("Error loading design context from workspace:", err);
   }
@@ -573,26 +571,23 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
   const isExplicitOllama = defaultModelInput === "local-ollama";
 
   const lastUserMsg = body.prompt || (body.messages && body.messages[body.messages.length - 1]?.content) || "";
-  let systemPrompt = getSystemPromptWithContext(lastUserMsg);
+  
+  // For Groq: strict token limits (12k TPM ceiling). Keep context small (3k chars max) to avoid 413 Payload Too Large
+  const groqSystemPrompt = getSystemPromptWithContext(lastUserMsg, 3000);
 
-  if (isExplicitOllama) {
-    systemPrompt = `CRITICAL FORMATTING RULES FOR LOCAL OLLAMA MODEL:
-1. You MUST generate the complete website in a SINGLE HTML file.
-2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.
-3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.
-4. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT explain or write introduction tutorials.
+  // For Ollama: no TPM ceiling, load full context (40k chars)
+  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 40000);
 
-` + systemPrompt;
-  }
+  const messagesToSend = [{ role: "system", content: groqSystemPrompt }, ...groqMessages];
 
-  const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
-
-  // Log estimated input size for diagnostics — no output cap applied here.
-  // llama-3.3-70b-versatile supports up to 32,768 output tokens; we request up to 16,000 for build mode.
+  // Dynamic token limit adjustment for Groq to avoid exceeding 12,000 TPM
   const estimatedInputTokens = estimateTokens(JSON.stringify(messagesToSend));
-  const adjustedMaxTokens = Math.min(maxTokens, GROQ_MAX_TOKENS);
+  const safetyBuffer = 600;
+  const maxTpmLimit = 12000;
+  const availableTokens = Math.max(2000, maxTpmLimit - estimatedInputTokens - safetyBuffer);
+  const adjustedMaxTokens = Math.min(maxTokens, availableTokens);
 
-  console.log(`Estimated input tokens: ${estimatedInputTokens}, requested max_tokens: ${adjustedMaxTokens}`);
+  console.log(`Estimated input tokens: ${estimatedInputTokens}, available output tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
 
   // Helper function to call Ollama
   const callOllama = async (timeoutMs: number) => {
@@ -601,14 +596,14 @@ CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const finalSystemPrompt = isExplicitOllama
-      ? systemPrompt
+      ? ollamaSystemPrompt
       : `CRITICAL FORMATTING RULES FOR LOCAL OLLAMA MODEL:
 1. You MUST generate the complete website in a SINGLE HTML file.
 2. DO NOT output separate code blocks for CSS or JavaScript. All CSS must be inside <style> tags, and all JavaScript must be inside <script> tags, all within the single HTML document.
 3. You MUST wrap the single HTML document inside a single <ONI_CODE>...</ONI_CODE> tag block.
 4. Output exactly one sentence before <ONI_CODE> (e.g. "Here's your website."). Do NOT explain or write introduction tutorials.
 
-` + systemPrompt;
+` + ollamaSystemPrompt;
 
     const localMessagesToSend = [
       { role: "system", content: finalSystemPrompt },
