@@ -3181,24 +3181,6 @@ function IconButton({
   );
 }
 
-function buildFallbackResponse(prompt: string, hasImage: boolean, error?: string) {
-  if (error) {
-    return `I could not reach the generator, so I prepared a local build plan instead. ${error}`;
-  }
-
-  if (hasImage) {
-    return "I analyzed the screenshot reference and mapped it into a clean responsive page: strong hero section, compact navigation, reusable content blocks, and a preview that can be refined in code.";
-  }
-
-  return `I created a starter website direction for "${prompt || "your website"}" with a polished hero, conversion-focused sections, responsive layout, and editable project files.`;
-}
-
-function buildThoughtProcess(prompt: string, hasImage: boolean) {
-  const reference = hasImage ? "The image reference drives layout, hierarchy, spacing, and visual emphasis." : "The written brief drives structure, copy, and component choices.";
-
-  return `${reference} The page is split into reusable sections, then mirrored into preview markup and editable source files so the design can be iterated quickly. Brief: ${prompt}`;
-}
-
 function buildProjectFiles(html: string): ProjectFile[] {
   if (!html) {
     return [
@@ -3304,61 +3286,6 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-
-function buildInitialPreviewHtml() {
-  return buildPreviewHtml("A polished launch page for an AI website builder");
-}
-
-function buildPreviewHtml(brief: string) {
-  const safeBrief = escapeHtml(brief || "A polished launch page for an AI website builder");
-
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      * { box-sizing: border-box; }
-      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #080808; color: white; }
-      .page { min-height: 100vh; background: radial-gradient(circle at 20% 0%, rgba(56,189,248,.16), transparent 32%), #080808; }
-      header { display: flex; justify-content: space-between; align-items: center; padding: 24px clamp(20px, 5vw, 64px); }
-      .brand { font-weight: 700; letter-spacing: -.03em; }
-      nav { display: flex; gap: 18px; color: rgba(255,255,255,.58); font-size: 14px; }
-      main { padding: 72px clamp(20px, 7vw, 96px); }
-      .eyebrow { color: #67e8f9; text-transform: uppercase; letter-spacing: .22em; font-size: 12px; margin-bottom: 18px; }
-      h1 { max-width: 920px; margin: 0; font-size: clamp(44px, 8vw, 92px); line-height: .94; letter-spacing: -.07em; }
-      .sub { max-width: 620px; margin-top: 24px; color: rgba(255,255,255,.62); font-size: 18px; line-height: 1.7; }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
-      .primary, .secondary { border-radius: 999px; padding: 14px 20px; font-weight: 650; font-size: 14px; }
-      .primary { background: white; color: black; }
-      .secondary { border: 1px solid rgba(255,255,255,.16); color: white; }
-      .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 72px; }
-      .card { min-height: 160px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.045); border-radius: 24px; padding: 22px; }
-      .card p { color: rgba(255,255,255,.55); line-height: 1.6; }
-      @media (max-width: 760px) { nav { display: none; } .cards { grid-template-columns: 1fr; } main { padding-top: 48px; } }
-    </style>
-  </head>
-  <body>
-    <div class="page">
-      <header>
-        <div class="brand">Oni Generated</div>
-        <nav><span>Product</span><span>Pricing</span><span>Contact</span></nav>
-      </header>
-      <main>
-        <div class="eyebrow">Preview build</div>
-        <h1>${safeBrief}</h1>
-        <p class="sub">This generated site uses a focused structure, responsive spacing, and production-minded sections that can be refined in the code editor.</p>
-        <div class="actions"><span class="primary">Get started</span><span class="secondary">View details</span></div>
-        <section class="cards">
-          <article class="card"><h2>Fast</h2><p>Clean section architecture for quick iteration.</p></article>
-          <article class="card"><h2>Responsive</h2><p>Layouts adapt across desktop, tablet, and mobile.</p></article>
-          <article class="card"><h2>Editable</h2><p>Every file is visible in the code tab.</p></article>
-        </section>
-      </main>
-    </div>
-  </body>
-</html>`;
-}
 
 function highlightLine(line: string, language: string) {
   const pattern =
@@ -3509,11 +3436,3 @@ function wait(ms: number) {
   });
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}

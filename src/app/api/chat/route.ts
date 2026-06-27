@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import DOMPurify from "isomorphic-dompurify";
-import { z } from "zod";
 import { sanitizeText } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
+import { TEMPLATE_PROMPTS } from "@/lib/template-prompts";
+import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
+import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
 import fs from "fs";
 import path from "path";
 
@@ -11,9 +13,10 @@ const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 16000;
-const GROQ_MAX_HISTORY_MESSAGES = 6;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
-const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
+const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
+const ONI_LEGACY_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
 
 RESPONSE FORMAT & SYSTEM MODES:
 - For EVERY response, you MUST output your planning/thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> first.
@@ -314,6 +317,40 @@ OUTPUT:
 QUALITY BAR:
 Every site you build must feel like it cost $10,000+ to make — think Cormorant Garamond or Playfair Display for headlines, Inter or Jost for body copy, dark luxury colour palettes with a strong primary accent, alternating dark/light sections, scroll-reveal animations, glassmorphism cards, floating orb backgrounds, and real specific copy (names, prices, addresses, hours). Never use placeholders or lorem ipsum. Never use generic business names like "Luxury Restaurant".`;
 
+const ONI_SYSTEM_PROMPT = `You are Oni, an elite AI website 
+designer and builder.
+
+For EVERY response output your thought process inside 
+<ONI_THOUGHT>...</ONI_THOUGHT> tags first.
+
+**Conversational mode**: casual messages, greetings, questions 
+not about building — reply naturally in 1-2 sentences, no code.
+
+**Build mode**: when user asks to build/create/make/design a website:
+1. Output your planning/thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> first, using this exact structure:
+   PALETTE: [A beautiful design palette name] | [color 1 hex code], [color 2 hex code], [color 3 hex code], [color 4 hex code], [color 5 hex code]
+   FONTS: [display font family name] | [body font family name] | [explanation of how these fonts fit the business tone]
+   SIGNATURE: [one-sentence description of unique signature layout or interactive element]
+   LAYOUT: [one-sentence description of layout design strategy]
+   SECTIONS: [comma-separated list of section names/IDs to be built, e.g. navbar, hero, features, services, testimonials, contact, footer]
+2. ONE short sentence (e.g. "Here's your restaurant website.")
+3. Complete website in <ONI_CODE>...</ONI_CODE>
+
+Build mode rules:
+- Single HTML file, all CSS in <style>, all JS in <script>
+- Import Google Fonts at top of <style>
+- Custom CSS only, no Tailwind, no frameworks
+- Design must look like it cost $10,000 to make
+- Rich colors matching the business type
+- Real content — real names, copy, prices, never placeholders
+- Minimum 6 sections: navbar, hero, features, services, 
+  testimonials, footer
+- Hero minimum 100vh, dramatic typography minimum 80px
+- CSS animations and hover effects throughout
+- Mobile responsive with media queries
+- No mention of Oni or AI anywhere in the output HTML
+- Minimum 300 lines of HTML`;
+
 const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
 1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
 2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
@@ -339,6 +376,9 @@ const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MAN
 15. NAV LINKS: The <nav> element inside the navbar MUST have class="nav-links" so the flex layout CSS applies. Without this class the links stack vertically. Each link inside uses class="nav-link".
 16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
 17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.`;
+
+void ONI_LEGACY_SYSTEM_PROMPT;
+void ONI_QUALITY_RULES;
 
 type GroqMessage = { role: string; content: string };
 
@@ -381,6 +421,30 @@ function isLikelyBuildRequest(text: string): boolean {
     "dashboard", "blog", "landing", "style", "change", "modify", "update", "add", "remove", "fix"
   ];
   return buildKeywords.some(kw => clean.includes(kw));
+}
+
+function getTemplateReferenceInstruction(promptText: string): string {
+  const clean = promptText.trim().toLowerCase();
+  const template =
+    clean.startsWith(TEMPLATE_PROMPTS.velara.toLowerCase()) || clean.includes("template: velara retreat")
+      ? { name: "Velara Retreat", html: VELARA_SAMPLE_HTML }
+      : clean.startsWith(TEMPLATE_PROMPTS.vox.toLowerCase()) || clean.includes("template: vox restaurant")
+        ? { name: "Vox Restaurant", html: VOX_SAMPLE_HTML }
+        : null;
+
+  if (!template) return "";
+
+  return [
+    "",
+    "",
+    `The user selected the built-in ${template.name} template. Recreate this template as closely as possible, not a new unrelated website.`,
+    "Use the exact brand, section order, visual system, copy tone, image choices, layout rhythm, and interactions from this reference HTML.",
+    "You may rewrite code cleanly, but the generated output should visually match this template.",
+    "",
+    "<REFERENCE_TEMPLATE_HTML>",
+    template.html,
+    "</REFERENCE_TEMPLATE_HTML>",
+  ].join("\n");
 }
 
 function prepareMessagesForGroq(
@@ -451,7 +515,9 @@ function prepareMessagesForGroq(
       c !== "" &&
       !c.startsWith("Welcome to Oni!") &&
       !c.includes("Velara — a bespoke five-star") &&
-      !c.includes("PALETTE: Deep Ocean Gold")
+      !c.includes("PALETTE: Deep Ocean Gold") &&
+      !c.includes("Vox — a premium, high-impact") &&
+      !c.includes("PALETTE: Bold Editorial")
     );
   });
 
@@ -524,6 +590,7 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
   return isOllama ? contextText : ONI_SYSTEM_PROMPT + contextText;
 }
 
+void getSystemPromptWithContext;
 
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
@@ -546,8 +613,6 @@ export async function POST(req: Request) {
       : "";
 
   let groqMessages: GroqMessage[] = [];
-  let maxTokens = 16000;
-  let isConversational = false;
 
   if (Array.isArray(body.messages) && body.messages.length > 0) {
     const rawMessages = body.messages.map((m: { role: string; content: string }) => ({
@@ -556,8 +621,6 @@ export async function POST(req: Request) {
     }));
     const result = prepareMessagesForGroq(rawMessages, currentHtml);
     groqMessages = result.messages;
-    maxTokens = result.maxTokens;
-    isConversational = !!result.isConversational;
   } else if (body.prompt) {
     const clean = sanitizeText(
       DOMPurify.sanitize(body.prompt, { ALLOWED_TAGS: [] })
@@ -573,10 +636,20 @@ export async function POST(req: Request) {
 
     const result = prepareMessagesForGroq([{ role: "user", content: clean }], currentHtml);
     groqMessages = result.messages;
-    maxTokens = result.maxTokens;
-    isConversational = !!result.isConversational;
   } else {
     return new NextResponse("Bad request", { status: 400 });
+  }
+
+  const shouldUseTemplateReferences =
+    process.env.VERCEL !== "1" ||
+    process.env.ONI_USE_OLLAMA === "true" ||
+    body?.defaultModel === "local-ollama";
+  const lastUserMsgIndexForTemplate = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
+  if (shouldUseTemplateReferences && lastUserMsgIndexForTemplate !== -1) {
+    const templateInstruction = getTemplateReferenceInstruction(groqMessages[lastUserMsgIndexForTemplate].content);
+    if (templateInstruction) {
+      groqMessages[lastUserMsgIndexForTemplate].content += templateInstruction;
+    }
   }
 
   if (body.userImage && typeof body.userImage === "string" && body.userImage.trim().length > 0) {
@@ -587,160 +660,72 @@ export async function POST(req: Request) {
     }
   }
 
-  // Only append the quality rules suffix for Groq. For Ollama, the rules are already in the
-  // system prompt (finalSystemPrompt in callOllama). Appending them again to the user message
-  // adds ~1200 tokens to the prefill, wasting ~6 seconds before the first token is generated.
-  const lastUserMsgIdxForQuality = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
-  const qualitySuffixTargetModel = body?.defaultModel || "oni-pro";
-  if (qualitySuffixTargetModel !== "local-ollama" && lastUserMsgIdxForQuality !== -1) {
-    groqMessages[lastUserMsgIdxForQuality].content += `\n\n` + ONI_QUALITY_RULES;
-  }
+  const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
+  const shouldUseOllama =
+    shouldUseTemplateReferences;
 
-  const defaultModelInput = body?.defaultModel || "oni-pro";
-  const isExplicitOllama = defaultModelInput === "local-ollama";
-
-  const lastUserMsg = body.prompt || (body.messages && body.messages[body.messages.length - 1]?.content) || "";
-  
-  // For Groq: strict token limits (12k TPM ceiling). Keep context small (3k chars max) to avoid 413 Payload Too Large
-  const groqSystemPrompt = getSystemPromptWithContext(lastUserMsg, 3000);
-
-  // For Ollama: context capped at 20k chars (~5k tokens) so total input stays well within
-  // qwen2.5-coder's 32,768 token context window (sys prompt ~7.5k + context ~5k + user ~0.5k = ~13k input, ~16k output budget)
-  const ollamaSystemPrompt = getSystemPromptWithContext(lastUserMsg, 20000, true);
-
-  const messagesToSend = [{ role: "system", content: groqSystemPrompt }, ...groqMessages];
-
-  // Dynamic token limit adjustment for Groq to avoid exceeding 12,000 TPM
-  const estimatedInputTokens = estimateTokens(JSON.stringify(messagesToSend));
-  const safetyBuffer = 600;
-  const maxTpmLimit = 12000;
-  const availableTokens = Math.max(2000, maxTpmLimit - estimatedInputTokens - safetyBuffer);
-  const adjustedMaxTokens = Math.min(maxTokens, availableTokens);
-
-  console.log(`Estimated input tokens: ${estimatedInputTokens}, available output tokens: ${availableTokens}, requested max_tokens: ${adjustedMaxTokens}`);
-
-  // Helper function to call Ollama
-  const callOllama = async (timeoutMs: number) => {
-    console.log("Attempting local Ollama connection on http://127.0.0.1:11434...");
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const finalSystemPrompt = isConversational
-      ? `You are Oni, a helpful AI assistant.
-Conversational Mode:
-Reply naturally, informatively, and in full detail in 1-2 sentences. Do NOT output any website HTML, CSS, JS or <ONI_CODE> or <ONI_THOUGHT> tags.`
-      : `You are Oni, an elite AI website designer and builder.
-Every website you generate must be beautiful, mobile-responsive, production-ready, and styled to look premium.
-
-${ollamaSystemPrompt}
-
-=== IMPORTANT INSTRUCTIONS FOR BUILD MODE ===
-You are in BUILD MODE. Follow these output formatting steps precisely:
-
-Step 1: Write your planning and design thought process inside <ONI_THOUGHT>...</ONI_THOUGHT> tags using this exact format:
-<ONI_THOUGHT>
-PALETTE: [A beautiful design palette name] | [color 1 hex code], [color 2 hex code], [color 3 hex code], [color 4 hex code], [color 5 hex code]
-FONTS: [display font family name] | [body font family name] | [explanation of how these fonts fit the business tone]
-SIGNATURE: [one-sentence description of unique signature layout or interactive element]
-LAYOUT: [one-sentence description of layout design strategy]
-SECTIONS: [comma-separated list of section names/IDs to be built, e.g. navbar, hero, features, services, testimonials, contact, footer]
-</ONI_THOUGHT>
-
-Step 2: Output exactly ONE short sentence of maximum 12 words (e.g., "Here is your luxury hotel website.").
-
-Step 3: Output the complete single HTML file (with all CSS in <style> and all JS in <script>) wrapped inside <ONI_CODE>...</ONI_CODE> tags.
-
-CRITICAL CONSTRAINTS:
-- Do NOT output any markdown headers, bullet points, explanations, or step-by-step guides outside the XML tags.
-- Do NOT use markdown code blocks (\`\`\`html or \`\`\`) to display the website code. Use raw HTML directly inside the <ONI_CODE>...</ONI_CODE> tags.
-- Keep the chat response (text outside of XML tags) to exactly ONE sentence.
-
-${ONI_QUALITY_RULES}`;
-
-    const localMessagesToSend = [
-      { role: "system", content: finalSystemPrompt },
-      ...groqMessages
-    ];
-
+  if (shouldUseOllama) {
     try {
-      const ollamaRequestBody = JSON.stringify({
-        model: "qwen2.5-coder:latest",
-        messages: localMessagesToSend,
-        temperature: isConversational ? 0.7 : 0.3,
-        // 6000 tokens gives ample room for 800+ lines of dense code, completing in ~150-300 seconds on normal local setups
-        max_tokens: isConversational ? 1500 : 6000,
+      const requestBody = JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages: messagesToSend,
+        temperature: 0.7,
+        max_tokens: GROQ_MAX_TOKENS,
         stream: true,
-        options: {
-          num_ctx: 32768,
-        },
       });
+      console.log("Ollama request body length:", requestBody.length, "Model used:", OLLAMA_MODEL);
 
-      const ollamaResponse = await fetch("http://127.0.0.1:11434/v1/chat/completions", {
+      const ollamaResponse = await fetch(OLLAMA_CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: ollamaRequestBody,
-        signal: controller.signal,
+        body: requestBody,
       });
 
-      clearTimeout(timeoutId);
-
-      if (!ollamaResponse.ok) {
-        const errorText = await ollamaResponse.text().catch(() => "");
-        throw new Error(`Ollama returned status ${ollamaResponse.status}: ${errorText}`);
+      if (ollamaResponse.ok) {
+        console.log("Ollama request successful, streaming response!");
+        return new Response(ollamaResponse.body, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
       }
 
-      console.log("Local Ollama connection successful! Streaming response from Ollama qwen2.5-coder.");
-      return new Response(ollamaResponse.body, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
+      const errorBody = await ollamaResponse.text();
+      console.error("Ollama error:", {
+        status: ollamaResponse.status,
+        statusText: ollamaResponse.statusText,
+        body: errorBody,
       });
-    } catch (err) {
-      clearTimeout(timeoutId);
-      throw err;
-    }
-  };
 
-  // If explicit local Ollama is chosen:
-  if (isExplicitOllama) {
-    try {
-      // 720s timeout: at 6000 max_tokens, generation takes ~480s + ~49s prefill = ~529s
-      // Extra 190s buffer handles slower hardware or cold model load
-      return await callOllama(720000);
+      return new NextResponse(
+        `Ollama error ${ollamaResponse.status} ${ollamaResponse.statusText}: ${errorBody}`,
+        { status: ollamaResponse.status }
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("Local Ollama connection failed:", err);
-      return new NextResponse(
-        `Ollama connection failed: ${message}. Make sure Ollama is running ('ollama run qwen2.5-coder') and accessible on http://127.0.0.1:11434.`,
-        { status: 503 }
-      );
+      console.error("Ollama connection/request failed:", err);
+      return new NextResponse(`Ollama request failed: ${message}`, { status: 500 });
     }
   }
 
-  // Otherwise, try Groq first, and use Ollama as a fallback if Groq fails
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
   }
 
   try {
-    let modelToUse = GROQ_MODEL;
-    if (defaultModelInput === "oni-flash") {
-      modelToUse = "llama-3.1-8b-instant";
-    }
-
     const requestBody = JSON.stringify({
-      model: modelToUse,
+      model: GROQ_MODEL,
       messages: messagesToSend,
       temperature: 0.7,
-      max_tokens: adjustedMaxTokens,
+      max_tokens: GROQ_MAX_TOKENS,
       stream: true,
     });
-    console.log('Request body length:', requestBody.length, 'Model used:', modelToUse);
+    console.log("Groq request body length:", requestBody.length, "Model used:", GROQ_MODEL);
 
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -766,35 +751,19 @@ ${ONI_QUALITY_RULES}`;
     }
 
     const errorBody = await groqResponse.text();
-    console.error('Groq error:', {
+    console.error("Groq error:", {
       status: groqResponse.status,
       statusText: groqResponse.statusText,
       body: errorBody
     });
 
-    // Groq failed (e.g. rate limit) -> Attempt fallback to Ollama
-    console.log("Groq API returned an error. Attempting fallback to local Ollama...");
-    try {
-      // 5 seconds timeout for fallback so we fail fast if Ollama isn't running
-      return await callOllama(5000);
-    } catch (ollamaErr) {
-      console.warn("Ollama fallback failed as well:", ollamaErr);
-      return new NextResponse(
-        `Groq error ${groqResponse.status} ${groqResponse.statusText}: ${errorBody}`,
-        { status: groqResponse.status }
-      );
-    }
+    return new NextResponse(
+      `Groq error ${groqResponse.status} ${groqResponse.statusText}: ${errorBody}`,
+      { status: groqResponse.status }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Groq connection/request failed:', err);
-
-    // Groq connection/network failed -> Attempt fallback to Ollama
-    console.log("Groq connection failed. Attempting fallback to local Ollama...");
-    try {
-      return await callOllama(5000);
-    } catch (ollamaErr) {
-      console.warn("Ollama fallback failed as well:", ollamaErr);
-      return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
-    }
+    console.error("Groq connection/request failed:", err);
+    return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
   }
 }

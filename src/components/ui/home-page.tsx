@@ -9,6 +9,7 @@ import { OniChat } from "./v0-ai-chat";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 import { motion } from "framer-motion";
+import { TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 
 const MAX_FILE_TEXT_CHARS = 24000;
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
@@ -587,69 +588,92 @@ export function HomePage() {
               </div>
             </motion.div>
 
-            {/* Quick Actions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 w-full mt-8 max-w-3xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
-              {[
-                {
-                  title: "Portfolio Site",
-                  desc: "For designers & creatives. Features dark theme and custom CSS entry animations.",
-                  prompt: "Build a fully responsive portfolio website for a freelance designer with a dark theme, grid-based layout, and custom entrance animations.",
-                  icon: "🎨",
-                  badge: "Popular"
-                },
-                {
-                  title: "Restaurant Bistro",
-                  desc: "Modern bistro layout. Includes food menus, price lists, and a booking modal.",
-                  prompt: "Build a premium responsive restaurant website with a dark design, beautiful menu cards, reservation form, and client testimonials.",
-                  icon: "🍕"
-                },
-                {
-                  title: "SaaS Dashboard",
-                  desc: "Clean analytic dashboard with stats, interactive grids, and sidebar navigation.",
-                  prompt: "Build an interactive SaaS dashboard website featuring data grids, analytics widgets, active client stats, and responsive dark panels.",
-                  icon: "📈"
-                },
-                {
-                  title: "Personal Blog",
-                  desc: "Reader-focused layout featuring grids, elegant typography, and a newsletter sign up.",
-                  prompt: "Build a beautiful personal blog landing page with grid article layouts, author bio card, and email newsletter sign up.",
-                  icon: "✍️"
-                },
-                {
-                  title: "Agency Landing",
-                  desc: "Premium creative shop layout with interactive sections and service highlight grids.",
-                  prompt: "Build a responsive creative agency homepage with services grid, clean hero intro, work case studies, and contact form.",
-                  icon: "🚀"
-                },
-                {
-                  title: "App Promo Page",
-                  desc: "Sleek marketing page for a mobile app showing features, reviews, and call-to-actions.",
-                  prompt: "Build a high-converting mobile app landing page showcasing key features, screenshot gallery layout, user testimonials, and store badges.",
-                  icon: "📱"
-                }
-              ].map((card) => (
-                <button
-                  key={card.title}
-                  type="button"
-                  onClick={() => handleQuickAction(card.prompt)}
-                  className="group flex flex-col justify-between p-4 rounded-xl border border-surface-container-high/60 bg-surface-container-low/40 hover:bg-surface-container/60 transition-all duration-300 hover:border-primary/40 hover:scale-[1.02] active:scale-[0.98] text-left cursor-pointer shadow-sm hover:shadow-md relative overflow-hidden"
-                >
-                  {card.badge && (
-                    <span className="absolute top-2 right-2 bg-primary/10 text-primary border border-primary/20 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider scale-90">
-                      {card.badge}
-                    </span>
-                  )}
-                  <div>
-                    <span className="text-xl mb-2.5 block select-none group-hover:scale-110 transition-transform origin-left">{card.icon}</span>
-                    <p className="text-xs font-semibold text-text-primary group-hover:text-primary transition-colors mb-1">
-                      {card.title}
-                    </p>
-                    <p className="text-[10px] text-text-tertiary leading-relaxed">
-                      {card.desc}
-                    </p>
-                  </div>
-                </button>
-              ))}
+            <div className="w-full mt-8 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
+              <div className="mb-3 flex items-center justify-between px-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
+                <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  {
+                    title: "Velara Retreat",
+                    desc: "Clifftop hotel, editorial rooms, deep navy and gold.",
+                    prompt: TEMPLATE_PROMPTS.velara,
+                    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop",
+                    badge: "Featured"
+                  },
+                  {
+                    title: "Vox Restaurant",
+                    desc: "Fine dining, steak hero, menu tabs, and reservations.",
+                    prompt: TEMPLATE_PROMPTS.vox,
+                    image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop",
+                    badge: "New"
+                  },
+                  {
+                    title: "Studio Portfolio",
+                    desc: "Creative work grid, dark gallery, and smooth reveals.",
+                    prompt: TEMPLATE_PROMPTS.portfolio,
+                    image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=900&q=80&fit=crop",
+                    badge: "Popular"
+                  },
+                  {
+                    title: "Bistro Booking",
+                    desc: "Warm restaurant layout with menus and booking flow.",
+                    prompt: TEMPLATE_PROMPTS.bistro,
+                    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&q=80&fit=crop"
+                  },
+                  {
+                    title: "SaaS Dashboard",
+                    desc: "Metrics, product panels, pricing, and sharp SaaS UI.",
+                    prompt: TEMPLATE_PROMPTS.saas,
+                    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop"
+                  },
+                  {
+                    title: "Personal Blog",
+                    desc: "Reader-first articles, author profile, and newsletter.",
+                    prompt: TEMPLATE_PROMPTS.blog,
+                    image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=900&q=80&fit=crop"
+                  },
+                  {
+                    title: "Agency Landing",
+                    desc: "Case studies, services, proof, and conversion sections.",
+                    prompt: TEMPLATE_PROMPTS.agency,
+                    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80&fit=crop"
+                  },
+                  {
+                    title: "App Promo",
+                    desc: "Mobile app marketing with features and reviews.",
+                    prompt: TEMPLATE_PROMPTS.app,
+                    image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&q=80&fit=crop"
+                  }
+                ].map((card, index) => (
+                  <button
+                    key={card.title}
+                    type="button"
+                    onClick={() => handleQuickAction(card.prompt)}
+                    className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
+                  >
+                    <Image
+                      src={card.image}
+                      alt={card.title}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      priority={index < 2}
+                      className="object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/5" />
+                    {card.badge && (
+                      <span className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/45 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
+                        {card.badge}
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 p-4">
+                      <p className="text-sm font-semibold text-white">{card.title}</p>
+                      <p className="mt-1 text-[11px] leading-4 text-white/65">{card.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

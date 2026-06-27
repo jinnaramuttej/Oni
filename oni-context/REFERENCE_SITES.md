@@ -33,6 +33,19 @@ This document defines premium design inspirations and photography alternatives u
     *   **Menus**: Simple grid listings with item names, brief 1-line ingredient lists, and prices aligned to the right.
     *   **CTAs**: Single-action reserve buttons that open up neat booking calendars or slide-out forms.
     *   **Imagery**: Single full-width header background images displaying ambient candlelight scenes or close-up culinary photos.
+### Velara Clifftop Retreat (Luxury Hotel/Resort Inspiration)
+*   **Aesthetic**: Romantic, clifftop luxury with deep navy backgrounds, warm ivory serif fonts, and elegant gold highlights.
+*   **Key Patterns to Replicate**:
+    *   **Typography**: Cormorant Garamond for display serif headings (`font-weight: 300` or `italic`), combined with Jost for thin, modern sans-serif body copy (`letter-spacing: 0.12em`).
+    *   **Signature Element**: A fullscreen immersive Hero section with a slow Ken Burns zoom animation (`@keyframes kenBurns`) acting on the background, with a giant faint watermark letter (e.g. "V" at 25vw size) overlaying the bottom right in a translucent color.
+    *   **Borders & Separators**: Thin gold borders (`border: 1px solid rgba(201, 169, 110, 0.3)`) and clean, delicate navigation bars that scroll transition to solid glass backgrounds.
+
+### Vox Media (High-Impact Editorial News/Magazine Inspiration)
+*   **Aesthetic**: Bold, high-contrast, black-and-white editorial grid layout with punchy neon yellow accents.
+*   **Key Patterns to Replicate**:
+    *   **Typography**: Tall, authoritative serif headers like Playfair Display (bold and heavy) paired with highly readable neutral sans-serifs like Inter or Alright Sans for body content and meta rows.
+    *   **Signature Element**: Asymmetrical grid systems (`grid-template-columns: 2fr 1fr`) where the lead story spans a massive card with a bold underline hover animation (`box-shadow: 0 4px 0 var(--primary)`), while minor category blocks stack adjacent with clean solid borders.
+    *   **Interaction**: Dynamic trending tickers, sharp card grids with no border-radius (`border-radius: 0px` for a modern boxy editorial look), and stark subscription newsletter forms in solid yellow highlight sections.
 
 ---
 
