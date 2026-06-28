@@ -602,51 +602,28 @@ export function HomePage() {
                     image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop",
                     badge: "Featured"
                   },
-                  {
-                    title: "Vox Restaurant",
-                    desc: "Fine dining, steak hero, menu tabs, and reservations.",
-                    prompt: TEMPLATE_PROMPTS.vox,
-                    image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop",
-                    badge: "New"
-                  },
-                  {
-                    title: "Studio Portfolio",
-                    desc: "Creative work grid, dark gallery, and smooth reveals.",
-                    prompt: TEMPLATE_PROMPTS.portfolio,
-                    image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=900&q=80&fit=crop",
-                    badge: "Popular"
-                  },
-                  {
-                    title: "Bistro Booking",
-                    desc: "Warm restaurant layout with menus and booking flow.",
-                    prompt: TEMPLATE_PROMPTS.bistro,
-                    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&q=80&fit=crop"
-                  },
-                  {
-                    title: "SaaS Dashboard",
-                    desc: "Metrics, product panels, pricing, and sharp SaaS UI.",
-                    prompt: TEMPLATE_PROMPTS.saas,
-                    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop"
-                  },
-                  {
-                    title: "Personal Blog",
-                    desc: "Reader-first articles, author profile, and newsletter.",
-                    prompt: TEMPLATE_PROMPTS.blog,
-                    image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=900&q=80&fit=crop"
-                  },
-                  {
-                    title: "Agency Landing",
-                    desc: "Case studies, services, proof, and conversion sections.",
-                    prompt: TEMPLATE_PROMPTS.agency,
-                    image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=900&q=80&fit=crop"
-                  },
-                  {
-                    title: "App Promo",
-                    desc: "Mobile app marketing with features and reviews.",
-                    prompt: TEMPLATE_PROMPTS.app,
-                    image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&q=80&fit=crop"
-                  }
-                ].map((card, index) => (
+                    {
+                      title: "Vox Restaurant",
+                      desc: "Fine dining, steak hero, menu tabs, and reservations.",
+                      prompt: TEMPLATE_PROMPTS.vox,
+                      image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop",
+                      badge: "New"
+                    },
+                    {
+                      title: "Moehr Atelier",
+                      desc: "Architecture studio, manifesto, project grid, and refined contact flow.",
+                      prompt: TEMPLATE_PROMPTS.moehr,
+                      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop",
+                      badge: "New"
+                    },
+                    {
+                      title: "Maison Doré",
+                      desc: "Hair atelier, couture hero, marquee services, and booking flow.",
+                      prompt: TEMPLATE_PROMPTS.maisonDore,
+                      image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop",
+                      badge: "New"
+                    },
+                  ].map((card, index) => (
                   <button
                     key={card.title}
                     type="button"
@@ -659,6 +636,7 @@ export function HomePage() {
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       priority={index < 2}
+                      unoptimized
                       className="object-cover opacity-75 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/5" />

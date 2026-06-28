@@ -4,6 +4,8 @@ import { sanitizeText } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
 import { TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
+import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
+import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
 import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
 import fs from "fs";
 import path from "path";
@@ -426,10 +428,14 @@ function isLikelyBuildRequest(text: string): boolean {
 function getTemplateReferenceInstruction(promptText: string): string {
   const clean = promptText.trim().toLowerCase();
   const template =
-    clean.startsWith(TEMPLATE_PROMPTS.velara.toLowerCase()) || clean.includes("template: velara retreat")
-      ? { name: "Velara Retreat", html: VELARA_SAMPLE_HTML }
-      : clean.startsWith(TEMPLATE_PROMPTS.vox.toLowerCase()) || clean.includes("template: vox restaurant")
-        ? { name: "Vox Restaurant", html: VOX_SAMPLE_HTML }
+    clean.includes("template: velara retreat") || clean.includes("velara retreat")
+      ? { name: "Velara Retreat", prompt: TEMPLATE_PROMPTS.velara }
+      : clean.includes("template: moehr atelier") || clean.includes("moehr atelier")
+        ? { name: "Moehr Atelier", prompt: TEMPLATE_PROMPTS.moehr }
+      : clean.includes("template: maison dore") || clean.includes("maison dore") || clean.includes("hair atelier")
+        ? { name: "Maison Dore", prompt: TEMPLATE_PROMPTS.maisonDore }
+      : clean.includes("template: vox restaurant") || clean.includes("vox restaurant")
+        ? { name: "Vox Restaurant", prompt: TEMPLATE_PROMPTS.vox }
         : null;
 
   if (!template) return "";
@@ -437,14 +443,123 @@ function getTemplateReferenceInstruction(promptText: string): string {
   return [
     "",
     "",
-    `The user selected the built-in ${template.name} template. Recreate this template as closely as possible, not a new unrelated website.`,
-    "Use the exact brand, section order, visual system, copy tone, image choices, layout rhythm, and interactions from this reference HTML.",
-    "You may rewrite code cleanly, but the generated output should visually match this template.",
+    `The user selected the ${template.name} template. Build the site from this section-by-section design brief, not from a generic category prompt.`,
+    "Do not output JSON, markdown code fences, placeholders, or explanatory metadata. Generate the normal Oni response with <ONI_THOUGHT> and <ONI_CODE>.",
     "",
-    "<REFERENCE_TEMPLATE_HTML>",
-    template.html,
-    "</REFERENCE_TEMPLATE_HTML>",
+    "SECTION BLUEPRINT:",
+    template.prompt,
   ].join("\n");
+}
+
+function getExactTemplateResponse(promptText: string): { thought: string; message: string; html: string } | null {
+  const clean = promptText.trim().toLowerCase();
+  if (clean.startsWith("template: vox restaurant")) {
+    return {
+      thought: [
+        "PALETTE: Midnight Gold Dining | #0A0A0A, #F8F5F0, #C9A96E, #1A1A1A, #9A9080",
+        "FONTS: Cormorant Garamond | Jost | Editorial fine-dining display type paired with crisp hospitality body copy.",
+        "SIGNATURE: Steak hero, tabbed tasting menus, gallery grid, Chef Elias Voss profile, rotating testimonials, and reservation modal.",
+        "LAYOUT: Black and ivory luxury restaurant editorial layout with warm gold accents and booking-focused flow.",
+        "SECTIONS: navbar, hero, story, menu, gallery, chef, testimonials, reservations, footer",
+      ].join("\n"),
+      message: "Here is your Vox Restaurant template.",
+      html: VOX_SAMPLE_HTML,
+    };
+  }
+
+  if (clean.startsWith("template: moehr atelier")) {
+    return {
+      thought: [
+        "PALETTE: Ink and Rust Atelier | #0D0C0A, #F2EFE9, #B85C38, #8A8478, #C4BFB6",
+        "FONTS: Playfair Display | DM Sans | DM Mono | Elegant editorial display type paired with restrained modern body copy and precise mono labels.",
+        "SIGNATURE: Split cinematic hero, ticker ribbon, manifesto, selected projects grid, studio story, stats strip, and minimal enquiry flow.",
+        "LAYOUT: Dark architectural editorial layout with warm paper sections, rust accents, and image-led composition.",
+        "SECTIONS: navbar, hero, ticker, manifesto, projects, services, stats, studio, contact, footer",
+      ].join("\n"),
+      message: "Here is your Moehr Atelier template.",
+      html: MOEHR_SAMPLE_HTML,
+    };
+  }
+
+  if (clean.startsWith("template: maison dore") || clean.startsWith("template: hair atelier")) {
+    return {
+      thought: [
+        "PALETTE: Cream and Bronze Atelier | #FAF7F2, #0E0D0B, #B5844A, #D4A96A, #8A7F72",
+        "FONTS: Playfair Display | DM Sans | DM Mono | Fashion-editorial serif headings with clean salon body copy and technical labels.",
+        "SIGNATURE: Split hero, marquee service ribbon, consultation-led about section, service grid, stylists portfolio, booking form, and restrained luxury finish.",
+        "LAYOUT: Warm editorial salon layout with a black contrast column, airy cream sections, and image-led service panels.",
+        "SECTIONS: navbar, hero, marquee, about, services, process, team, gallery, booking, footer",
+      ].join("\n"),
+      message: "Here is your Maison Dore template.",
+      html: MAISON_DORE_SAMPLE_HTML,
+    };
+  }
+
+  if (clean.startsWith("template: velara retreat")) {
+    return {
+      thought: [
+        "PALETTE: Deep Ocean Gold | #0A0F1E, #F5F0E8, #C9A96E, #4A5568, #8A9B8E",
+        "FONTS: Cormorant Garamond | Jost | Luxury resort display type paired with clean hospitality body copy.",
+        "SIGNATURE: Cinematic clifftop hero, suite cards, experience sections, dining/location story, and booking CTA.",
+        "LAYOUT: Deep navy and ivory hotel editorial layout with gold accents and spacious resort storytelling.",
+        "SECTIONS: navbar, hero, intro, rooms, experience, testimonial, dining, location, booking, footer",
+      ].join("\n"),
+      message: "Here is your Velara Retreat template.",
+      html: VELARA_SAMPLE_HTML,
+    };
+  }
+
+  return null;
+}
+
+function streamTextAsSse(content: string) {
+  const encoder = new TextEncoder();
+  const targetDurationMs = 30_000;
+  const targetChunks = Math.max(24, Math.min(80, Math.ceil(content.length / 900)));
+  const chunkSize = Math.ceil(content.length / targetChunks);
+  const intervalMs = Math.ceil(targetDurationMs / targetChunks);
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let offset = 0;
+
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        const sendNextChunk = () => {
+          if (offset >= content.length) {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+            return;
+          }
+
+          const chunk = content.slice(offset, offset + chunkSize);
+          offset += chunk.length;
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                choices: [{ delta: { content: chunk } }],
+              })}\n\n`
+            )
+          );
+
+          timeout = setTimeout(sendNextChunk, intervalMs);
+        };
+
+        sendNextChunk();
+      },
+      cancel() {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    }
+  );
 }
 
 function prepareMessagesForGroq(
@@ -638,6 +753,15 @@ export async function POST(req: Request) {
     groqMessages = result.messages;
   } else {
     return new NextResponse("Bad request", { status: 400 });
+  }
+
+  const lastUserMsgIndexForExactTemplate = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
+  if (lastUserMsgIndexForExactTemplate !== -1) {
+    const exactTemplate = getExactTemplateResponse(groqMessages[lastUserMsgIndexForExactTemplate].content);
+    if (exactTemplate) {
+      const content = `<ONI_THOUGHT>${exactTemplate.thought}</ONI_THOUGHT>${exactTemplate.message}<ONI_CODE>${exactTemplate.html}</ONI_CODE>`;
+      return streamTextAsSse(content);
+    }
   }
 
   const shouldUseTemplateReferences =
