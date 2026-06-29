@@ -90,6 +90,15 @@ const TEMPLATE_LABELS: Record<string, { title: string; desc: string }> = {
   app:            { title: "App Promo",            desc: "Sleek app marketing, features, store CTAs." },
 };
 
+function getCleanedTemplatePrompt(rawPrompt: string): string {
+  if (!rawPrompt) return "";
+  const lines = rawPrompt.split("\n");
+  if (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:")) {
+    return lines.slice(1).join("\n").trim();
+  }
+  return rawPrompt.trim();
+}
+
 export function HomePage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [promptText, setPromptText] = useState("");
@@ -103,7 +112,6 @@ export function HomePage() {
   const [isListening, setIsListening] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [templateMatch, setTemplateMatch] = useState<string | null>(null);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -240,8 +248,7 @@ export function HomePage() {
   };
 
   const handleQuickAction = (text: string) => {
-    setPromptText(text);
-    setTemplateMatch(null);
+    setPromptText(getCleanedTemplatePrompt(text));
     window.setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -267,12 +274,29 @@ export function HomePage() {
     setPromptText("");
     setAttachedImage(null);
     setAttachedFiles([]);
-    setTemplateMatch(null);
   };
 
   const handleEnhancePrompt = async () => {
     if (isEnhancing || !promptText.trim() || promptText.trim().length < 3) return;
     setIsEnhancing(true);
+
+    const matchKey = detectTemplateMatch(promptText);
+    if (matchKey) {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 800)); // simulated load
+        const rawPrompt = TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] || "";
+        const cleanedPrompt = getCleanedTemplatePrompt(rawPrompt);
+        setPromptText(cleanedPrompt);
+        showToast("Prompt enhanced!");
+        window.requestAnimationFrame(() => adjustTextareaHeight());
+      } catch (err) {
+        console.error("Enhancement error:", err);
+      } finally {
+        setIsEnhancing(false);
+      }
+      return;
+    }
+
     let activeModel = "oni-pro";
     if (typeof window !== "undefined") {
       try {
@@ -307,14 +331,11 @@ export function HomePage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
-
-  // Update template match whenever prompt text changes
-  useEffect(() => {
-    setTemplateMatch(detectTemplateMatch(promptText));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promptText]);
 
   // Fetch the logged-in user
   useEffect(() => {
@@ -494,21 +515,6 @@ export function HomePage() {
                 </div>
               </div>
             </motion.div>
-
-            {/* Template upgrade suggestion chip — shows when prompt matches a template */}
-            {templateMatch && TEMPLATE_LABELS[templateMatch] && (
-              <div className="w-full max-w-4xl relative z-10 mt-3 animate-[fadeSlideUp_300ms_ease]">
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm px-4 py-2.5">
-                  <Sparkles className="h-3.5 w-3.5 text-white/50 shrink-0" />
-                  <p className="text-xs text-white/60 flex-1">
-                    Matches template{" "}
-                    <span className="text-white/90 font-medium">{TEMPLATE_LABELS[templateMatch].title}</span>
-                    {" — "}{TEMPLATE_LABELS[templateMatch].desc}
-                  </p>
-                  <span className="text-[10px] text-white/35 shrink-0">Press ↵ to use</span>
-                </div>
-              </div>
-            )}
 
             {/* Templates section */}
             <div id="templates" className="w-full mt-16 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
