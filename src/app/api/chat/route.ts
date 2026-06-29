@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import DOMPurify from "isomorphic-dompurify";
 import { sanitizeText } from "@/lib/auth";
 import { rateLimiter, getClientIp } from "@/lib/rate-limit";
-import { TEMPLATE_PROMPTS } from "@/lib/template-prompts";
+import { TEMPLATE_PROMPTS, TEMPLATE_KEYWORDS } from "@/lib/template-prompts";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
 import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
 import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
 import fs from "fs";
 import path from "path";
+
 
 // 10 AI generation requests per minute per IP
 const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };

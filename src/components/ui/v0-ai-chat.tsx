@@ -558,6 +558,11 @@ function getCleanChatTitle(content: string): string {
 }
 
 function getCleanUserMessageContent(content: string): string {
+  // Strip the internal "TEMPLATE: X" header line before showing in the chat bubble
+  const lines = content.split('\n');
+  if (lines.length > 0 && lines[0].trim().toUpperCase().startsWith('TEMPLATE:')) {
+    return lines.slice(1).join('\n').trim();
+  }
   return content;
 }
 
@@ -1058,13 +1063,10 @@ export function OniChat({
     if (matchedKey) {
       try {
         await new Promise((resolve) => setTimeout(resolve, 600)); // brief shimmer
+        // Use the RAW prompt (with TEMPLATE: prefix) so when the user hits send,
+        // the API sees "TEMPLATE: Velara Retreat\n..." and matches getExactTemplateResponse.
         const rawPrompt = TEMPLATE_PROMPTS[matchedKey as keyof typeof TEMPLATE_PROMPTS] || "";
-        // Strip the first "TEMPLATE: X" header line to expose the descriptive prompt
-        const lines = rawPrompt.split("\n");
-        const cleaned = (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:"))
-          ? lines.slice(1).join("\n").trim()
-          : rawPrompt.trim();
-        setInput(cleaned);
+        setInput(rawPrompt);
         showToast("Prompt enhanced!");
         window.requestAnimationFrame(() => adjustHeight());
       } catch (err) {
@@ -1277,13 +1279,18 @@ export function OniChat({
     const imageForMessage = attachedImage ?? undefined;
     const filesForMessage = attachedFiles;
     const promptForApi = buildPromptWithAttachments(prompt, imageForMessage, filesForMessage);
+
+    // For the chat bubble, strip the "TEMPLATE: X" header line so it looks clean
+    const displayPrompt = getCleanUserMessageContent(prompt);
+
     const userMessage: ChatMessage = {
       id: createId(),
       role: "user",
-      content: prompt,
+      content: displayPrompt,
       image: imageForMessage,
       files: filesForMessage,
     };
+
 
     setMessages((current) => [...current, userMessage]);
     setInput("");

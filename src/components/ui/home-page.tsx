@@ -262,10 +262,11 @@ export function HomePage() {
   const handleSend = () => {
     const text = promptText.trim();
     if (!text && !attachedImage && attachedFiles.length === 0) return;
-    // Upgrade to the full template prompt if a template keyword is detected
+    // If the input matches a template keyword, send the raw template prompt
+    // (WITH the "TEMPLATE: X" prefix) so the API can return the pre-built HTML.
     const matchKey = detectTemplateMatch(text);
     const finalPrompt = matchKey
-      ? getCleanedTemplatePrompt(TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] ?? text)
+      ? (TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] ?? text)
       : text;
     try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
     setChatPrompt(finalPrompt);
@@ -285,9 +286,10 @@ export function HomePage() {
     if (matchKey) {
       try {
         await new Promise((resolve) => setTimeout(resolve, 800)); // simulated load
+        // Set the RAW prompt (with TEMPLATE: prefix) so when the user hits send,
+        // the API receives "TEMPLATE: Velara Retreat\n..." and matches getExactTemplateResponse.
         const rawPrompt = TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] || "";
-        const cleanedPrompt = getCleanedTemplatePrompt(rawPrompt);
-        setPromptText(cleanedPrompt);
+        setPromptText(rawPrompt);
         showToast("Prompt enhanced!");
         window.requestAnimationFrame(() => adjustTextareaHeight());
       } catch (err) {
