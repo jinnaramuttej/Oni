@@ -275,7 +275,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
     { id: "chats", label: "Chats", href: "/", icon: "chat_bubble" },
     { id: "projects", label: "Projects", href: "#", icon: "folder" },
     { id: "plugins", label: "Plugins", href: "#", icon: "extension" },
-    { id: "customize", label: "Customize", href: "#", icon: "tune" },
+    { id: "templates", label: "Templates", href: "#", icon: "grid_view" },
   ];
 
   return (
