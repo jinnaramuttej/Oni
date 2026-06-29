@@ -51,6 +51,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
+import { TEMPLATE_KEYWORDS, TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 
 async function resizeImageToBase64(file: File, maxWidth = 800, maxHeight = 800): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -1044,6 +1045,37 @@ export function OniChat({
   const handleEnhancePrompt = useCallback(async () => {
     if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
     setIsEnhancing(true);
+
+    // --- Template short-circuit: match input against known template keywords ---
+    const lower = input.trim().toLowerCase();
+    let matchedKey: string | null = null;
+    for (const [key, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
+      if (keywords.some((kw) => lower.includes(kw))) {
+        matchedKey = key;
+        break;
+      }
+    }
+    if (matchedKey) {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 600)); // brief shimmer
+        const rawPrompt = TEMPLATE_PROMPTS[matchedKey as keyof typeof TEMPLATE_PROMPTS] || "";
+        // Strip the first "TEMPLATE: X" header line to expose the descriptive prompt
+        const lines = rawPrompt.split("\n");
+        const cleaned = (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:"))
+          ? lines.slice(1).join("\n").trim()
+          : rawPrompt.trim();
+        setInput(cleaned);
+        showToast("Prompt enhanced!");
+        window.requestAnimationFrame(() => adjustHeight());
+      } catch (err) {
+        console.error("Template enhancement error:", err);
+      } finally {
+        setIsEnhancing(false);
+      }
+      return;
+    }
+    // --- End template short-circuit ---
+
     try {
       const response = await fetch("/api/enhance-prompt", {
         method: "POST",

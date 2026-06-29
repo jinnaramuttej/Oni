@@ -514,10 +514,11 @@ function getExactTemplateResponse(promptText: string): { thought: string; messag
 
 function streamTextAsSse(content: string) {
   const encoder = new TextEncoder();
-  const targetDurationMs = 30_000;
+  const targetDurationMs = 5_000;  // stream templates in ~5 s (was 30 s)
   const targetChunks = Math.max(24, Math.min(80, Math.ceil(content.length / 900)));
   const chunkSize = Math.ceil(content.length / targetChunks);
   const intervalMs = Math.ceil(targetDurationMs / targetChunks);
+
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let offset = 0;
 
