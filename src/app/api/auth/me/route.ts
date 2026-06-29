@@ -1,13 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
 
-export async function GET(req: Request) {
-  // Return a guest user by default so the app runs without auth checks
-  const guestUser = {
-    id: "guest",
-    name: "Guest User",
-    email: "guest@oni.ai",
-    createdAt: new Date().toISOString(),
-  };
-
-  return NextResponse.json({ user: guestUser });
+export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  return NextResponse.json({ user: user ?? null });
 }
