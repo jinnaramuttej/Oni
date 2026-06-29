@@ -1,3 +1,19 @@
+// Maps a template key to keywords that trigger an upgrade suggestion
+export const TEMPLATE_KEYWORDS: Record<string, string[]> = {
+  velara: ["luxury hotel", "boutique hotel", "clifftop hotel", "amalfi", "resort", "hotel website", "hotel site", "5 star hotel", "five star hotel", "retreat website"],
+  vox: ["restaurant", "fine dining", "steak", "bistro restaurant", "dining website", "food website", "nyc restaurant"],
+  moehr: ["architecture", "architect", "studio website", "architecture firm", "interior design studio", "atelier"],
+  maisonDore: ["hair salon", "hair atelier", "beauty salon", "salon website", "hairdresser", "hair studio"],
+  ameCoffee: ["coffee", "cafe", "coffee shop", "coffee bar", "specialty coffee", "espresso bar", "coffee house"],
+  foliantLibrary: ["bookshop", "library", "bookstore", "rare books", "antiquarian", "book shop", "literary"],
+  portfolio: ["portfolio", "personal website", "designer portfolio", "creative portfolio"],
+  bistro: ["bistro", "casual dining", "bar and grill", "pub website"],
+  saas: ["saas", "software", "dashboard", "app landing", "startup website", "tech product"],
+  blog: ["blog", "personal blog", "editorial", "magazine website"],
+  agency: ["agency", "creative agency", "marketing agency", "design agency", "branding"],
+  app: ["mobile app", "app promo", "app website", "app store"],
+};
+
 export const TEMPLATE_PROMPTS = {
   velara:
     [
@@ -65,7 +81,42 @@ export const TEMPLATE_PROMPTS = {
       "Footer: refined four-column footer with navigation, hours, follow links, and address.",
       "Overall: make it feel like the original pasted hair atelier sample, not a generic salon site.",
     ].join("\n"),
+  ameCoffee:
+    [
+      "TEMPLATE: Âme Coffee Atelier",
+      "Build the Âme Coffee Atelier specialty coffee website with these exact design notes:",
+      "Brand: Âme, a precision specialty coffee atelier in SoHo, New York. Named after the French word for soul.",
+      "Visual system: cream (#F9F5EF), oat (#F1E8DA), espresso black (#14100D), copper accent (#C4834A), Fraunces serif display type, Fragment Mono labels, Instrument Sans body type, page-texture warm editorial aesthetic.",
+      "Hero: full-screen dark coffee shop hero image, oversized serif headline 'Coffee is a question of attention', small 'Âme — New York' eyebrow, copper CTA, gentle scroll cue, fixed transparent navigation.",
+      "Menu: tabbed menu section with Espresso, Filter, Signature Drinks, and Pantry tabs; real drinks like Gesha Shot, V60 Yirgacheffe, Âme Tonic, Kyoto Slow with origin, tasting notes, and prices.",
+      "Origin: farm story cards for Finca Las Nubes (Colombia), Yirgacheffe Lot 12 (Ethiopia), Santa Teresa (Costa Rica) with altitude, varietal, process, and tasting notes.",
+      "Journal: editorial roast notes and brew guide posts with images and excerpts.",
+      "Team: head roaster, brew director, and sensory buyer portraits with names and cities.",
+      "Testimonials: rotating copper-accented quotes from press and regulars.",
+      "Visit: location and hours section with address, opening times, and map note.",
+      "Footer: warm four-column footer with navigation, hours, follow, and address.",
+      "Overall: make it feel like the original Âme sample — minimal, precise, warm, not a generic coffee shop site.",
+    ].join("\n"),
+  foliantLibrary:
+    [
+      "TEMPLATE: Foliant & Sons Antiquarian Booksellers",
+      "Build the Foliant & Sons antiquarian bookshop website with these exact design notes:",
+      "Brand: Foliant & Sons, an antiquarian and rare book dealer established in London.",
+      "Visual system: aged parchment (#F3EAD6), ink brown (#231C12), burgundy (#7A1F2B), Fraunces serif display type, paper/page texture SVG overlay, quiet literary editorial aesthetic.",
+      "Hero: full-bleed editorial hero with a warm bookshop/library image, oversized serif headline about rare books and the life they carry, eyebrow with founding year, warm reserve/catalogue CTA, fixed navigation with logo.",
+      "Ticker: animated ribbon with categories — First Editions · Maps & Atlases · Illustrated · Manuscripts · Travel · Philosophy · Science.",
+      "About: story section about a multi-generational family of booksellers, love of marginalia, and the craft of acquisition.",
+      "Catalogue: book shelf-style grid with real book titles (Borges, Rilke, Woolf, Herodotus), authors, binding descriptions, years, and prices in British pounds.",
+      "Book of the Month: featured book spotlight with rich editorial copy and acquisition story.",
+      "Journal: literary blog posts about marginalia, estate acquisitions, and how to read a binding.",
+      "Services: valuation, private search, cataloguing, and restoration services.",
+      "Testimonials: warm collector and institution testimonials.",
+      "Visit: opening hours (Tue–Sun), address, and appointment note.",
+      "Footer: parchment-toned four-column footer with navigation, hours, journal links, and contact.",
+      "Overall: make it feel like the original Foliant sample — literary, warm, dusty-elegant, not a generic bookshop site.",
+    ].join("\n"),
   portfolio:
+
     "TEMPLATE: Studio Portfolio\nCreate a premium dark studio portfolio website with a cinematic hero, selected work grid, case study cards, creative services, client proof, about section, contact CTA, refined typography, image-led project previews, smooth reveal animations, and a polished designer portfolio feel.",
   bistro:
     "TEMPLATE: Bistro Booking\nCreate a premium restaurant booking website with a warm dark palette, dramatic food hero, menu categories with real dishes and prices, reservation form, chef/story section, testimonials, hours, address, phone, and polished hospitality interactions.",
