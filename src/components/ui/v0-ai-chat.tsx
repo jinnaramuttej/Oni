@@ -557,11 +557,6 @@ function getCleanChatTitle(content: string): string {
 }
 
 function getCleanUserMessageContent(content: string): string {
-  if (!content) return "";
-  const templateMatch = content.match(/^TEMPLATE:\s*([^\n\r]+)/i);
-  if (templateMatch && templateMatch[1]) {
-    return `Build ${templateMatch[1].trim()} website`;
-  }
   return content;
 }
 
@@ -1560,7 +1555,7 @@ export function OniChat({
   }, [generating, isLoading, messages, generatedHtml, isWritingCode]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if ((event.key === "Enter" || event.keyCode === 13) && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void handleSend();
     }

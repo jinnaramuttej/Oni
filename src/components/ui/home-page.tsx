@@ -248,12 +248,13 @@ export function HomePage() {
   };
 
   const handleQuickAction = (text: string) => {
-    setPromptText(getCleanedTemplatePrompt(text));
+    const cleanedText = getCleanedTemplatePrompt(text);
+    setPromptText(cleanedText);
     window.setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
-        textareaRef.current.selectionStart = text.length;
-        textareaRef.current.selectionEnd = text.length;
+        textareaRef.current.selectionStart = cleanedText.length;
+        textareaRef.current.selectionEnd = cleanedText.length;
       }
     }, 50);
   };
@@ -264,7 +265,7 @@ export function HomePage() {
     // Upgrade to the full template prompt if a template keyword is detected
     const matchKey = detectTemplateMatch(text);
     const finalPrompt = matchKey
-      ? (TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] ?? text)
+      ? getCleanedTemplatePrompt(TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] ?? text)
       : text;
     try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
     setChatPrompt(finalPrompt);
@@ -331,7 +332,7 @@ export function HomePage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if ((e.key === "Enter" || e.keyCode === 13) && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
