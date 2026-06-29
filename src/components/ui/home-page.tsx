@@ -514,7 +514,7 @@ export function HomePage() {
             )}
 
             {/* Templates section */}
-            <div className="w-full mt-8 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
+            <div id="templates" className="w-full mt-8 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
               <div className="mb-3 flex items-center justify-between px-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
                 <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>

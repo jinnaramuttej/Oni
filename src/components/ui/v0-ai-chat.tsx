@@ -544,6 +544,27 @@ function getOrCreateVisitorId() {
   return id;
 }
 
+function getCleanChatTitle(content: string): string {
+  if (!content) return "New Chat";
+  const templateMatch = content.match(/^TEMPLATE:\s*([^\n\r]+)/i);
+  if (templateMatch && templateMatch[1]) {
+    return templateMatch[1].trim();
+  }
+  const firstLine = content.split('\n')[0].trim();
+  return firstLine.length > 40
+    ? firstLine.slice(0, 40).trimEnd() + "…"
+    : firstLine;
+}
+
+function getCleanUserMessageContent(content: string): string {
+  if (!content) return "";
+  const templateMatch = content.match(/^TEMPLATE:\s*([^\n\r]+)/i);
+  if (templateMatch && templateMatch[1]) {
+    return `Build ${templateMatch[1].trim()} website`;
+  }
+  return content;
+}
+
 export function OniChat({
   initialPrompt = "",
   initialImage = null,
@@ -637,6 +658,10 @@ export function OniChat({
       } catch { /* ignore */ }
       return "";
     }
+    // If we have an initial prompt, start with empty HTML preview (no Velara preview)
+    if (initialPrompt) {
+      return "";
+    }
     // Home page launch: always show the Velara sample fresh, no old session
     if (forceNewSession) {
       return VELARA_SAMPLE_HTML;
@@ -652,7 +677,7 @@ export function OniChat({
   });
   // Track whether the iframe is showing the preloaded Velara sample (not user-generated).
   // We use a ref so it never causes re-renders.
-  const isShowingSample = useRef(true);
+  const isShowingSample = useRef(!initialPrompt);
   const [toast, setToast] = useState<string | null>(null);
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
@@ -949,9 +974,7 @@ export function OniChat({
   const conversationTitle = useMemo(() => {
     const firstUser = messages.find((m) => m.role === "user");
     if (!firstUser?.content) return null;
-    return firstUser.content.length > 40
-      ? firstUser.content.slice(0, 40).trimEnd() + "…"
-      : firstUser.content;
+    return getCleanChatTitle(firstUser.content);
   }, [messages]);
 
   // Persist messages + id + generatedHtml to sessionStorage, localStorage, and Supabase server
@@ -1645,10 +1668,17 @@ export function OniChat({
           {[
             { label: "Chats", href: "/", icon: <MessageSquare className="h-4 w-4" /> },
             { label: "Projects", href: "#", icon: <Folder className="h-4 w-4" /> },
+            { label: "Templates", href: "/#templates", icon: <LayoutGrid className="h-4 w-4" /> },
           ].map((item) => (
             <a
               key={item.label}
               href={item.href}
+              onClick={(e) => {
+                if (item.href.startsWith("/#")) {
+                  e.preventDefault();
+                  window.location.href = item.href;
+                }
+              }}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-text-secondary hover:text-primary hover:bg-surface-container transition-colors group whitespace-nowrap"
             >
               <span className="text-text-tertiary group-hover:text-primary transition-colors shrink-0">{item.icon}</span>
@@ -2147,7 +2177,7 @@ function UserMessage({ message, chatFont, compactMode }: { message: ChatMessage;
               paddingClass
             )}
           >
-            {message.content}
+            {getCleanUserMessageContent(message.content)}
           </div>
         )}
       </div>

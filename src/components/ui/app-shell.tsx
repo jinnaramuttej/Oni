@@ -275,7 +275,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
     { id: "chats", label: "Chats", href: "/", icon: "chat_bubble" },
     { id: "projects", label: "Projects", href: "#", icon: "folder" },
     { id: "plugins", label: "Plugins", href: "#", icon: "extension" },
-    { id: "templates", label: "Templates", href: "#", icon: "grid_view" },
+    { id: "templates", label: "Templates", href: "/#templates", icon: "grid_view" },
   ];
 
   return (
@@ -363,7 +363,20 @@ export function AppShell({ children, activePage }: AppShellProps) {
               return (
                 <button
                   key={item.id}
-                  onClick={() => item.href !== "#" && router.push(item.href)}
+                  onClick={() => {
+                    if (item.id === "templates") {
+                      if (window.location.pathname !== "/") {
+                        window.location.href = "/#templates";
+                      } else {
+                        const el = document.getElementById("templates");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }
+                    } else if (item.href !== "#") {
+                      router.push(item.href);
+                    }
+                  }}
                   className={cn(
                     "flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-colors w-full text-left cursor-pointer",
                     isActive
