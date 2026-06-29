@@ -348,22 +348,19 @@ export function HomePage() {
           forceNewSession
         />
       ) : (
-        <div className="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-surface w-full h-full">
+        <div className="flex-1 flex flex-col justify-start items-center relative overflow-y-auto bg-surface w-full h-full py-16 px-4 md:px-8">
           {/* Ambient monochrome background glow */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
             <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-white/5 to-transparent blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
             <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-white/3 to-transparent blur-[110px] mix-blend-screen animate-pulse" style={{ animationDuration: "15s" }} />
           </div>
 
-          <div className="relative z-10 flex flex-col items-center justify-center px-4 md:px-8 max-w-4xl mx-auto w-full mt-[-5vh]">
+          <div className="relative z-10 flex flex-col items-center w-full max-w-4xl mx-auto">
             {/* Greeting */}
-            <div className="flex flex-col items-center text-center gap-2 mb-8 select-none relative z-10 animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]">
-              <h1 className="text-3xl md:text-4xl font-sans font-semibold tracking-tight text-text-primary">
+            <div className="flex flex-col items-center text-center mb-8 select-none relative z-10 animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]">
+              <h1 className="text-4xl md:text-5xl font-sans font-semibold tracking-tight text-text-primary">
                 {getGreeting()}, <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">{user?.name || "User"}</span>
               </h1>
-              <p className="text-xs text-text-tertiary max-w-sm">
-                Describe a website or pick a template card below to generate a custom design instantly.
-              </p>
             </div>
 
             <motion.div
@@ -514,7 +511,7 @@ export function HomePage() {
             )}
 
             {/* Templates section */}
-            <div id="templates" className="w-full mt-8 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
+            <div id="templates" className="w-full mt-16 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
               <div className="mb-3 flex items-center justify-between px-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
                 <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>
