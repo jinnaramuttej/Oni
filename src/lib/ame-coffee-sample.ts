@@ -926,14 +926,14 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
   marqueeItems.forEach(item => {
     const span = document.createElement('span');
     span.className = 'marquee-item';
-    span.innerHTML = `${item}<span class="marquee-dot"></span>`;
+    span.innerHTML = \`\${item}<span class="marquee-dot"></span>\`;
     marqueeTrack.appendChild(span);
   });
   // Duplicate for seamless loop
   marqueeItems.forEach(item => {
     const span = document.createElement('span');
     span.className = 'marquee-item';
-    span.innerHTML = `${item}<span class="marquee-dot"></span>`;
+    span.innerHTML = \`\${item}<span class="marquee-dot"></span>\`;
     marqueeTrack.appendChild(span);
   });
 
@@ -959,14 +959,14 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
     menuData[activeTab].forEach(item => {
       const div = document.createElement('div');
       div.className = 'menu-item';
-      div.innerHTML = `
+      div.innerHTML = \`
         <div class="menu-item-left">
-          <div class="menu-item-name">${item.name}</div>
-          <div class="menu-item-origin">${item.origin}</div>
-          <div class="menu-item-notes">${item.notes}</div>
+          <div class="menu-item-name">\${item.name}</div>
+          <div class="menu-item-origin">\${item.origin}</div>
+          <div class="menu-item-notes">\${item.notes}</div>
         </div>
-        <div class="menu-item-price">$${item.price}</div>
-      `;
+        <div class="menu-item-price">$\${item.price}</div>
+      \`;
       gridContainer.appendChild(div);
     });
   }
@@ -979,21 +979,21 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
   farms.forEach((farm, i) => {
     const card = document.createElement('div');
     card.className = 'farm-card is-reveal';
-    card.style.animationDelay = `${i * 50}ms`;
-    card.innerHTML = `
+    card.style.animationDelay = \`\${i * 50}ms\`;
+    card.innerHTML = \`
       <div class="farm-img">
-        <img src="${farm.img}" alt="${farm.name}" loading="lazy">
+        <img src="\${farm.img}" alt="\${farm.name}" loading="lazy">
       </div>
       <div class="farm-info">
         <div class="farm-details">
-          <div><span class="label">ALT</span>${farm.alt}</div>
-          <div><span class="label">VARIETAL</span>${farm.varietal}</div>
-          <div style="grid-column: span 2"><span class="label">PROCESS</span>${farm.process}</div>
+          <div><span class="label">ALT</span>\${farm.alt}</div>
+          <div><span class="label">VARIETAL</span>\${farm.varietal}</div>
+          <div style="grid-column: span 2"><span class="label">PROCESS</span>\${farm.process}</div>
         </div>
-        <div class="farm-name">${farm.name}</div>
-        <div class="farm-notes">${farm.notes}</div>
+        <div class="farm-name">\${farm.name}</div>
+        <div class="farm-notes">\${farm.notes}</div>
       </div>
-    `;
+    \`;
     farmsGrid.appendChild(card);
   });
 
@@ -1002,17 +1002,17 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
   baristas.forEach((b, i) => {
     const card = document.createElement('div');
     card.className = 'barista-card is-reveal';
-    card.style.animationDelay = `${i * 50}ms`;
-    card.innerHTML = `
+    card.style.animationDelay = \`\${i * 50}ms\`;
+    card.innerHTML = \`
       <div class="barista-img">
-        <img src="${b.img}" alt="${b.name}" loading="lazy">
+        <img src="\${b.img}" alt="\${b.name}" loading="lazy">
       </div>
       <div class="barista-info">
-        <div class="barista-name">${b.name}</div>
-        <div class="barista-role">${b.role}</div>
-        <div class="barista-city">${b.city}</div>
+        <div class="barista-name">\${b.name}</div>
+        <div class="barista-role">\${b.role}</div>
+        <div class="barista-city">\${b.city}</div>
       </div>
-    `;
+    \`;
     baristasGrid.appendChild(card);
   });
 
@@ -1023,10 +1023,10 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
 
   function renderTestimonial() {
     const t = testimonials[testimonialIdx];
-    testimonialContent.innerHTML = `
-      <blockquote class="testimonial-quote">"${t.quote}"</blockquote>
-      <div class="testimonial-author">— ${t.author}</div>
-    `;
+    testimonialContent.innerHTML = \`
+      <blockquote class="testimonial-quote">"\${t.quote}"</blockquote>
+      <div class="testimonial-author">— \${t.author}</div>
+    \`;
     testimonialDots.innerHTML = '';
     testimonials.forEach((_, i) => {
       const dot = document.createElement('button');
@@ -1044,7 +1044,7 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
   galleryImages.forEach(src => {
     const div = document.createElement('div');
     div.className = 'gallery-img';
-    div.style.backgroundImage = `url(${src})`;
+    div.style.backgroundImage = \`url(\${src})\`;
     galleryStrip.appendChild(div);
   });
 
@@ -1053,16 +1053,16 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
   journalPosts.forEach(p => {
     const article = document.createElement('article');
     article.className = 'journal-card';
-    article.innerHTML = `
+    article.innerHTML = \`
       <div class="journal-img">
-        <img src="${p.img}" alt="" loading="lazy">
+        <img src="\${p.img}" alt="" loading="lazy">
       </div>
       <div class="journal-meta">
-        <div class="journal-kicker">${p.kicker}</div>
-        <div class="journal-title">${p.title}</div>
-        <div class="journal-excerpt">${p.excerpt}</div>
+        <div class="journal-kicker">\${p.kicker}</div>
+        <div class="journal-title">\${p.title}</div>
+        <div class="journal-excerpt">\${p.excerpt}</div>
       </div>
-    `;
+    \`;
     journalGrid.appendChild(article);
   });
 
@@ -1082,7 +1082,7 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
     e.preventDefault();
     const fd = new FormData(e.target);
     const name = fd.get('name')?.trim() || 'friend';
-    showToast(`Thank you, ${name.split(' ')[0]}. We'll text you shortly.`);
+    showToast(\`Thank you, \${name.split(' ')[0]}. We'll text you shortly.\`);
     e.target.reset();
   }
 
@@ -1090,7 +1090,7 @@ export const AME_COFFEE_SAMPLE_HTML = `<!DOCTYPE html>
     e.preventDefault();
     const fd = new FormData(e.target);
     closeModal();
-    showToast(`Table held, ${fd.get('m_name')?.split(' ')[0] || 'friend'}. See you soon.`);
+    showToast(\`Table held, \${fd.get('m_name')?.split(' ')[0] || 'friend'}. See you soon.\`);
     e.target.reset();
   }
 

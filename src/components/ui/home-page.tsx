@@ -123,9 +123,9 @@ export function HomePage() {
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    textarea.style.height = "24px";
+    textarea.style.height = "26px";
     const scrollHeight = textarea.scrollHeight;
-    const nextHeight = Math.max(24, Math.min(scrollHeight, 200));
+    const nextHeight = Math.max(26, Math.min(scrollHeight, 200));
     textarea.style.height = `${nextHeight}px`;
   }, []);
 
@@ -381,15 +381,15 @@ export function HomePage() {
 
           <div className="relative z-10 flex flex-col items-center w-full max-w-4xl mx-auto">
             {/* Greeting */}
-            <div className="flex flex-col items-center text-center mb-8 select-none relative z-10 animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]">
-              <h1 className="text-4xl md:text-5xl font-sans font-semibold tracking-tight text-text-primary">
+            <div className="flex flex-col items-center text-center mb-6 select-none relative z-10 animate-[fadeSlideUp_800ms_cubic-bezier(0.16,1,0.3,1)]">
+              <h1 className="text-3xl md:text-4xl font-sans font-semibold tracking-tight text-text-primary">
                 {getGreeting()}, <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">{user?.name || "User"}</span>
               </h1>
             </div>
 
             <motion.div
               layoutId="composer-container"
-              className="w-full bg-surface-container-low/60 backdrop-blur-md rounded-2xl border border-surface-container-high/70 p-4 flex flex-col gap-3 shadow-lg hover:shadow-xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-300 relative z-10"
+              className="w-full max-w-2xl bg-surface-container-low/60 backdrop-blur-md rounded-2xl border border-surface-container-high/70 p-4 flex flex-col gap-3 shadow-lg hover:shadow-xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-300 relative z-10"
             >
               <input
                 ref={fileInputRef}
@@ -438,34 +438,19 @@ export function HomePage() {
                 </div>
               )}
 
-              <div className="relative pr-12">
+              <div className="w-full">
                 <textarea
                   ref={textareaRef}
                   value={promptText}
                   onChange={(e) => setPromptText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full bg-transparent border-none text-primary placeholder-text-tertiary resize-none focus:ring-0 focus:outline-none p-0 text-sm leading-6"
+                  className="w-full bg-transparent border-none text-primary placeholder-text-tertiary resize-none focus:ring-0 focus:outline-none p-0 text-base leading-relaxed"
                   placeholder="How can I help you today?"
                   rows={1}
-                  style={{ minHeight: "24px" }}
+                  style={{ minHeight: "26px" }}
                 />
-                <button
-                  onClick={handleSend}
-                  disabled={!promptText.trim() && !attachedImage && attachedFiles.length === 0}
-                  aria-label="Send message"
-                  className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-colors animate-all"
-                  style={{
-                    background: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "white" : "rgba(255,255,255,0.1)",
-                    color: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "black" : "rgba(255,255,255,0.3)",
-                    cursor: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "pointer" : "not-allowed",
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
-                </button>
               </div>
-              <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center justify-between mt-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   aria-label="Add attachment"
@@ -475,7 +460,7 @@ export function HomePage() {
                     <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                   </svg>
                 </button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={handleEnhancePrompt}
                     disabled={isEnhancing || !promptText.trim() || promptText.trim().length < 3}
@@ -515,12 +500,27 @@ export function HomePage() {
                       <path d="M2 12h4l2-9 4 18 2-9h6"></path>
                     </svg>
                   </button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!promptText.trim() && !attachedImage && attachedFiles.length === 0}
+                    aria-label="Send message"
+                    className="ml-1 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+                    style={{
+                      background: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "white" : "rgba(255,255,255,0.08)",
+                      color: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "black" : "rgba(255,255,255,0.3)",
+                      cursor: (promptText.trim() || attachedImage || attachedFiles.length > 0) ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 19V5M5 12l7-7 7 7" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </motion.div>
 
             {/* Templates section */}
-            <div id="templates" className="w-full mt-16 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
+            <div id="templates" className="w-full mt-12 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
               <div className="mb-3 flex items-center justify-between px-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
                 <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>
@@ -576,7 +576,7 @@ export function HomePage() {
                     key={card.title}
                     type="button"
                     onClick={() => handleQuickAction(card.prompt)}
-                    className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
+                    className="group relative h-40 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
                   >
                     <Image
                       src={card.image}
