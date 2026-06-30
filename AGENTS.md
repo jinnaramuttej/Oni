@@ -117,3 +117,8 @@ src/lib/auth.ts — exists but NOT used for now
 - Confirm response streams word by word (not instant)
 - Confirm iframe shows a real designed website
 - Confirm no mock HTML like "Custom Digital Experience"
+
+### 12. Git commits and pushes
+- After completing a task/response, you must commit and push your changes locally and to GitHub.
+- If needed, create multiple granular commits.
+- Use natural, non-AI-like commit messages (e.g. avoid robotic/generic phrases like "Refactored code" or "AI generated fixes", use direct human-like descriptions of the actual change).
