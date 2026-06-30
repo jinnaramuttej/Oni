@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthUser } from "@/lib/auth";
+import { motion } from "framer-motion";
 
 type ProfileMenuProps = {
   user: AuthUser | null;
@@ -51,9 +52,13 @@ export function ProfileMenu({ user, onClose, onLogout, className }: ProfileMenuP
   };
 
   return (
-    <div
+    <motion.div
       ref={menuRef}
-      className={`absolute w-56 bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden shadow-none transition-all duration-200 ease-in-out opacity-100 translate-y-0 z-50 ${className || "bottom-full left-0 mb-2"}`}
+      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+      transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      className={`absolute w-56 bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden shadow-xl z-50 ${className || "bottom-full left-0 mb-2"}`}
       id="profile-popup"
     >
       {/* Header / User Info in Popup */}
@@ -123,6 +128,6 @@ export function ProfileMenu({ user, onClose, onLogout, className }: ProfileMenuP
           <span className="font-sans text-xs">Log out</span>
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 type StoredConversation = {
   id: string;
@@ -281,11 +282,14 @@ export function AppShell({ children, activePage }: AppShellProps) {
   return (
     <div className="h-screen w-full flex overflow-hidden font-sans antialiased text-[13px] bg-surface text-text-primary">
       {/* Sidebar */}
-      <aside
-        className={cn(
-          "h-full flex flex-col bg-surface-container-lowest/70 backdrop-blur-md border-r border-surface-container-high shrink-0 transition-all duration-300 z-30",
-          sidebarOpen ? "w-[240px] translate-x-0" : "w-0 -translate-x-full md:w-0 overflow-hidden border-r-0"
-        )}
+      <motion.aside
+        initial={{ width: sidebarOpen ? 240 : 0, opacity: sidebarOpen ? 1 : 0 }}
+        animate={{ 
+          width: sidebarOpen ? 240 : 0, 
+          opacity: sidebarOpen ? 1 : 0
+        }}
+        transition={{ type: "spring", stiffness: 350, damping: 32 }}
+        className="h-full flex flex-col bg-surface-container-lowest/70 backdrop-blur-md border-r border-surface-container-high shrink-0 z-30 overflow-hidden"
       >
         {/* Sidebar Header */}
         <div className="h-12 flex items-center justify-between px-4 shrink-0 border-b border-surface-container-high/50">
@@ -581,13 +585,15 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
         {/* Sidebar Footer / User Profile */}
         <div className="p-3 border-t border-surface-container-high shrink-0 relative">
-          {profileOpen && (
-            <ProfileMenu
-              user={user}
-              onClose={() => setProfileOpen(false)}
-              onLogout={handleLogout}
-            />
-          )}
+          <AnimatePresence>
+            {profileOpen && (
+              <ProfileMenu
+                user={user}
+                onClose={() => setProfileOpen(false)}
+                onLogout={handleLogout}
+              />
+            )}
+          </AnimatePresence>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             className={cn(
@@ -625,7 +631,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
             </div>
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-surface">

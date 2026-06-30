@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, LayoutGrid } from "lucide-react";
 import { AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 type Props = {
   open: boolean;
@@ -51,9 +52,21 @@ export function SettingsModal({ open, onClose, user }: Props) {
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      <div className="relative z-70 w-[95%] max-w-5xl rounded-2xl bg-white/[0.02] shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-70 w-[95%] max-w-5xl rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-2xl overflow-hidden"
+      >
         <div className="flex h-14 items-center justify-between border-b border-white/6 px-4">
           <div className="flex items-center gap-3">
             <div className="rounded-md bg-white/3 px-3 py-2 text-sm text-white/80">Oni</div>
@@ -136,7 +149,7 @@ export function SettingsModal({ open, onClose, user }: Props) {
             </div>
           </main>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

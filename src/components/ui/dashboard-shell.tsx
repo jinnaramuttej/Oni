@@ -20,6 +20,7 @@ import {
 import type { AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SettingsModal = dynamic(() => import("./settings-modal").then((m) => m.SettingsModal), { ssr: false });
 
@@ -226,9 +227,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 )}
                 </div>
 
-                {showSettingsModal && (
-                  <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} user={user} />
-                )}
+                <AnimatePresence>
+                  {showSettingsModal && (
+                    <SettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} user={user} />
+                  )}
+                </AnimatePresence>
               </>
             ) : (
               <div className="relative flex justify-center" ref={profileMenuRef}>
@@ -242,11 +245,16 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   {initials}
                 </button>
 
-                {profileOpen && (
-                  <div
-                    className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
-                    role="menu"
-                  >
+                <AnimatePresence>
+                  {profileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                      className="absolute bottom-full right-0 mb-3 w-56 rounded-2xl border border-white/10 bg-zinc-950 p-2 shadow-2xl shadow-black/50"
+                      role="menu"
+                    >
                     <button
                       type="button"
                       onClick={() => {
@@ -277,8 +285,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
                       <LogOut className="h-4 w-4" />
                       Logout
                     </button>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>
