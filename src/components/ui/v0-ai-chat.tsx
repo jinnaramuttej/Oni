@@ -576,6 +576,8 @@ interface BrandContext {
   currentQuestionIndex: number;
   answers: Record<number, string>;
   originalPrompt: string;
+  competitorContent?: string;
+  competitorTitle?: string;
 }
 
 const BRAND_QUESTIONS: Record<BrandIndustry, string[]> = {
@@ -732,6 +734,17 @@ function extractBrandFields(industry: BrandIndustry | '', answers: Record<number
   };
 }
 
+function extractUrl(text: string): string | null {
+  const match = text.match(/(https?:\/\/[^\s]+)/i);
+  return match ? match[1] : null;
+}
+
+function hasCompetitorKeywords(text: string): boolean {
+  const t = text.toLowerCase();
+  const keywords = ['better than', 'like this', 'similar to', 'competitor', 'inspiration', 'reference'];
+  return keywords.some(k => t.includes(k));
+}
+
 export function OniChat({
   initialPrompt = "",
   initialImage = null,
@@ -853,6 +866,8 @@ export function OniChat({
     currentQuestionIndex: 0,
     answers: {},
     originalPrompt: '',
+    competitorContent: '',
+    competitorTitle: '',
   });
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
@@ -1174,6 +1189,8 @@ export function OniChat({
             currentQuestionIndex: 0,
             answers: data.custom_answers || {},
             originalPrompt: '',
+            competitorContent: data.custom_answers?.competitorContent || '',
+            competitorTitle: data.custom_answers?.competitorTitle || '',
           });
         }
       })
@@ -1536,6 +1553,8 @@ export function OniChat({
         currentQuestionIndex: 0,
         answers: newAnswers,
         originalPrompt: brandContext.originalPrompt,
+        competitorContent: brandContext.competitorContent,
+        competitorTitle: brandContext.competitorTitle,
       });
 
       // Small delay so the confirm message renders first
@@ -1546,8 +1565,102 @@ export function OniChat({
       return;
     }
 
-    // ── Brand Intake: intercept fresh build requests ───────────────────────────
+    // ── Competitor URL Analysis Intercept ──────────────────────────────────────
+    const detectedUrl = extractUrl(prompt);
+    const hasCompetitor = hasCompetitorKeywords(prompt);
     const isFresh = !generatedHtml || isShowingSample.current;
+
+    if (isFresh && detectedUrl && hasCompetitor && !overrideText) {
+      let domain = detectedUrl;
+      try {
+        domain = new URL(detectedUrl.startsWith('http') ? detectedUrl : 'https://' + detectedUrl).hostname || detectedUrl;
+      } catch { /* ignore */ }
+
+      const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
+      const statusMsg: ChatMessage = {
+        id: createId(),
+        role: 'assistant',
+        content: `✦ Analyzing ${domain}... give me a moment.`,
+      };
+      setMessages(prev => [...prev, userMsg, statusMsg]);
+      setInput('');
+      adjustHeight(true);
+      if (!hasStarted) setHasStarted(true);
+
+      setIsLoading(true);
+
+      fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: detectedUrl }),
+      })
+        .then((res) => (res.ok ? res.json() : { error: 'Fetch failed' }))
+        .then((data) => {
+          setIsLoading(false);
+          const industry = detectIndustry(prompt);
+          const successText = `✦ Done! I can see their design approach.\n\nNow — what's YOUR business name?`;
+
+          setMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.findIndex(m => m.id === statusMsg.id);
+            if (lastIdx > -1) {
+              updated[lastIdx] = {
+                id: statusMsg.id,
+                role: 'assistant',
+                content: successText,
+              };
+            } else {
+              updated.push({ id: createId(), role: 'assistant', content: successText });
+            }
+            return updated;
+          });
+
+          setBrandContext({
+            isCollecting: true,
+            industry,
+            currentQuestionIndex: 0,
+            answers: {},
+            originalPrompt: prompt,
+            competitorContent: data.content || '',
+            competitorTitle: data.title || '',
+          });
+        })
+        .catch((err) => {
+          setIsLoading(false);
+          console.error(err);
+          const industry = detectIndustry(prompt);
+          const failText = `✦ Could not access the website. Let's proceed with design questions anyway.\n\nWhat's YOUR business name?`;
+
+          setMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.findIndex(m => m.id === statusMsg.id);
+            if (lastIdx > -1) {
+              updated[lastIdx] = {
+                id: statusMsg.id,
+                role: 'assistant',
+                content: failText,
+              };
+            } else {
+              updated.push({ id: createId(), role: 'assistant', content: failText });
+            }
+            return updated;
+          });
+
+          setBrandContext({
+            isCollecting: true,
+            industry,
+            currentQuestionIndex: 0,
+            answers: {},
+            originalPrompt: prompt,
+            competitorContent: '',
+            competitorTitle: '',
+          });
+        });
+
+      return;
+    }
+
+    // ── Brand Intake: intercept fresh build requests ───────────────────────────
     if (isFresh && isFreshBuildRequest(prompt) && !overrideText) {
       const industry = detectIndustry(prompt);
       const questions = BRAND_QUESTIONS[industry];
@@ -1565,6 +1678,8 @@ export function OniChat({
         currentQuestionIndex: 0,
         answers: {},
         originalPrompt: prompt,
+        competitorContent: '',
+        competitorTitle: '',
       });
       return;
     }
@@ -1651,6 +1766,10 @@ ${prompt}`;
           currentHtml: isShowingSample.current ? "" : generatedHtml,
           defaultModel: getActiveModel(),
           userImage: base64Image,
+          competitorReference: brandContext.competitorContent ? {
+            title: brandContext.competitorTitle || '',
+            content: brandContext.competitorContent,
+          } : undefined,
         }),
       });
 
@@ -1780,7 +1899,11 @@ ${prompt}`;
                       primaryColor: fields.primaryColor,
                       secondaryColor: fields.secondaryColor,
                       tone: fields.tone,
-                      customAnswers: brandContext.answers,
+                      customAnswers: {
+                        ...brandContext.answers,
+                        competitorContent: brandContext.competitorContent || '',
+                        competitorTitle: brandContext.competitorTitle || '',
+                      },
                     }),
                   }).catch((err) => console.error("Failed to save brand context:", err));
                 }

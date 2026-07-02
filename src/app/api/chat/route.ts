@@ -865,7 +865,18 @@ export async function POST(req: Request) {
     }
   }
 
-  const messagesToSend = [{ role: "system", content: ONI_SYSTEM_PROMPT }, ...groqMessages];
+  let systemPrompt = ONI_SYSTEM_PROMPT;
+  if (body.competitorReference && typeof body.competitorReference === "object") {
+    const { title, content } = body.competitorReference;
+    if (content) {
+      systemPrompt += `\n\nCOMPETITOR REFERENCE: ${title || 'Untitled'}
+Content: ${content}
+Build something better than this for the user's business.
+Improve the design, make it more premium and modern.`;
+    }
+  }
+
+  const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
   const shouldUseOllama =
     shouldUseTemplateReferences;
 
