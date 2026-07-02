@@ -689,6 +689,49 @@ ${lines.join('\n')}
 Use ALL of this brand context. Generate real content specific to this exact business. Every section — headings, body copy, testimonials, pricing, menu items — must be written specifically for ${businessName || 'this business'}, not generic. No placeholders.`;
 }
 
+function extractBrandFields(industry: BrandIndustry | '', answers: Record<number, string>) {
+  const businessName = answers[0] || '';
+  let location = '';
+  let primaryColor = '';
+  let secondaryColor = '';
+  let tone = '';
+
+  if (industry === 'restaurant') {
+    location = answers[2] || '';
+    primaryColor = answers[3] || '';
+    tone = answers[1] || '';
+  } else if (industry === 'salon') {
+    location = answers[4] || '';
+    primaryColor = answers[3] || '';
+    tone = answers[2] || '';
+  } else if (industry === 'medical') {
+    location = answers[3] || '';
+    primaryColor = answers[4] || '';
+    tone = answers[1] || '';
+  } else if (industry === 'fitness') {
+    location = answers[4] || '';
+    primaryColor = answers[3] || '';
+    tone = answers[2] || '';
+  } else if (industry === 'portfolio') {
+    primaryColor = answers[3] || '';
+    tone = answers[1] || '';
+  } else if (industry === 'saas') {
+    primaryColor = answers[4] || '';
+    tone = answers[1] || '';
+  } else if (industry === 'general') {
+    primaryColor = answers[2] || '';
+    tone = TONE_MAP[answers[3]?.trim()] || answers[3] || '';
+  }
+
+  return {
+    businessName,
+    location,
+    primaryColor,
+    secondaryColor,
+    tone,
+  };
+}
+
 export function OniChat({
   initialPrompt = "",
   initialImage = null,
@@ -1118,6 +1161,25 @@ export function OniChat({
       });
   }, [chatId]);
 
+  // Load brand memory when conversation ID changes
+  useEffect(() => {
+    if (!conversationId) return;
+    fetch(`/api/brands?projectId=${conversationId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setBrandContext({
+            isCollecting: false,
+            industry: (data.industry || 'general') as BrandIndustry,
+            currentQuestionIndex: 0,
+            answers: data.custom_answers || {},
+            originalPrompt: '',
+          });
+        }
+      })
+      .catch((err) => console.error("Error loading brand context:", err));
+  }, [conversationId]);
+
   // Derive conversation title from first user message
   const conversationTitle = useMemo(() => {
     const firstUser = messages.find((m) => m.role === "user");
@@ -1462,7 +1524,7 @@ export function OniChat({
       };
       setMessages(prev => [...prev, confirmMsg]);
 
-      // Reset intake state before calling the AI
+      // Preserve brand context in state so it acts as active brand memory
       const enrichedPrompt = buildBrandPrompt(
         brandContext.originalPrompt,
         brandContext.industry as BrandIndustry,
@@ -1470,10 +1532,10 @@ export function OniChat({
       );
       setBrandContext({
         isCollecting: false,
-        industry: '',
+        industry: brandContext.industry,
         currentQuestionIndex: 0,
-        answers: {},
-        originalPrompt: '',
+        answers: newAnswers,
+        originalPrompt: brandContext.originalPrompt,
       });
 
       // Small delay so the confirm message renders first
@@ -1519,7 +1581,20 @@ export function OniChat({
     filesForMessage: FileAttachment[]
   ) => {
     const imageAttach = imageForMessage ?? undefined;
-    const promptForApi = buildPromptWithAttachments(prompt, imageAttach, filesForMessage);
+
+    let finalPrompt = prompt;
+    if (brandContext.industry && !brandContext.isCollecting && (generatedHtml || messages.length > 0)) {
+      const fields = extractBrandFields(brandContext.industry, brandContext.answers);
+      finalPrompt = `EXISTING BRAND:
+Business: ${fields.businessName}, Industry: ${brandContext.industry}
+Colors: primary=${fields.primaryColor} secondary=${fields.secondaryColor}
+Tone: ${fields.tone}
+Maintain this brand identity in all changes.
+
+${prompt}`;
+    }
+
+    const promptForApi = buildPromptWithAttachments(finalPrompt, imageAttach, filesForMessage);
     const displayPrompt = getCleanUserMessageContent(prompt);
 
     const userMessage: ChatMessage = {
@@ -1675,6 +1750,43 @@ export function OniChat({
             .then((r) => r.ok ? r.json() : null)
             .then((d) => { if (d && typeof d.credits_remaining === "number") setCreditsRemaining(d.credits_remaining); })
             .catch(() => {});
+
+          // Save brand context to database (project_brands) if present
+          if (brandContext.industry && conversationId) {
+            const fields = extractBrandFields(brandContext.industry, brandContext.answers);
+            fetch("/api/chat/history", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-visitor-id": visitorId,
+              },
+              body: JSON.stringify({
+                id: conversationId,
+                title: conversationTitle || "New Chat",
+                messages: [...messages, userMessage],
+                generatedHtml: sanitized,
+              }),
+            })
+              .then((res) => {
+                if (res.ok) {
+                  fetch("/api/brands", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      projectId: conversationId,
+                      industry: brandContext.industry,
+                      businessName: fields.businessName,
+                      location: fields.location,
+                      primaryColor: fields.primaryColor,
+                      secondaryColor: fields.secondaryColor,
+                      tone: fields.tone,
+                      customAnswers: brandContext.answers,
+                    }),
+                  }).catch((err) => console.error("Failed to save brand context:", err));
+                }
+              })
+              .catch((err) => console.error("Failed to save parent chat:", err));
+          }
         }
       }
 
@@ -1700,7 +1812,7 @@ export function OniChat({
       setGenerating(false);
       setIsWritingCode(false);
     }
-  }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel]);
+  }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel, brandContext, conversationId, conversationTitle]);
 
   // Keep the ref in sync so handleSend can always call the latest handleSendToAI
   useEffect(() => {
@@ -1729,7 +1841,20 @@ export function OniChat({
     const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
     if (!lastUserMessage) return;
 
-    const prompt = lastUserMessage.content || "Regenerate the website.";
+    const basePrompt = lastUserMessage.content || "Regenerate the website.";
+
+    let finalPrompt = basePrompt;
+    if (brandContext.industry && !brandContext.isCollecting && (generatedHtml || messages.length > 0)) {
+      const fields = extractBrandFields(brandContext.industry, brandContext.answers);
+      finalPrompt = `EXISTING BRAND:
+Business: ${fields.businessName}, Industry: ${brandContext.industry}
+Colors: primary=${fields.primaryColor} secondary=${fields.secondaryColor}
+Tone: ${fields.tone}
+Maintain this brand identity in all changes.
+
+${basePrompt}`;
+    }
+
     setIsLoading(true);
     setGenerating(true);
     setIsWritingCode(false);
@@ -1746,8 +1871,8 @@ export function OniChat({
           "x-visitor-id": getOrCreateVisitorId(),
         },
         body: JSON.stringify({
-          prompt: prompt,
-          messages: [{ role: "user", content: prompt }],
+          prompt: finalPrompt,
+          messages: [{ role: "user", content: finalPrompt }],
           currentHtml: isShowingSample.current ? "" : generatedHtml,
           defaultModel: getActiveModel()
         }),
@@ -1864,7 +1989,7 @@ export function OniChat({
       setGenerating(false);
       setIsWritingCode(false);
     }
-  }, [generating, isLoading, messages, generatedHtml, isWritingCode]);
+  }, [generating, isLoading, messages, generatedHtml, isWritingCode, brandContext, getActiveModel]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.key === "Enter" || event.keyCode === 13) && !event.shiftKey && !event.nativeEvent.isComposing) {
