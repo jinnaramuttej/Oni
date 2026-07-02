@@ -566,6 +566,129 @@ function getCleanUserMessageContent(content: string): string {
   return content;
 }
 
+// ── Brand Intake Flow ─────────────────────────────────────────────────────────
+
+type BrandIndustry = 'restaurant' | 'salon' | 'medical' | 'fitness' | 'portfolio' | 'saas' | 'general';
+
+interface BrandContext {
+  isCollecting: boolean;
+  industry: BrandIndustry | '';
+  currentQuestionIndex: number;
+  answers: Record<number, string>;
+  originalPrompt: string;
+}
+
+const BRAND_QUESTIONS: Record<BrandIndustry, string[]> = {
+  restaurant: [
+    "Love it! A few quick questions ✦\n\nWhat's your restaurant name?",
+    "What cuisine and vibe — casual family, fine dining, street food?",
+    "Which city and area?",
+    "Any brand colors? Or I'll pick something perfect for your cuisine.",
+    "Name 3-4 signature dishes I should feature.",
+  ],
+  salon: [
+    "Let's build something stunning ✦\n\nWhat's your salon name?",
+    "Main services — haircuts, color, keratin, bridal, nails, full beauty?",
+    "Target clients and price range — budget, mid-range, or luxury?",
+    "Brand colors or aesthetic — rose gold, black minimal, warm earthy?",
+    "Which city and area?",
+  ],
+  medical: [
+    "Let's build a professional clinic website ✦\n\nClinic name?",
+    "Specialization — general, dental, derma, pediatrics, ortho?",
+    "Lead doctor name and qualifications?",
+    "Which city and area?",
+    "Color preference or should I use medical blue and white?",
+  ],
+  fitness: [
+    "Let's build something energetic ✦\n\nGym or studio name?",
+    "Type — gym, yoga, crossfit, martial arts, dance, wellness?",
+    "Target audience and price range?",
+    "Any brand colors or energy you want — dark & intense, clean & minimal, vibrant?",
+    "Which city and area?",
+  ],
+  portfolio: [
+    "Let's craft your portfolio ✦\n\nYour name or studio name?",
+    "What do you do — designer, developer, photographer, writer, agency?",
+    "Top 3 skills or specializations?",
+    "Style direction — minimal, bold, dark, editorial?",
+    "Any specific projects or work you want featured?",
+  ],
+  saas: [
+    "Let's build something that converts ✦\n\nProduct name?",
+    "One sentence — what it does and who it's for?",
+    "3 main features or benefits?",
+    "Pricing tiers if any — plan names and prices?",
+    "Color style — dark futuristic, clean minimal, bold colorful?",
+  ],
+  general: [
+    "Let's make this perfect ✦\n\nBusiness name?",
+    "What does your business do?",
+    "Any brand colors?",
+    "Tone: reply with a number\n1. Luxury\n2. Professional\n3. Friendly\n4. Bold\n5. Minimal",
+  ],
+};
+
+const TONE_MAP: Record<string, string> = {
+  '1': 'Luxury',
+  '2': 'Professional',
+  '3': 'Friendly',
+  '4': 'Bold',
+  '5': 'Minimal',
+};
+
+function detectIndustry(prompt: string): BrandIndustry {
+  const p = prompt.toLowerCase();
+  if (/restaurant|cafe|food|dhaba|bistro|dining|eatery|cuisine|diner/.test(p)) return 'restaurant';
+  if (/salon|hair|beauty|spa|nail|barber|grooming/.test(p)) return 'salon';
+  if (/clinic|doctor|hospital|medical|dental|health|physician|specialist|ortho|derma|pediatric/.test(p)) return 'medical';
+  if (/gym|fitness|yoga|wellness|crossfit|pilates|workout|martial/.test(p)) return 'fitness';
+  if (/portfolio|agency|freelance|creative|designer|photographer|architect|studio/.test(p)) return 'portfolio';
+  if (/saas|app|startup|software|tech|platform|tool|product|dashboard/.test(p)) return 'saas';
+  return 'general';
+}
+
+function isFreshBuildRequest(prompt: string): boolean {
+  const p = prompt.toLowerCase();
+  const hasBuildWord = /\b(make|build|create|design|generate)\b/.test(p);
+  const hasSiteWord = /\b(website|site|page|landing|portfolio)\b/.test(p);
+  return hasBuildWord && hasSiteWord;
+}
+
+function buildBrandPrompt(originalPrompt: string, industry: BrandIndustry, answers: Record<number, string>): string {
+  // Map answer index -> semantic label depending on industry
+  const labelMap: Record<BrandIndustry, string[]> = {
+    restaurant: ['Business Name', 'Cuisine & Vibe', 'Location', 'Brand Colors', 'Signature Dishes'],
+    salon: ['Business Name', 'Services', 'Target Clients & Price Range', 'Brand Aesthetic', 'Location'],
+    medical: ['Clinic Name', 'Specialization', 'Lead Doctor', 'Location', 'Color Preference'],
+    fitness: ['Business Name', 'Type', 'Target Audience & Price Range', 'Brand Energy', 'Location'],
+    portfolio: ['Name / Studio', 'Profession', 'Skills / Specializations', 'Style Direction', 'Featured Projects'],
+    saas: ['Product Name', 'Product Description', 'Key Features', 'Pricing Tiers', 'Color Style'],
+    general: ['Business Name', 'What the Business Does', 'Brand Colors', 'Tone'],
+  };
+
+  const labels = labelMap[industry];
+  const lines = Object.entries(answers).map(([idx, val]) => {
+    const label = labels[Number(idx)] ?? `Detail ${Number(idx) + 1}`;
+    // For the general tone question, translate the number
+    if (industry === 'general' && Number(idx) === 3) {
+      const tone = TONE_MAP[val.trim()] ?? val;
+      return `${label}: ${tone}`;
+    }
+    return `${label}: ${val}`;
+  });
+
+  const businessName = answers[0] ?? '';
+
+  return `${originalPrompt}
+
+BRAND CONTEXT:
+Industry: ${industry}
+${lines.join('\n')}
+
+Use ALL of this brand context. Generate real content specific to this exact business. Every section — headings, body copy, testimonials, pricing, menu items — must be written specifically for ${businessName || 'this business'}, not generic. No placeholders.`;
+}
+
 export function OniChat({
   initialPrompt = "",
   initialImage = null,
@@ -681,6 +804,13 @@ export function OniChat({
   const isShowingSample = useRef(!initialPrompt);
   const [toast, setToast] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  const [brandContext, setBrandContext] = useState<BrandContext>({
+    isCollecting: false,
+    industry: '',
+    currentQuestionIndex: 0,
+    answers: {},
+    originalPrompt: '',
+  });
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
     billingPlan: "pro",
@@ -1289,25 +1419,116 @@ export function OniChat({
     recognition.start();
   }, [adjustHeight, input, isListening, showToast]);
 
+  // Ref so handleSend can always call the latest handleSendToAI without a TDZ issue
+  const handleSendToAIRef = useRef<(prompt: string, image: ImageAttachment | null | undefined, files: FileAttachment[]) => Promise<void>>(async () => {});
+
   const handleSend = useCallback(async (overrideText?: string) => {
     const prompt = (overrideText ?? input).trim();
     if ((!prompt && !attachedImage && attachedFiles.length === 0) || generating || isLoading) return;
 
-    const imageForMessage = attachedImage ?? undefined;
-    const filesForMessage = attachedFiles;
-    const promptForApi = buildPromptWithAttachments(prompt, imageForMessage, filesForMessage);
+    // ── Brand Intake: handle answer to current question ────────────────────────
+    if (brandContext.isCollecting) {
+      const questions = BRAND_QUESTIONS[brandContext.industry as BrandIndustry];
+      const qIdx = brandContext.currentQuestionIndex;
+      const newAnswers = { ...brandContext.answers, [qIdx]: prompt };
 
-    // For the chat bubble, strip the "TEMPLATE: X" header line so it looks clean
+      // Show the user's answer in chat
+      const userAnswerMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
+      setMessages(prev => [...prev, userAnswerMsg]);
+      setInput('');
+      adjustHeight(true);
+
+      const isLastQuestion = qIdx >= questions.length - 1;
+
+      if (!isLastQuestion) {
+        // Ask next question
+        const nextQ = questions[qIdx + 1];
+        const nextQMsg: ChatMessage = { id: createId(), role: 'assistant', content: nextQ };
+        setMessages(prev => [...prev, nextQMsg]);
+        setBrandContext(prev => ({
+          ...prev,
+          currentQuestionIndex: qIdx + 1,
+          answers: newAnswers,
+        }));
+        return;
+      }
+
+      // All questions answered — build the enriched prompt and fire the AI
+      const businessName = newAnswers[0] ?? '';
+      const confirmMsg: ChatMessage = {
+        id: createId(),
+        role: 'assistant',
+        content: `Perfect! Building your${businessName ? ` ${businessName}` : ''} website now ✦`,
+      };
+      setMessages(prev => [...prev, confirmMsg]);
+
+      // Reset intake state before calling the AI
+      const enrichedPrompt = buildBrandPrompt(
+        brandContext.originalPrompt,
+        brandContext.industry as BrandIndustry,
+        newAnswers
+      );
+      setBrandContext({
+        isCollecting: false,
+        industry: '',
+        currentQuestionIndex: 0,
+        answers: {},
+        originalPrompt: '',
+      });
+
+      // Small delay so the confirm message renders first
+      await new Promise(r => setTimeout(r, 300));
+
+      // Kick off AI generation with enriched prompt (bypass intake detection)
+      void handleSendToAIRef.current(enrichedPrompt, null, []);
+      return;
+    }
+
+    // ── Brand Intake: intercept fresh build requests ───────────────────────────
+    const isFresh = !generatedHtml || isShowingSample.current;
+    if (isFresh && isFreshBuildRequest(prompt) && !overrideText) {
+      const industry = detectIndustry(prompt);
+      const questions = BRAND_QUESTIONS[industry];
+      const firstQ = questions[0];
+
+      const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
+      const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
+      setMessages(prev => [...prev, userMsg, oniQ]);
+      setInput('');
+      adjustHeight(true);
+      if (!hasStarted) setHasStarted(true);
+      setBrandContext({
+        isCollecting: true,
+        industry,
+        currentQuestionIndex: 0,
+        answers: {},
+        originalPrompt: prompt,
+      });
+      return;
+    }
+
+    // ── Normal send (no intake or overrideText) ────────────────────────────────
+    void handleSendToAIRef.current(prompt, attachedImage, attachedFiles);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adjustHeight, attachedFiles, attachedImage, brandContext, generatedHtml, generating, hasStarted, input, isLoading, messages]);
+
+  // Core AI dispatch — called via ref from handleSend
+  const handleSendToAI = useCallback(async (
+    prompt: string,
+    imageForMessage: ImageAttachment | undefined | null,
+    filesForMessage: FileAttachment[]
+  ) => {
+    const imageAttach = imageForMessage ?? undefined;
+    const promptForApi = buildPromptWithAttachments(prompt, imageAttach, filesForMessage);
     const displayPrompt = getCleanUserMessageContent(prompt);
 
     const userMessage: ChatMessage = {
       id: createId(),
       role: "user",
       content: displayPrompt,
-      image: imageForMessage,
+      image: imageAttach,
       files: filesForMessage,
     };
-
 
     setMessages((current) => [...current, userMessage]);
     setInput("");
@@ -1327,9 +1548,9 @@ export function OniChat({
 
     // Compress & convert user attached image to base64 if present
     let base64Image: string | null = null;
-    if (imageForMessage && imageForMessage.file) {
+    if (imageAttach && imageAttach.file) {
       try {
-        base64Image = await resizeImageToBase64(imageForMessage.file);
+        base64Image = await resizeImageToBase64(imageAttach.file);
       } catch (err) {
         console.error("Failed to convert image to base64:", err);
       }
@@ -1479,7 +1700,12 @@ export function OniChat({
       setGenerating(false);
       setIsWritingCode(false);
     }
-  }, [adjustHeight, attachedFiles, attachedImage, generatedHtml, hasStarted, generating, isLoading, input, messages, isWritingCode]);
+  }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel]);
+
+  // Keep the ref in sync so handleSend can always call the latest handleSendToAI
+  useEffect(() => {
+    handleSendToAIRef.current = handleSendToAI;
+  });
 
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
   // Guard: don't re-fire on refresh if session already has messages
