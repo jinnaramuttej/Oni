@@ -7,8 +7,69 @@ import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
 import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
 import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
+import { createSupabaseAdminClientOrNull } from "@/lib/supabase";
+import { classifyIntent } from "@/lib/classifier";
+import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
+
+// ── Credit helpers ────────────────────────────────────────────────────────────
+
+async function getOrCreateCredits(visitorId: string) {
+  const supabase = createSupabaseAdminClientOrNull();
+  if (!supabase) return null;
+  const planKey = `free::${visitorId}`;
+  const { data, error } = await supabase
+    .from("user_credits")
+    .select("*")
+    .eq("plan", planKey)
+    .maybeSingle();
+  if (error) {
+    console.error("[Credits] fetch error:", error.message);
+    return null;
+  }
+  if (!data) {
+    const { data: created, error: insertError } = await supabase
+      .from("user_credits")
+      .insert({
+        user_id: null,
+        credits_remaining: 50,
+        credits_used: 0,
+        plan: planKey,
+        reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (insertError) {
+      console.error("[Credits] insert error:", insertError.message);
+      return null;
+    }
+    return created;
+  }
+  return data;
+}
+
+async function deductCredits(visitorId: string, amount: number) {
+  if (amount <= 0) return;
+  const supabase = createSupabaseAdminClientOrNull();
+  if (!supabase) return;
+  const planKey = `free::${visitorId}`;
+  const { data: row } = await supabase
+    .from("user_credits")
+    .select("credits_remaining, credits_used")
+    .eq("plan", planKey)
+    .maybeSingle();
+  if (!row) return;
+  await supabase
+    .from("user_credits")
+    .update({
+      credits_remaining: Math.max(0, (row.credits_remaining as number) - amount),
+      credits_used: (row.credits_used as number) + amount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("plan", planKey);
+}
 
 
 // 10 AI generation requests per minute per IP
@@ -719,6 +780,24 @@ export async function POST(req: Request) {
     });
   }
 
+  // ── Credit check ────────────────────────────────────────────────────────────
+  const visitorId = req.headers.get("x-visitor-id") || "";
+  let creditCost = 0;
+  if (visitorId) {
+    const credits = await getOrCreateCredits(visitorId);
+    if (credits && (credits.plan as string).startsWith("free::")) {
+      if ((credits.credits_remaining as number) <= 0) {
+        return NextResponse.json(
+          {
+            error: "out_of_credits",
+            message: "You have used all your free credits this month.",
+          },
+          { status: 402 }
+        );
+      }
+    }
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) {
     return new NextResponse("Bad request", { status: 400 });
@@ -838,6 +917,23 @@ export async function POST(req: Request) {
     }
   }
 
+  // ── Classify intent & determine credit cost (non-blocking, best effort) ────
+  if (visitorId) {
+    try {
+      const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
+      if (lastUserMsg) {
+        const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
+        const intent = await classifyIntent(lastUserMsg.content.slice(0, 500), hasExistingWebsite);
+        const routeConfig = routeIntent(intent);
+        creditCost = routeConfig.creditCost;
+        console.log(`[Credits] intent=${intent} cost=${creditCost}`);
+      }
+    } catch (err) {
+      console.error("[Credits] classifier error (non-fatal):", err);
+      creditCost = 8; // default to new_website cost on failure
+    }
+  }
+
   const groqApiKey = process.env.GROQ_API_KEY?.trim();
   if (!groqApiKey) {
     return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
@@ -867,6 +963,10 @@ export async function POST(req: Request) {
 
     if (groqResponse.ok) {
       console.log('Groq request successful, streaming response!');
+      // Deduct credits in background — don't block the stream
+      if (visitorId && creditCost > 0) {
+        void deductCredits(visitorId, creditCost);
+      }
       return new Response(groqResponse.body, {
         headers: {
           "Content-Type": "text/event-stream",

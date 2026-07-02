@@ -680,6 +680,7 @@ export function OniChat({
   // We use a ref so it never causes re-renders.
   const isShowingSample = useRef(!initialPrompt);
   const [toast, setToast] = useState<string | null>(null);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
     billingPlan: "pro",
@@ -832,6 +833,22 @@ export function OniChat({
     } catch { /* ignore */ }
     return false;
   });
+
+  // Fetch credits on mount
+  useEffect(() => {
+    const visitorId = getOrCreateVisitorId();
+    if (!visitorId) return;
+    fetch("/api/credits", {
+      headers: { "x-visitor-id": visitorId },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.credits_remaining === "number") {
+          setCreditsRemaining(data.credits_remaining);
+        }
+      })
+      .catch(() => { /* silently ignore */ });
+  }, []);
   const [navOpen, setNavOpen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1322,7 +1339,10 @@ export function OniChat({
       const messagesForApi = [...messages, userMessage];
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-visitor-id": getOrCreateVisitorId(),
+        },
         body: JSON.stringify({
           prompt: promptForApi,
           messages: messagesForApi.map(m => ({
@@ -1339,8 +1359,16 @@ export function OniChat({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error:', errorText);
+        const status = response.status;
+        let errorContent: string;
+        if (status === 402) {
+          errorContent = "__OUT_OF_CREDITS__";
+          setCreditsRemaining(0);
+        } else {
+          const errorText = await response.text();
+          console.error('API error:', errorText);
+          errorContent = `Sorry, there was an error: ${errorText || response.statusText}`;
+        }
         setIsLoading(false);
         setGenerating(false);
         setMessages(prev => {
@@ -1348,7 +1376,7 @@ export function OniChat({
           updated[updated.length - 1] = {
             id: assistantId,
             role: 'assistant',
-            content: `Sorry, there was an error: ${errorText || response.statusText}`,
+            content: errorContent,
           };
           return updated;
         });
@@ -1419,6 +1447,14 @@ export function OniChat({
         setGeneratedHtml(sanitized);
         isShowingSample.current = false; // user now has a real generated site
         setActiveFilePath("index.html");
+        // Refresh credits after successful generation
+        const visitorId = getOrCreateVisitorId();
+        if (visitorId) {
+          fetch("/api/credits", { headers: { "x-visitor-id": visitorId } })
+            .then((r) => r.ok ? r.json() : null)
+            .then((d) => { if (d && typeof d.credits_remaining === "number") setCreditsRemaining(d.credits_remaining); })
+            .catch(() => {});
+        }
       }
 
       const combinedContent = finalThought ? `${finalThought}\n\n${cleanContent}`.trim() : cleanContent;
@@ -1479,7 +1515,10 @@ export function OniChat({
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-visitor-id": getOrCreateVisitorId(),
+        },
         body: JSON.stringify({
           prompt: prompt,
           messages: [{ role: "user", content: prompt }],
@@ -1489,14 +1528,22 @@ export function OniChat({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error:', errorText);
+        const status = response.status;
+        let errorContent: string;
+        if (status === 402) {
+          errorContent = "__OUT_OF_CREDITS__";
+          setCreditsRemaining(0);
+        } else {
+          const errorText = await response.text();
+          console.error('API error:', errorText);
+          errorContent = `Sorry, there was an error: ${errorText || response.statusText}`;
+        }
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = {
             id: assistantId,
             role: 'assistant',
-            content: `Sorry, there was an error: ${errorText || response.statusText}`,
+            content: errorContent,
           };
           return updated;
         });
@@ -1893,6 +1940,7 @@ export function OniChat({
             compactMode={oniSettings.compactMode}
             isWritingCode={isWritingCode}
             generatedHtml={generatedHtml}
+            creditsRemaining={creditsRemaining}
           />
         </section>
 
@@ -1993,6 +2041,7 @@ interface ChatPanelProps {
   compactMode?: boolean;
   isWritingCode: boolean;
   generatedHtml: string;
+  creditsRemaining: number | null;
 }
 
 function ChatPanel({
@@ -2034,6 +2083,7 @@ function ChatPanel({
   compactMode,
   isWritingCode,
   generatedHtml,
+  creditsRemaining,
 }: ChatPanelProps) {
   return (
     <>
@@ -2054,6 +2104,22 @@ function ChatPanel({
         </button>
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold tracking-tight text-text-secondary">Oni</span>
+          {creditsRemaining !== null && (
+            <a
+              href="/pricing"
+              title="Credits remaining this month"
+              className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
+                creditsRemaining <= 5
+                  ? "bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                  : creditsRemaining <= 15
+                  ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                  : "bg-surface-container-high text-text-secondary hover:bg-surface-container-highest hover:text-text-primary"
+              }`}
+            >
+              <span>⚡</span>
+              <span>{creditsRemaining} credits</span>
+            </a>
+          )}
         </div>
       </header>
       )}
@@ -2551,7 +2617,33 @@ function AssistantMessage({
       <div className="pl-8 space-y-2">
 
         {message.content && (
-          isStreaming ? (
+          message.content === "__OUT_OF_CREDITS__" ? (
+            <div className="relative max-w-sm rounded-2xl overflow-hidden border border-amber-500/20 bg-gradient-to-br from-surface-container-low to-surface-container-lowest shadow-xl">
+              {/* Glow accent */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/0 via-amber-400/60 to-amber-500/0" />
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+                    <span className="text-lg">⚡</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-text-primary leading-tight">You&apos;ve used all 50 free credits</h3>
+                    <p className="text-xs text-text-tertiary mt-0.5">Your monthly allowance has been used up.</p>
+                  </div>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed mb-4">
+                  Upgrade to Pro for unlimited generations, priority access, and faster models.
+                </p>
+                <a
+                  href="/pricing"
+                  className="flex items-center justify-center gap-2 w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold py-2.5 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-amber-500/20"
+                >
+                  <span>✨</span>
+                  <span>Upgrade to Pro for unlimited generations</span>
+                </a>
+              </div>
+            </div>
+          ) : isStreaming ? (
             <AnimatedStreamText
               text={message.content}
               fontStyle={fontStyle}
