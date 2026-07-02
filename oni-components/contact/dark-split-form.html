@@ -1,0 +1,32 @@
+<section class="oni-contact" id="contact" style="background:#0a0a0a;padding:100px 5%;">
+  <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:start;">
+    <div>
+      <p style="color:{{PRIMARY_COLOR}};font-size:0.78rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;margin:0 0 0.75rem;">Get in Touch</p>
+      <h2 style="font-family:'{{DISPLAY_FONT}}',serif;font-size:clamp(2rem,3.5vw,2.8rem);font-weight:800;color:#fff;margin:0 0 1.5rem;letter-spacing:-0.03em;">Ready to get started?</h2>
+      <p style="color:#888;font-size:0.95rem;line-height:1.8;margin:0 0 2.5rem;">Reach out to {{BUSINESS_NAME}} and let's create something exceptional together. Our team in {{LOCATION}} is ready to help.</p>
+      <div style="display:flex;flex-direction:column;gap:1.2rem;">
+        <a href="tel:{{PHONE}}" style="display:flex;align-items:center;gap:1rem;color:#ccc;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='{{PRIMARY_COLOR}}'" onmouseout="this.style.color='#ccc'">
+          <span style="width:40px;height:40px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">📞</span>
+          <span style="font-size:0.95rem;">{{PHONE}}</span>
+        </a>
+        <a href="mailto:{{EMAIL}}" style="display:flex;align-items:center;gap:1rem;color:#ccc;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='{{PRIMARY_COLOR}}'" onmouseout="this.style.color='#ccc'">
+          <span style="width:40px;height:40px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">✉️</span>
+          <span style="font-size:0.95rem;">{{EMAIL}}</span>
+        </a>
+        <div style="display:flex;align-items:center;gap:1rem;color:#ccc;">
+          <span style="width:40px;height:40px;background:#1a1a1a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">📍</span>
+          <span style="font-size:0.95rem;">{{LOCATION}}</span>
+        </div>
+      </div>
+    </div>
+    <form style="background:#111;border:1px solid #1e1e1e;border-radius:1rem;padding:2.5rem;display:flex;flex-direction:column;gap:1rem;" onsubmit="event.preventDefault();alert('Thank you! We will be in touch soon.');this.reset();">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div><label style="color:#888;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:0.4rem;">Name</label><input type="text" placeholder="Your name" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.75rem 1rem;color:#fff;font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='{{PRIMARY_COLOR}}'" onblur="this.style.borderColor='#2a2a2a'"></div>
+        <div><label style="color:#888;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:0.4rem;">Phone</label><input type="tel" placeholder="Your number" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.75rem 1rem;color:#fff;font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='{{PRIMARY_COLOR}}'" onblur="this.style.borderColor='#2a2a2a'"></div>
+      </div>
+      <div><label style="color:#888;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:0.4rem;">Service</label><select style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.75rem 1rem;color:#fff;font-size:0.9rem;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='{{PRIMARY_COLOR}}'" onblur="this.style.borderColor='#2a2a2a'"><option>Select a service</option><option>Starter Package</option><option>Premium Package</option><option>Custom Solution</option></select></div>
+      <div><label style="color:#888;font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:0.4rem;">Message</label><textarea placeholder="Tell us about your needs..." rows="4" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.75rem 1rem;color:#fff;font-size:0.9rem;outline:none;resize:vertical;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='{{PRIMARY_COLOR}}'" onblur="this.style.borderColor='#2a2a2a'"></textarea></div>
+      <button type="submit" style="background:{{PRIMARY_COLOR}};color:#fff;border:none;padding:1rem;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{{CTA_TEXT}}</button>
+    </form>
+  </div>
+</section>
