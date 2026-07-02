@@ -770,6 +770,27 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
 
 void getSystemPromptWithContext;
 
+const FREE_KEYS_POOL: Record<string, string[]> = {
+  "claude-opus-4-7": [
+    "sk-ceaWeoE6jZEMEEo6lSPXgjd5WIWA6OSoeIrzCa2Fw4n5hEDF",
+    "sk-K87O4HeIy4cvjUK9ZREqL1uBROCguGMULi9EPlgF28OaruKV",
+    "sk-1WRJ304InZANcQL3hmJP8XpGzVIrsDgYzkGa1k8m1Q5HoU7q",
+    "sk-rjS01TDLrNDEodBmQ8DQvhnUlJeNxsvrboT1jiHEMIPiYwPD",
+    "sk-jShIV7jFXenRsmJTydNNn6Vot3qfkpPoDmsgkuhReAb5my2B",
+    "sk-p9QZv4CxNHOuRKiWQZcDNkExHNzDdvVWnS4HIu3C16PpRrIA"
+  ],
+  "gemini-2.5-flash": [
+    "sk-jAnj6nCkKIeP88wLm2b8dSz3jgv2oGRSuX6MQriJpZC45Qyu",
+    "sk-B8ZObuRLKy0KZ3END5Gso7uOTD6IoAdVBbLH3Zl5rU5w5WqL",
+    "sk-7RlPueIsQY4eSfC6AgtSON6OZ8PAIOEnHKsNNBO6s9bIt1Ya",
+    "sk-x0MhUOOGSqDMnGsPJcuAljIDxM6XOdjylgDPfKiC8AoHxtf6",
+    "sk-10p8ZI2fyeuhP7WFDGf9zbe9UenLQneyF18HT6ctjlN2jFqn",
+    "sk-pikPeGyScDDgPgeiwvpCmRXl978HwsW7bm0c4iSDRXmJC2Nc"
+  ]
+};
+
+const FREE_BASE_URL = "https://aiapiv2.pekpik.com/v1/chat/completions";
+
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
   const ip = getClientIp(req);
@@ -780,27 +801,25 @@ export async function POST(req: Request) {
     });
   }
 
-  // ── Credit check ────────────────────────────────────────────────────────────
-  const visitorId = req.headers.get("x-visitor-id") || "";
-  let creditCost = 0;
-  if (visitorId) {
-    const credits = await getOrCreateCredits(visitorId);
-    if (credits && (credits.plan as string).startsWith("free::")) {
-      if ((credits.credits_remaining as number) <= 0) {
-        return NextResponse.json(
-          {
-            error: "out_of_credits",
-            message: "You have used all your free credits this month.",
-          },
-          { status: 402 }
-        );
-      }
-    }
-  }
-
   const body = await req.json().catch(() => null);
   if (!body) {
     return new NextResponse("Bad request", { status: 400 });
+  }
+
+  // ── Credit check ────────────────────────────────────────────────────────────
+  const visitorId = req.headers.get("x-visitor-id") || "";
+  let creditCost = 0;
+  let useFallbackPool = false;
+
+  // Custom key brings unlimited free generations
+  if (visitorId && !body.customApiKey) {
+    const credits = await getOrCreateCredits(visitorId);
+    if (credits && (credits.plan as string).startsWith("free::")) {
+      if ((credits.credits_remaining as number) <= 0) {
+        // Instead of returning 402, use the free fallback keys pool
+        useFallbackPool = true;
+      }
+    }
   }
 
   const currentHtml =
@@ -877,10 +896,9 @@ Improve the design, make it more premium and modern.`;
   }
 
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
-  const shouldUseOllama =
-    shouldUseTemplateReferences;
 
-  if (shouldUseOllama) {
+  // ── Local Model (Ollama) Graceful routing & fallback ─────────────────────────
+  if (shouldUseTemplateReferences) {
     try {
       const requestBody = JSON.stringify({
         model: OLLAMA_MODEL,
@@ -891,13 +909,19 @@ Improve the design, make it more premium and modern.`;
       });
       console.log("Ollama request body length:", requestBody.length, "Model used:", OLLAMA_MODEL);
 
+      // Timeout abort controller to prevent request hanging in deployment
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
       const ollamaResponse = await fetch(OLLAMA_CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: requestBody,
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (ollamaResponse.ok) {
         console.log("Ollama request successful, streaming response!");
@@ -909,22 +933,9 @@ Improve the design, make it more premium and modern.`;
           },
         });
       }
-
-      const errorBody = await ollamaResponse.text();
-      console.error("Ollama error:", {
-        status: ollamaResponse.status,
-        statusText: ollamaResponse.statusText,
-        body: errorBody,
-      });
-
-      return new NextResponse(
-        `Ollama error ${ollamaResponse.status} ${ollamaResponse.statusText}: ${errorBody}`,
-        { status: ollamaResponse.status }
-      );
+      console.warn(`Ollama returned status ${ollamaResponse.status}. Falling back to cloud model.`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("Ollama connection/request failed:", err);
-      return new NextResponse(`Ollama request failed: ${message}`, { status: 500 });
+      console.warn("Ollama connection failed, falling back to cloud model:", err);
     }
   }
 
@@ -945,62 +956,157 @@ Improve the design, make it more premium and modern.`;
     }
   }
 
-  const groqApiKey = process.env.GROQ_API_KEY?.trim();
-  if (!groqApiKey) {
-    return new NextResponse("GROQ_API_KEY is missing", { status: 500 });
+  // ── Determine routing, custom settings, and model configuration ───────────────
+  let selectedModel = body?.defaultModel || "oni-pro";
+  let apiKey = "";
+  let apiUrl = "";
+  let isCustom = false;
+  let isFreeFallback = false;
+
+  if (body?.customApiKey) {
+    apiKey = body.customApiKey.trim();
+    apiUrl = body.customBaseUrl ? body.customBaseUrl.trim() : "https://api.openai.com/v1/chat/completions";
+    if (!apiUrl.endsWith("/chat/completions") && !apiUrl.endsWith("/chat/completions/")) {
+      apiUrl = apiUrl.replace(/\/$/, "") + "/chat/completions";
+    }
+    isCustom = true;
+  } else if (useFallbackPool) {
+    // Triggered because credits are <= 0
+    const chosenModel = "gemini-2.5-flash"; // default fallback for credits
+    const keys = FREE_KEYS_POOL[chosenModel];
+    apiKey = keys[Math.floor(Math.random() * keys.length)];
+    apiUrl = FREE_BASE_URL;
+    selectedModel = chosenModel;
+    isFreeFallback = true;
+  } else {
+    if (selectedModel === "claude-opus-4-7") {
+      const keys = FREE_KEYS_POOL["claude-opus-4-7"];
+      apiKey = keys[Math.floor(Math.random() * keys.length)];
+      apiUrl = FREE_BASE_URL;
+      isFreeFallback = true;
+    } else if (selectedModel === "gemini-2.5-flash") {
+      const keys = FREE_KEYS_POOL["gemini-2.5-flash"];
+      apiKey = keys[Math.floor(Math.random() * keys.length)];
+      apiUrl = FREE_BASE_URL;
+      isFreeFallback = true;
+    } else {
+      // Primary model (Groq)
+      apiKey = process.env.GROQ_API_KEY?.trim() || "";
+      apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+    }
   }
 
+  let apiModelName = selectedModel;
+  if (selectedModel === "oni-pro") {
+    apiModelName = GROQ_MODEL;
+  }
+
+  // ── Execute Request with Retries / Fallbacks ──────────────────────────────────
   try {
     const requestBody = JSON.stringify({
-      model: GROQ_MODEL,
+      model: apiModelName,
       messages: messagesToSend,
       temperature: 0.7,
       max_tokens: GROQ_MAX_TOKENS,
       stream: true,
     });
-    console.log("Groq request body length:", requestBody.length, "Model used:", GROQ_MODEL);
 
-    const groqResponse = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
+    let response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: requestBody,
+    });
+
+    // Fallback if primary fails
+    if (!response.ok && !isCustom && !isFreeFallback) {
+      console.warn(`[Fallback] Primary API call failed with status ${response.status}. Retrying with free Gemini fallback...`);
+      const chosenModel = "gemini-2.5-flash";
+      const keys = FREE_KEYS_POOL[chosenModel];
+      const fallbackApiKey = keys[Math.floor(Math.random() * keys.length)];
+      isFreeFallback = true;
+
+      const fallbackRequestBody = JSON.stringify({
+        model: chosenModel,
+        messages: messagesToSend,
+        temperature: 0.7,
+        max_tokens: GROQ_MAX_TOKENS,
+        stream: true,
+      });
+
+      response = await fetch(FREE_BASE_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${groqApiKey}`,
+          Authorization: `Bearer ${fallbackApiKey}`,
           "Content-Type": "application/json",
         },
-        body: requestBody,
-      }
-    );
-
-    if (groqResponse.ok) {
-      console.log('Groq request successful, streaming response!');
-      // Deduct credits in background — don't block the stream
-      if (visitorId && creditCost > 0) {
-        void deductCredits(visitorId, creditCost);
-      }
-      return new Response(groqResponse.body, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
+        body: fallbackRequestBody,
       });
     }
 
-    const errorBody = await groqResponse.text();
-    console.error("Groq error:", {
-      status: groqResponse.status,
-      statusText: groqResponse.statusText,
-      body: errorBody
+    if (!response.ok) {
+      const errorBody = await response.text();
+      return new NextResponse(
+        `API error ${response.status} ${response.statusText}: ${errorBody}`,
+        { status: response.status }
+      );
+    }
+
+    // Deduct credits only for successful primary Groq API generations
+    if (visitorId && creditCost > 0 && !isFreeFallback && !isCustom) {
+      void deductCredits(visitorId, creditCost);
+    }
+
+    return new Response(response.body, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     });
 
-    return new NextResponse(
-      `Groq error ${groqResponse.status} ${groqResponse.statusText}: ${errorBody}`,
-      { status: groqResponse.status }
-    );
-  } catch (err) {
+  } catch (err: any) {
+    // Catch-all connection failure fallback
+    if (!isCustom && !isFreeFallback) {
+      try {
+        console.warn(`[Fallback] API request caught error: ${err.message}. Retrying with free Gemini fallback...`);
+        const chosenModel = "gemini-2.5-flash";
+        const keys = FREE_KEYS_POOL[chosenModel];
+        const fallbackApiKey = keys[Math.floor(Math.random() * keys.length)];
+
+        const fallbackRequestBody = JSON.stringify({
+          model: chosenModel,
+          messages: messagesToSend,
+          temperature: 0.7,
+          max_tokens: GROQ_MAX_TOKENS,
+          stream: true,
+        });
+
+        const response = await fetch(FREE_BASE_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${fallbackApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: fallbackRequestBody,
+        });
+
+        if (response.ok) {
+          return new Response(response.body, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback pool retry also failed:", fallbackErr);
+      }
+    }
+
     const message = err instanceof Error ? err.message : String(err);
-    console.error("Groq connection/request failed:", err);
-    return new NextResponse(`Groq request failed: ${message}`, { status: 500 });
   }
 }

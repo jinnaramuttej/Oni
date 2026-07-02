@@ -8,6 +8,8 @@ export function SettingsCapabilities() {
   const [codeInterpreter, setCodeInterpreter] = useState(true);
   const [imageGen, setImageGen] = useState(false);
   const [defaultModel, setDefaultModel] = useState("oni-pro");
+  const [customApiKey, setCustomApiKey] = useState("");
+  const [customBaseUrl, setCustomBaseUrl] = useState("");
 
   useEffect(() => {
     try {
@@ -19,6 +21,8 @@ export function SettingsCapabilities() {
         if (parsed.codeInterpreter !== undefined) setCodeInterpreter(!!parsed.codeInterpreter);
         if (parsed.imageGen !== undefined) setImageGen(!!parsed.imageGen);
         if (parsed.defaultModel) setDefaultModel(parsed.defaultModel);
+        if (parsed.customApiKey) setCustomApiKey(parsed.customApiKey);
+        if (parsed.customBaseUrl) setCustomBaseUrl(parsed.customBaseUrl);
       }
     } catch {
       // ignore
@@ -68,6 +72,8 @@ export function SettingsCapabilities() {
     if (model === "oni-flash") label = "Oni Flash";
     if (model === "oni-creative") label = "Oni Creative";
     if (model === "local-ollama") label = "Local Ollama (qwen2.5-coder)";
+    if (model === "claude-opus-4-7") label = "Claude Opus 4.7 (Free)";
+    if (model === "gemini-2.5-flash") label = "Gemini 2.5 Flash (Free)";
     
     updateSetting("defaultModel", model, `Default model changed to ${label}`);
   };
@@ -238,6 +244,8 @@ export function SettingsCapabilities() {
                 <option value="oni-flash">Oni Flash (Speed-optimized)</option>
                 <option value="oni-creative">Oni Creative (Expanded Context)</option>
                 <option value="local-ollama">Local Ollama (qwen2.5-coder)</option>
+                <option value="claude-opus-4-7">Claude Opus 4.7 (Free Gateway)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Free Gateway)</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-text-secondary">
                 <span className="material-symbols-outlined text-[18px]">expand_more</span>
@@ -245,8 +253,51 @@ export function SettingsCapabilities() {
             </div>
             <p className="mt-2 text-xs text-text-tertiary flex items-center gap-1.5 font-normal tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-              {defaultModel === "local-ollama" ? "Local Ollama model is currently active." : defaultModel === "oni-flash" ? "Speed-optimized model is currently active." : "Pro plan models are currently active."}
+              {defaultModel === "local-ollama" ? "Local Ollama model is currently active." : defaultModel === "oni-flash" ? "Speed-optimized model is currently active." : defaultModel === "claude-opus-4-7" ? "Claude Opus 4.7 Free Gateway is currently active." : defaultModel === "gemini-2.5-flash" ? "Gemini 2.5 Flash Free Gateway is currently active." : "Pro plan models are currently active."}
             </p>
+
+            {/* Custom Keys Section */}
+            <div className="mt-5 pt-5 border-t border-outline-variant/50 space-y-4">
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider" htmlFor="custom_api_key">
+                  Custom API Key (OpenAI format)
+                </label>
+                <input
+                  type="password"
+                  id="custom_api_key"
+                  placeholder="sk-..."
+                  value={customApiKey}
+                  onChange={(e) => {
+                    setCustomApiKey(e.target.value);
+                    updateSetting("customApiKey", e.target.value);
+                  }}
+                  className="w-full bg-surface border border-outline-variant text-primary py-2 px-3 rounded-lg text-sm focus:outline-none focus:border-text-secondary focus:ring-1 focus:ring-text-secondary transition-colors"
+                />
+                <p className="mt-1 text-[10px] text-text-tertiary">
+                  Enter your custom bearer token to bypass credit limits and enable unlimited free generations.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider" htmlFor="custom_base_url">
+                  Custom Base URL
+                </label>
+                <input
+                  type="text"
+                  id="custom_base_url"
+                  placeholder="https://api.openai.com/v1"
+                  value={customBaseUrl}
+                  onChange={(e) => {
+                    setCustomBaseUrl(e.target.value);
+                    updateSetting("customBaseUrl", e.target.value);
+                  }}
+                  className="w-full bg-surface border border-outline-variant text-primary py-2 px-3 rounded-lg text-sm focus:outline-none focus:border-text-secondary focus:ring-1 focus:ring-text-secondary transition-colors"
+                />
+                <p className="mt-1 text-[10px] text-text-tertiary">
+                  The API endpoint compatible with OpenAI format (e.g. OpenRouter, Local server). Defaults to official OpenAI.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
       </div>

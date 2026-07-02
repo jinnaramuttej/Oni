@@ -891,6 +891,24 @@ export function OniChat({
     }
     return oniSettings.defaultModel;
   }, [oniSettings.defaultModel]);
+
+  const getCustomApiConfig = useCallback(() => {
+    let customApiKey = "";
+    let customBaseUrl = "";
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("oni_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.customApiKey) customApiKey = parsed.customApiKey as string;
+          if (parsed.customBaseUrl) customBaseUrl = parsed.customBaseUrl as string;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return { customApiKey, customBaseUrl };
+  }, []);
   const [pinnedChatsList, setPinnedChatsList] = useState<string[]>([]);
   const [sortMethod, setSortMethod] = useState("date_desc");
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -1747,6 +1765,7 @@ ${prompt}`;
     }
 
     try {
+      const { customApiKey, customBaseUrl } = getCustomApiConfig();
       const messagesForApi = [...messages, userMessage];
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -1766,6 +1785,8 @@ ${prompt}`;
           currentHtml: isShowingSample.current ? "" : generatedHtml,
           defaultModel: getActiveModel(),
           userImage: base64Image,
+          customApiKey,
+          customBaseUrl,
           competitorReference: brandContext.competitorContent ? {
             title: brandContext.competitorTitle || '',
             content: brandContext.competitorContent,
@@ -1935,7 +1956,7 @@ ${prompt}`;
       setGenerating(false);
       setIsWritingCode(false);
     }
-  }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel, brandContext, conversationId, conversationTitle]);
+  }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel, brandContext, conversationId, conversationTitle, getCustomApiConfig]);
 
   // Keep the ref in sync so handleSend can always call the latest handleSendToAI
   useEffect(() => {
@@ -1987,6 +2008,7 @@ ${basePrompt}`;
     setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
+      const { customApiKey, customBaseUrl } = getCustomApiConfig();
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -1997,7 +2019,9 @@ ${basePrompt}`;
           prompt: finalPrompt,
           messages: [{ role: "user", content: finalPrompt }],
           currentHtml: isShowingSample.current ? "" : generatedHtml,
-          defaultModel: getActiveModel()
+          defaultModel: getActiveModel(),
+          customApiKey,
+          customBaseUrl,
         }),
       });
 
@@ -2112,7 +2136,7 @@ ${basePrompt}`;
       setGenerating(false);
       setIsWritingCode(false);
     }
-  }, [generating, isLoading, messages, generatedHtml, isWritingCode, brandContext, getActiveModel]);
+  }, [generating, isLoading, messages, generatedHtml, isWritingCode, brandContext, getActiveModel, getCustomApiConfig]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.key === "Enter" || event.keyCode === 13) && !event.shiftKey && !event.nativeEvent.isComposing) {
