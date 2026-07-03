@@ -45,7 +45,24 @@ async function getOrCreateCredits(visitorId: string) {
       console.error("[Credits] insert error:", insertError.message);
       return null;
     }
+    if (process.env.NODE_ENV === "development" && created) {
+      created.credits_remaining = 1000;
+    }
     return created;
+  }
+  if (process.env.NODE_ENV === "development" && data && (data.credits_remaining as number) < 20) {
+    try {
+      await supabase
+        .from("user_credits")
+        .update({
+          credits_remaining: 1000,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("plan", planKey);
+      data.credits_remaining = 1000;
+    } catch (e) {
+      console.error("[Credits] failed to auto-recharge credits:", e);
+    }
   }
   return data;
 }

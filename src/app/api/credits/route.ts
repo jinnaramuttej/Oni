@@ -71,7 +71,29 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
+    if (process.env.NODE_ENV === "development" && created) {
+      created.credits_remaining = 1000;
+    }
     return NextResponse.json(created);
+  }
+
+  if (process.env.NODE_ENV === "development" && data && (data.credits_remaining as number) < 20) {
+    try {
+      const { data: updated } = await supabase
+        .from("user_credits")
+        .update({
+          credits_remaining: 1000,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("plan", planKey)
+        .select()
+        .single();
+      if (updated) {
+        return NextResponse.json(updated);
+      }
+    } catch (e) {
+      console.error("[Credits GET] failed to auto-recharge credits:", e);
+    }
   }
 
   return NextResponse.json(data);
