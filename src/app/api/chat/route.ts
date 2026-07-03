@@ -1199,20 +1199,29 @@ Improve the design, make it more premium and modern.`;
     }
   }
 
-  // ── Classify intent & determine credit cost (non-blocking, best effort) ────
-  if (visitorId) {
+  // ── Classify intent & determine credit cost ────
+  let intent: any = "new_website";
+  const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
+  if (lastUserMsg) {
     try {
-      const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
-      if (lastUserMsg) {
-        const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
-        const intent = await classifyIntent(lastUserMsg.content.slice(0, 500), hasExistingWebsite);
-        const routeConfig = routeIntent(intent);
-        creditCost = routeConfig.creditCost;
-        console.log(`[Credits] intent=${intent} cost=${creditCost}`);
-      }
+      const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
+      intent = await classifyIntent(lastUserMsg.content.slice(0, 500), hasExistingWebsite);
+      const routeConfig = routeIntent(intent);
+      creditCost = routeConfig.creditCost;
+      console.log(`[Credits] intent=${intent} cost=${creditCost}`);
     } catch (err) {
-      console.error("[Credits] classifier error (non-fatal):", err);
+      console.error("[Credits] classifier error:", err);
       creditCost = 8;
+      // Fallback detection if classifier fails
+      const cleanLower = lastUserMsg.content.toLowerCase();
+      if (cleanLower.includes("hi") || cleanLower.includes("hello") || cleanLower.includes("hey") || cleanLower.includes("explain")) {
+        intent = "casual";
+      }
+    }
+
+    // Append formatting prompt for any code generation intents
+    if (intent !== "casual") {
+      lastUserMsg.content += `\n\nCRITICAL FORMATTING REQUIREMENT:\n- You MUST wrap the entire complete website HTML (including all CSS in <style> and all JS in <script>) inside <ONI_CODE>...</ONI_CODE> tags.\n- Do NOT output separate HTML, CSS, or JS code blocks.\n- Do NOT write notes like "This is a basic template" or "customize it as per your requirements". You MUST build the complete, fully styled premium website with real content and copy inside the <ONI_CODE> block.`;
     }
   }
 
