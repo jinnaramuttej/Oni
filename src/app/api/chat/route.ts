@@ -416,18 +416,18 @@ Build mode rules:
 - Minimum 800 lines of HTML`;
 
 const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
-1. OUTPUT LENGTH: Write a highly detailed, premium website of around 700-900 lines of HTML/CSS/JS total. Avoid skeletons or stubs. Keep CSS elegant, clean, and concise (about 200-300 lines total) to leave ample token space for the HTML body and JavaScript logic.
+1. OUTPUT BUDGET & CSS LIMIT: Your output is subject to strict token limits. To ensure you do not get cut off mid-generation, you MUST limit your entire <style> block to a MAXIMUM of 150-180 lines of CSS total. Group similar layout rules, use shorthand properties, flexbox, and inherited variables to keep styling highly efficient, leaving ample space to complete the HTML body and scripts fully.
 2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
 3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
-4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
-5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries).
-6. BUILD ALL 7 SECTIONS:
-   a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
-   b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
-   c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
-   d. #services — dark bg, 6 glass cards with H3 in var(--p), price/detail line, hover translateY(-8px).
-   e. #testimonials — light bg, 3 white cards, large decorative quote mark, stars, italic quote, author + title.
-   f. #contact — dark gradient bg, 2-column grid: left info panel + right form with floating labels.
+4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must float and have radial-gradient background.
+5. COMPACT STYLE COMPLETENESS: Write complete styles for the main sections inside the <style> block BEFORE the HTML body. But keep them highly compact! Combine selectors where possible (e.g., group card rules .feature-card, .service-card, .testimonial-card { background: rgba(255,255,255,0.95); border-radius: var(--r); padding: 30px; }). Avoid long, redundant CSS blocks.
+6. BUILD ALL 7 SECTIONS (HTML must contain all of these, fully populated with real copy):
+   a. #navbar — fixed, glassmorphism bg, links, right CTA button with gradient.
+   b. .hero — min-height:100vh, 3 orb divs, H1 gradient-text, subtitle, 2 buttons, 3 stat items.
+   c. #features — grid of cards, icons, H3, real copy.
+   d. #services — grid of services, prices, hover effects.
+   e. #testimonials — grid of cards, quotation mark, stars, quotes.
+   f. #contact — grid with left info panel + right contact form.
    g. footer — dark bg, 4-column grid, bottom copyright bar.
 7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
 8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
