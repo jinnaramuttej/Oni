@@ -3688,9 +3688,14 @@ function CodeTab({
               {activeFile.language}
             </span>
           </div>
-          <IconButton label="Copy code" onClick={() => onCopyCode(activeFile.content)}>
+          <button
+            type="button"
+            onClick={() => onCopyCode(activeFile.content)}
+            title="Copy full code"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+          >
             <Copy className="h-4 w-4" />
-          </IconButton>
+          </button>
         </div>
 
         <div className="h-[calc(100%-3rem)] overflow-auto bg-[#0d0d0d] scrollbar-hidden">
