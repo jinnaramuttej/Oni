@@ -416,12 +416,12 @@ Build mode rules:
 - Minimum 800 lines of HTML`;
 
 const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
-1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
+1. OUTPUT LENGTH: Write a highly detailed, premium website of around 700-900 lines of HTML/CSS/JS total. Avoid skeletons or stubs. Keep CSS elegant, clean, and concise (about 200-300 lines total) to leave ample token space for the HTML body and JavaScript logic.
 2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
 3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
 4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must be 300px–600px wide with radial-gradient background and a float animation.
-5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined, non-empty style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries). Do NOT refer to any class or ID in the HTML markup that has not been completely styled in the CSS block.
-6. BUILD ALL 7 SECTIONS — write 80–120 lines of CSS per section:
+5. CSS-FIRST STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. The CSS block must contain fully-defined style rules for #navbar, .nav-inner, .nav-logo, .nav-links, .nav-cta, .hero, .orb, .orb-1, .orb-2, .orb-3, #features, .feature-card, #services, .service-card, #testimonials, .testimonial-card, #contact, .form-group, label, input, textarea, and footer (plus grids, hover effects, transition classes, and @media queries).
+6. BUILD ALL 7 SECTIONS:
    a. #navbar — fixed, glassmorphism bg, logo (italic display font), centered links, right CTA button with gradient.
    b. .hero — min-height:100vh, 3 orb divs, trust badge pill, H1 gradient-text (clamp 4–7rem), subtitle, 2 buttons, 3 stat items.
    c. #features — light background, 3 glass cards each with 64px gradient icon circle, H3, 3-sentence paragraph.
