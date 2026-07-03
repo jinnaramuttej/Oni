@@ -574,6 +574,67 @@ function getExactTemplateResponse(promptText: string): { thought: string; messag
   return null;
 }
 
+function getMatchingTemplateHtml(promptText: string): { name: string; html: string } | null {
+  const clean = promptText.toLowerCase();
+
+  // Hotel / Stay
+  if (
+    clean.includes("hotel") ||
+    clean.includes("resort") ||
+    clean.includes("villa") ||
+    clean.includes("retreat") ||
+    clean.includes("stay") ||
+    clean.includes("inn") ||
+    clean.includes("lodge")
+  ) {
+    return { name: "Velara Retreat", html: VELARA_SAMPLE_HTML };
+  }
+
+  // Restaurant / Food
+  if (
+    clean.includes("restaurant") ||
+    clean.includes("food") ||
+    clean.includes("cafe") ||
+    clean.includes("bistro") ||
+    clean.includes("steak") ||
+    clean.includes("dining") ||
+    clean.includes("bakery") ||
+    clean.includes("kitchen")
+  ) {
+    return { name: "Vox Restaurant", html: VOX_SAMPLE_HTML };
+  }
+
+  // Salon / Beauty
+  if (
+    clean.includes("salon") ||
+    clean.includes("beauty") ||
+    clean.includes("hair") ||
+    clean.includes("spa") ||
+    clean.includes("stylist") ||
+    clean.includes("makeup") ||
+    clean.includes("parlor") ||
+    clean.includes("cosmetic")
+  ) {
+    return { name: "Maison Dore", html: MAISON_DORE_SAMPLE_HTML };
+  }
+
+  // Agency / Creative Portfolio
+  if (
+    clean.includes("agency") ||
+    clean.includes("studio") ||
+    clean.includes("portfolio") ||
+    clean.includes("atelier") ||
+    clean.includes("design") ||
+    clean.includes("creative") ||
+    clean.includes("architecture") ||
+    clean.includes("developer")
+  ) {
+    return { name: "Moehr Atelier", html: MOEHR_SAMPLE_HTML };
+  }
+
+  return null;
+}
+
 function streamTextAsSse(content: string) {
   const encoder = new TextEncoder();
   const targetDurationMs = 30_000;
@@ -944,6 +1005,20 @@ export async function POST(req: Request) {
   }
 
   let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES;
+  const userPromptText = body.prompt || "";
+  const hasExistingHtml = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
+  if (!hasExistingHtml && userPromptText) {
+    const matchingTemplate = getMatchingTemplateHtml(userPromptText);
+    if (matchingTemplate) {
+      console.log(`[Templates] Matching user request to template: ${matchingTemplate.name}. Injecting component code reference.`);
+      systemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${matchingTemplate.html}\n</TEMPLATE_SAMPLE_CODE>\n\nINSTRUCTIONS FOR TEMPLATE ADAPTATION & COMPONENT EXTRACTION:
+1. You have access to a premium template sample above ("${matchingTemplate.name}") that matches the user's business type.
+2. Analyze the grid structures, CSS classes, interactive JS logic (e.g. modals, scroll reveals, tabs), and section styles in this template.
+3. Extract and borrow components and code snippets from it, adapt them to the user's specific request and brand (brand name, colors, fonts, content), and make them significantly better, more modern, and highly polished.
+4. Ensure the output is a complete website containing at least 6-7 fully fleshed-out sections. Do not just copy-paste the template raw; extend it, refine the layout, add animations, and customize it uniquely for the user!`;
+    }
+  }
+
   if (body.competitorReference && typeof body.competitorReference === "object") {
     const { title, content } = body.competitorReference;
     if (content) {
