@@ -229,7 +229,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
     };
   }, []);
 
-  const handleDeleteChat = (chatId: string) => {
+  const handleDeleteChat = async (chatId: string) => {
     try {
       const updated = recentChats.filter((c) => c.id !== chatId);
       setRecentChats(updated);
@@ -239,10 +239,20 @@ export function AppShell({ children, activePage }: AppShellProps) {
         sessionStorage.removeItem(SESSION_KEY);
         window.location.href = "/";
       }
+
+      const visitorId = localStorage.getItem("oni_visitor_id");
+      if (visitorId) {
+        await fetch(`/api/chat/history?chatId=${chatId}`, {
+          method: "DELETE",
+          headers: {
+            "x-visitor-id": visitorId,
+          },
+        }).catch((err) => console.error("Server delete failed:", err));
+      }
     } catch { /* ignore */ }
   };
 
-  const handleDeleteAllChats = () => {
+  const handleDeleteAllChats = async () => {
     try {
       recentChats.forEach((c) => {
         localStorage.removeItem(`oni_chat_${c.id}`);
@@ -251,6 +261,16 @@ export function AppShell({ children, activePage }: AppShellProps) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       sessionStorage.removeItem(SESSION_KEY);
       window.location.href = "/";
+
+      const visitorId = localStorage.getItem("oni_visitor_id");
+      if (visitorId) {
+        await fetch("/api/chat/history?all=true", {
+          method: "DELETE",
+          headers: {
+            "x-visitor-id": visitorId,
+          },
+        }).catch((err) => console.error("Server delete all failed:", err));
+      }
     } catch { /* ignore */ }
   };
 

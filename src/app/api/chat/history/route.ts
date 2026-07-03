@@ -253,3 +253,76 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const ownerResult = await resolveOwnerId(req);
+  if ("error" in ownerResult) {
+    return NextResponse.json({ error: ownerResult.error }, { status: ownerResult.status });
+  }
+  const visitorId = ownerResult.id;
+
+  const { searchParams } = new URL(req.url);
+  const chatId = searchParams.get("chatId");
+  const deleteAll = searchParams.get("all") === "true";
+
+  if (!chatId && !deleteAll) {
+    return NextResponse.json({ error: "Missing parameter: chatId or all=true" }, { status: 400 });
+  }
+
+  // 1. Supabase Mode
+  if (hasSupabaseConfig()) {
+    const supabase = createSupabaseAdminClientOrNull();
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase client initialization failed" }, { status: 500 });
+    }
+
+    try {
+      if (deleteAll) {
+        // Delete all chats for this visitor
+        const { error } = await supabase
+          .from("chats")
+          .delete()
+          .eq("visitor_id", visitorId);
+
+        if (error) throw error;
+      } else if (chatId) {
+        // Delete single chat — filter by visitor_id for security
+        const { error } = await supabase
+          .from("chats")
+          .delete()
+          .eq("id", chatId)
+          .eq("visitor_id", visitorId);
+
+        if (error) throw error;
+      }
+      return NextResponse.json({ success: true });
+    } catch (err: any) {
+      console.error("Supabase history DELETE error:", err.message || err);
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+  }
+
+  // 2. Local File Fallback Mode
+  try {
+    const store = await readLocalStore();
+    if (deleteAll) {
+      // Keep only chats belonging to other visitors
+      store.conversations = store.conversations.filter(c => c.visitor_id !== visitorId);
+    } else if (chatId) {
+      // Delete the specific chat (and double-check ownership)
+      const existing = store.conversations.find(c => c.id === chatId);
+      if (existing) {
+        if (existing.visitor_id !== visitorId) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+        store.conversations = store.conversations.filter(c => c.id !== chatId);
+      }
+    }
+
+    await writeLocalStore(store);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Local history DELETE error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
