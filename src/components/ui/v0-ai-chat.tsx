@@ -195,6 +195,20 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
   return { html: "", cleanText: content };
 }
 
+function mergeContinuationHtml(existing: string, continuation: string): string {
+  const cleanExisting = existing.trimEnd();
+  const cleanCont = continuation.trimStart();
+  
+  // Find character overlap up to 40 characters from the end
+  for (let len = Math.min(40, cleanCont.length); len >= 1; len--) {
+    const overlapStr = cleanCont.slice(0, len);
+    if (cleanExisting.endsWith(overlapStr)) {
+      return cleanExisting + cleanCont.slice(len);
+    }
+  }
+  return cleanExisting + " " + cleanCont;
+}
+
 interface ParsedThought {
   paletteName?: string;
   colors: string[];
@@ -1686,6 +1700,16 @@ export function OniChat({
     imageForMessage: ImageAttachment | undefined | null,
     filesForMessage: FileAttachment[]
   ) => {
+    const cleanPromptLower = prompt.toLowerCase().trim();
+    const isContinuation =
+      cleanPromptLower === "continue" ||
+      cleanPromptLower === "continue generating" ||
+      cleanPromptLower === "go on" ||
+      cleanPromptLower === "finish" ||
+      cleanPromptLower === "complete" ||
+      cleanPromptLower === "complete it";
+
+    const baseHtmlBeforeContinuation = generatedHtml;
     const imageAttach = imageForMessage ?? undefined;
 
     let finalPrompt = prompt;
@@ -1838,7 +1862,10 @@ ${prompt}`;
 
               // Stream partial code block into files in real-time
               if (partialHtml) {
-                setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
+                const finalHtml = isContinuation
+                  ? mergeContinuationHtml(baseHtmlBeforeContinuation, partialHtml)
+                  : partialHtml;
+                setGeneratedHtml(sanitizeGeneratedHtml(finalHtml));
               }
               if (fullText.includes("<ONI_CODE>") || fullText.includes("```html") || fullText.toLowerCase().includes("<!doctype html") || fullText.toLowerCase().includes("<html")) {
                 setIsWritingCode(true);
@@ -1852,7 +1879,10 @@ ${prompt}`;
 
       const { thought: finalThought, html: extractedHtml, cleanText: cleanContent } = extractThoughtAndHtml(fullText);
       if (extractedHtml) {
-        const sanitized = sanitizeGeneratedHtml(extractedHtml);
+        const finalHtml = isContinuation
+          ? mergeContinuationHtml(baseHtmlBeforeContinuation, extractedHtml)
+          : extractedHtml;
+        const sanitized = sanitizeGeneratedHtml(finalHtml);
         setGeneratedHtml(sanitized);
         isShowingSample.current = false; // user now has a real generated site
         setActiveFilePath("index.html");
