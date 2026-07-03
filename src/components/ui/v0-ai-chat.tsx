@@ -2418,7 +2418,7 @@ ${basePrompt}`;
         {generatedHtml && (
           <section
             className={cn(
-              "min-h-0 flex-1 flex-col bg-surface lg:flex",
+              "min-h-0 min-w-0 flex-1 flex-col bg-surface lg:flex",
               mobilePanel === "preview" || mobilePanel === "code" ? "flex flex-1" : "hidden lg:flex"
             )}
           >
@@ -3511,7 +3511,7 @@ function WorkspacePanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {editorTab === "preview" ? (
           <PreviewTab
             previewSize={previewSize}
@@ -3675,7 +3675,7 @@ function CodeTab({
   onCopyCode: (content: string) => void;
 }) {
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 min-w-0 overflow-hidden">
       <aside className="w-[190px] shrink-0 overflow-y-auto border-r border-white/10 bg-white/[0.02] p-3 scrollbar-hidden sm:w-[210px]">
         <FileTree files={projectFiles} activeFilePath={activeFilePath} onFileSelect={onFileSelect} onCopyCode={onCopyCode} />
       </aside>
