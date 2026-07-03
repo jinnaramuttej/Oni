@@ -7,6 +7,7 @@ import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
 import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
 import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
+import { AME_COFFEE_SAMPLE_HTML } from "@/lib/ame-coffee-sample";
 import { createSupabaseAdminClientOrNull } from "@/lib/supabase";
 import { classifyIntent, Intent } from "@/lib/classifier";
 import { routeIntent } from "@/lib/router";
@@ -721,6 +722,20 @@ function getExactTemplateResponse(promptText: string): { thought: string; messag
     };
   }
 
+  if (clean.startsWith("template: ame coffee") || clean.startsWith("template: coffee atelier")) {
+    return {
+      thought: [
+        "PALETTE: Cream and Espresso Atelier | #F9F5EF, #14100D, #C4834A, #F1E8DA, #FCFAF7",
+        "FONTS: Fraunces | Instrument Sans | Fragment Mono | Luxury editorial display serif paired with minimalist sans body and mechanical monospaced accent tags.",
+        "SIGNATURE: Split layout, scrolling logo marquee, horizontal atelier section, pricing menu grid, dynamic interactive contact/enquiry drawer modal.",
+        "LAYOUT: Elegant coffee atelier editorial layout with warm cream/oat pages and rich espresso typography.",
+        "SECTIONS: navbar, hero, marquee, about, services, testimonials, booking, footer",
+      ].join("\n"),
+      message: "Here is your Âme Coffee Atelier template.",
+      html: AME_COFFEE_SAMPLE_HTML,
+    };
+  }
+
   return null;
 }
 
@@ -739,6 +754,19 @@ function getCompactHtml(html: string): string {
 
 function getMatchingTemplateHtml(promptText: string): { name: string; html: string } | null {
   const clean = promptText.toLowerCase();
+
+  // Coffee / Cafe
+  if (
+    clean.includes("coffee") ||
+    clean.includes("cafe") ||
+    clean.includes("atelier") ||
+    clean.includes("roaster") ||
+    clean.includes("barista") ||
+    clean.includes("espresso") ||
+    clean.includes("brew")
+  ) {
+    return { name: "Âme Coffee Atelier", html: AME_COFFEE_SAMPLE_HTML };
+  }
 
   // Hotel / Stay
   if (
@@ -1135,7 +1163,12 @@ export async function POST(req: Request) {
     const credits = await getOrCreateCredits(visitorId);
     if (credits && (credits.plan as string).startsWith("free::")) {
       if ((credits.credits_remaining as number) <= 0) {
-        useFallbackPool = true;
+        if (process.env.GROQ_API_KEY && process.env.NODE_ENV === "development") {
+          console.log("[Credits] Credits depleted, but bypass fallback pool in development because GROQ_API_KEY is configured.");
+          useFallbackPool = false;
+        } else {
+          useFallbackPool = true;
+        }
       }
     }
   }
@@ -1320,14 +1353,7 @@ Improve the design, make it more premium and modern.`;
         maxTokens: 6000,
       });
     } else {
-      // Groq with dynamic token safety cap
-      let groqMaxTokens = Math.min(GROQ_MAX_TOKENS, 6000);
-      if (primaryModel.includes("8b") || primaryModel.includes("instant")) {
-        groqMaxTokens = 2000;
-      } else if (primaryModel.includes("70b") || primaryModel === GROQ_MODEL) {
-        const promptTokensEst = Math.ceil(JSON.stringify(messagesToSend).length / 3.8);
-        groqMaxTokens = Math.max(3000, Math.min(6000, 11000 - promptTokensEst));
-      }
+      let groqMaxTokens = GROQ_MAX_TOKENS;
 
       targets.push({
         name: `Primary Groq (${primaryModel})`,
