@@ -1024,7 +1024,6 @@ export async function POST(req: Request) {
   }
 
   const isLocalOrOllamaSelected =
-    process.env.VERCEL !== "1" ||
     process.env.ONI_USE_OLLAMA === "true" ||
     body?.defaultModel === "local-ollama";
 
