@@ -430,15 +430,15 @@ Build mode rules:
 - CSS animations and hover effects throughout
 - Mobile responsive with media queries
 - No mention of Oni or AI anywhere in the output HTML
-- Minimum 800 lines of HTML`;
+- Minimum 1000 lines of HTML/CSS/JS`;
 
 const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
-1. OUTPUT BUDGET & CSS LIMIT: Your output is subject to strict token limits. To ensure you do not get cut off mid-generation, you MUST limit your entire <style> block to a MAXIMUM of 150-180 lines of CSS total. Group similar layout rules, use shorthand properties, flexbox, and inherited variables to keep styling highly efficient, leaving ample space to complete the HTML body and scripts fully.
+1. OUTPUT LENGTH: You MUST write a minimum of 1000 lines of code total. The website code must be highly detailed, complete, and production-ready. Write extensive, verbose CSS (aim for 500-700 lines of CSS in <style>), thorough JS, and a rich HTML body. Never output a basic skeleton, stub, or shortened suggestion.
 2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
 3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
 4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must float and have radial-gradient background.
-5. COMPACT STYLE COMPLETENESS: Write complete styles for the main sections inside the <style> block BEFORE the HTML body. But keep them highly compact! Combine selectors where possible (e.g., group card rules .feature-card, .service-card, .testimonial-card { background: rgba(255,255,255,0.95); border-radius: var(--r); padding: 30px; }). Avoid long, redundant CSS blocks.
-6. BUILD ALL 7 SECTIONS (HTML must contain all of these, fully populated with real copy):
+5. DETAILED STYLE COMPLETENESS: You MUST write complete, detailed, and robust CSS styling for every single element and section inside the <style> block BEFORE writing any HTML body markup. Define distinct classes for hover effects, transition variables, layout grids, animations, keyframes, scroll reveals, custom logos, unique background shapes, and media queries. The CSS block must feel like a premium, $50,000 agency stylesheet.
+6. BUILD ALL 7 SECTIONS (HTML must contain all of these, fully populated with real, premium copy and rich components):
    a. #navbar — fixed, glassmorphism bg, links, right CTA button with gradient.
    b. .hero — min-height:100vh, 3 orb divs, H1 gradient-text, subtitle, 2 buttons, 3 stat items.
    c. #features — grid of cards, icons, H3, real copy.
