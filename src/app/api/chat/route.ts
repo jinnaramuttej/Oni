@@ -967,7 +967,11 @@ Improve the design, make it more premium and modern.`;
   }
 
   let apiModelName = selectedModel;
-  if (selectedModel === "oni-pro") {
+  if (selectedModel === "oni-pro" || selectedModel === "oni-creative") {
+    apiModelName = GROQ_MODEL;
+  } else if (selectedModel === "oni-flash") {
+    apiModelName = "llama-3.1-8b-instant";
+  } else if (selectedModel === "local-ollama") {
     apiModelName = GROQ_MODEL;
   }
 
