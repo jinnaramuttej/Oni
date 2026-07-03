@@ -413,7 +413,7 @@ Build mode rules:
 - CSS animations and hover effects throughout
 - Mobile responsive with media queries
 - No mention of Oni or AI anywhere in the output HTML
-- Minimum 300 lines of HTML`;
+- Minimum 800 lines of HTML`;
 
 const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
 1. OUTPUT LENGTH: You MUST write a minimum of 800 lines of HTML/CSS/JS total. A skeleton or stub will be rejected. Write every section in full detail — verbose CSS, thorough JS, detailed copy.
@@ -629,7 +629,7 @@ function prepareMessagesForGroq(
   messages: GroqMessage[],
   currentHtml: string
 ): { messages: GroqMessage[]; maxTokens: number; isConversational: boolean } {
-  const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT);
+  const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES);
   const maxPromptTokensBudget = 40000; // Increased budget to allow full website context (e.g. up to 120k chars)
   const remainingBudget = maxPromptTokensBudget - systemTokens;
 
@@ -765,7 +765,7 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
     console.error("Error loading design context from workspace:", err);
   }
 
-  return isOllama ? contextText : ONI_SYSTEM_PROMPT + contextText;
+  return isOllama ? contextText : (ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES) + contextText;
 }
 
 void getSystemPromptWithContext;
@@ -943,7 +943,7 @@ export async function POST(req: Request) {
     }
   }
 
-  let systemPrompt = ONI_SYSTEM_PROMPT;
+  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES;
   if (body.competitorReference && typeof body.competitorReference === "object") {
     const { title, content } = body.competitorReference;
     if (content) {
