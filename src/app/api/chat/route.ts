@@ -773,6 +773,7 @@ void getSystemPromptWithContext;
 interface FreeKeys {
   "claude-opus-4-7": string[];
   "gemini-2.5-flash": string[];
+  "smart-chat": string[];
 }
 
 let cachedKeys: FreeKeys | null = null;
@@ -786,7 +787,8 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
 
   const defaultKeys: FreeKeys = {
     "claude-opus-4-7": (process.env.FREE_KEYS_CLAUDE_OPUS || "").split(",").map(k => k.trim()).filter(Boolean),
-    "gemini-2.5-flash": (process.env.FREE_KEYS_GEMINI_FLASH || "").split(",").map(k => k.trim()).filter(Boolean)
+    "gemini-2.5-flash": (process.env.FREE_KEYS_GEMINI_FLASH || "").split(",").map(k => k.trim()).filter(Boolean),
+    "smart-chat": []
   };
 
   if (defaultKeys["claude-opus-4-7"].length === 0) {
@@ -809,6 +811,16 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
       "sk-53KrR1PrpH96kKTnLrn9Qk3doCfzfHRtFywfmYqLZQSObDJi"
     ];
   }
+  if (defaultKeys["smart-chat"].length === 0) {
+    defaultKeys["smart-chat"] = [
+      "sk-sQpqsRSn4BHDrarxUeUW5AFRmIe7jdazMEhZ0cwuvdKaSs9g",
+      "sk-kDH48bq0kxyAeYAtKGLpTYLvxJOBJugwXCxb4DlpG0ExLUbm",
+      "sk-UqU5Iv2GmbPTQvaTcFG8dVDZmtv0UBp0IHQsmhSCB9enkGUw",
+      "sk-Lk8VjVUPXxzsr3QSBVxgyUg6K3htkVETKmCFgH3qLKHy2RNr",
+      "sk-s6AjaM4vIQ2F5rX7VU1oAr2zqhgrXrrFMLuOUBk6CEv2Nchs",
+      "sk-IW6Ikr4TFsE2fyBd7tvy9e3sGyPjYYdufSxMfuMR9K26blUF"
+    ];
+  }
 
   try {
     const res = await fetch("https://raw.githubusercontent.com/alistaitsacle/free-llm-api-keys/main/README.md", {
@@ -819,6 +831,7 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
 
     const claudeKeys: string[] = [];
     const geminiKeys: string[] = [];
+    const smartKeys: string[] = [];
 
     const lines = text.split("\n");
     for (const line of lines) {
@@ -830,6 +843,8 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
             claudeKeys.push(key);
           } else if (line.includes("gemini-2.5-flash")) {
             geminiKeys.push(key);
+          } else if (line.includes("smart-chat")) {
+            smartKeys.push(key);
           }
         }
       }
@@ -837,10 +852,11 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
 
     cachedKeys = {
       "claude-opus-4-7": claudeKeys.length > 0 ? claudeKeys : defaultKeys["claude-opus-4-7"],
-      "gemini-2.5-flash": geminiKeys.length > 0 ? geminiKeys : defaultKeys["gemini-2.5-flash"]
+      "gemini-2.5-flash": geminiKeys.length > 0 ? geminiKeys : defaultKeys["gemini-2.5-flash"],
+      "smart-chat": smartKeys.length > 0 ? smartKeys : defaultKeys["smart-chat"]
     };
     lastFetchedTime = now;
-    console.log(`[Free Keys] Dynamically loaded ${cachedKeys["claude-opus-4-7"].length} Claude keys & ${cachedKeys["gemini-2.5-flash"].length} Gemini keys from GitHub.`);
+    console.log(`[Free Keys] Dynamically loaded ${cachedKeys["claude-opus-4-7"].length} Claude, ${cachedKeys["gemini-2.5-flash"].length} Gemini, and ${cachedKeys["smart-chat"].length} Smart-chat keys from GitHub.`);
     return cachedKeys;
   } catch (err: any) {
     console.error("[Free Keys] Failed to fetch latest keys from GitHub, using default fallback pool:", err.message);

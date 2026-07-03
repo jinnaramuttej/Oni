@@ -3436,7 +3436,7 @@ type WorkspacePanelProps = {
   onDownloadZip: () => void;
   onOpenPreview: () => void;
   onFileSelect: (path: string) => void;
-  onCopyCode: () => void;
+  onCopyCode: (content: string) => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
 };
@@ -3672,12 +3672,12 @@ function CodeTab({
   activeFile: ProjectFile;
   activeFilePath: string;
   onFileSelect: (path: string) => void;
-  onCopyCode: () => void;
+  onCopyCode: (content: string) => void;
 }) {
   return (
     <div className="flex h-full min-h-0">
       <aside className="w-[190px] shrink-0 overflow-y-auto border-r border-white/10 bg-white/[0.02] p-3 scrollbar-hidden sm:w-[210px]">
-        <FileTree files={projectFiles} activeFilePath={activeFilePath} onFileSelect={onFileSelect} />
+        <FileTree files={projectFiles} activeFilePath={activeFilePath} onFileSelect={onFileSelect} onCopyCode={onCopyCode} />
       </aside>
 
       <div className="min-w-0 flex-1 overflow-hidden">
@@ -3688,7 +3688,7 @@ function CodeTab({
               {activeFile.language}
             </span>
           </div>
-          <IconButton label="Copy code" onClick={onCopyCode}>
+          <IconButton label="Copy code" onClick={() => onCopyCode(activeFile.content)}>
             <Copy className="h-4 w-4" />
           </IconButton>
         </div>
@@ -3712,10 +3712,12 @@ function FileTree({
   files,
   activeFilePath,
   onFileSelect,
+  onCopyCode,
 }: {
   files: ProjectFile[];
   activeFilePath: string;
   onFileSelect: (path: string) => void;
+  onCopyCode: (content: string) => void;
 }) {
   const groups = [
     {
@@ -3742,20 +3744,35 @@ function FileTree({
           </div>
           <div className="space-y-1">
             {group.files.map((file) => (
-              <button
+              <div
                 key={file.path}
-                type="button"
-                onClick={() => onFileSelect(file.path)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors duration-200 ease-in-out",
+                  "group/file flex w-full items-center justify-between rounded-lg px-2 text-xs transition-colors duration-200 ease-in-out",
                   activeFilePath === file.path
                     ? "bg-white/10 text-white"
                     : "text-white/55 hover:bg-white/5 hover:text-white/85"
                 )}
               >
-                <FileIcon path={file.path} />
-                <span className="truncate">{file.label}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onFileSelect(file.path)}
+                  className="flex flex-1 items-center gap-2 text-left min-w-0 py-2 cursor-pointer"
+                >
+                  <FileIcon path={file.path} />
+                  <span className="truncate">{file.label}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyCode(file.content);
+                  }}
+                  title={`Copy ${file.label} full code`}
+                  className="opacity-0 group-hover/file:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/40 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
