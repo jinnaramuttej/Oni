@@ -1086,7 +1086,7 @@ Improve the design, make it more premium and modern.`;
         apiKey: "",
         model: OLLAMA_MODEL,
         maxTokens: GROQ_MAX_TOKENS,
-        timeoutMs: 4000,
+        timeoutMs: 45000,
       });
     }
 
