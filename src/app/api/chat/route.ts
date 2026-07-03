@@ -771,22 +771,8 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
 void getSystemPromptWithContext;
 
 const FREE_KEYS_POOL: Record<string, string[]> = {
-  "claude-opus-4-7": [
-    "sk-ceaWeoE6jZEMEEo6lSPXgjd5WIWA6OSoeIrzCa2Fw4n5hEDF",
-    "sk-K87O4HeIy4cvjUK9ZREqL1uBROCguGMULi9EPlgF28OaruKV",
-    "sk-1WRJ304InZANcQL3hmJP8XpGzVIrsDgYzkGa1k8m1Q5HoU7q",
-    "sk-rjS01TDLrNDEodBmQ8DQvhnUlJeNxsvrboT1jiHEMIPiYwPD",
-    "sk-jShIV7jFXenRsmJTydNNn6Vot3qfkpPoDmsgkuhReAb5my2B",
-    "sk-p9QZv4CxNHOuRKiWQZcDNkExHNzDdvVWnS4HIu3C16PpRrIA"
-  ],
-  "gemini-2.5-flash": [
-    "sk-jAnj6nCkKIeP88wLm2b8dSz3jgv2oGRSuX6MQriJpZC45Qyu",
-    "sk-B8ZObuRLKy0KZ3END5Gso7uOTD6IoAdVBbLH3Zl5rU5w5WqL",
-    "sk-7RlPueIsQY4eSfC6AgtSON6OZ8PAIOEnHKsNNBO6s9bIt1Ya",
-    "sk-x0MhUOOGSqDMnGsPJcuAljIDxM6XOdjylgDPfKiC8AoHxtf6",
-    "sk-10p8ZI2fyeuhP7WFDGf9zbe9UenLQneyF18HT6ctjlN2jFqn",
-    "sk-pikPeGyScDDgPgeiwvpCmRXl978HwsW7bm0c4iSDRXmJC2Nc"
-  ]
+  "claude-opus-4-7": (process.env.FREE_KEYS_CLAUDE_OPUS || "").split(",").map(k => k.trim()).filter(Boolean),
+  "gemini-2.5-flash": (process.env.FREE_KEYS_GEMINI_FLASH || "").split(",").map(k => k.trim()).filter(Boolean)
 };
 
 const FREE_BASE_URL = "https://aiapiv2.pekpik.com/v1/chat/completions";
