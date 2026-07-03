@@ -841,26 +841,10 @@ export async function POST(req: Request) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
-  const lastUserMsgIndexForExactTemplate = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
-  if (lastUserMsgIndexForExactTemplate !== -1) {
-    const exactTemplate = getExactTemplateResponse(groqMessages[lastUserMsgIndexForExactTemplate].content);
-    if (exactTemplate) {
-      const content = `<ONI_THOUGHT>${exactTemplate.thought}</ONI_THOUGHT>${exactTemplate.message}<ONI_CODE>${exactTemplate.html}</ONI_CODE>`;
-      return streamTextAsSse(content);
-    }
-  }
-
-  const shouldUseTemplateReferences =
+  const isLocalOrOllamaSelected =
     process.env.VERCEL !== "1" ||
     process.env.ONI_USE_OLLAMA === "true" ||
     body?.defaultModel === "local-ollama";
-  const lastUserMsgIndexForTemplate = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
-  if (shouldUseTemplateReferences && lastUserMsgIndexForTemplate !== -1) {
-    const templateInstruction = getTemplateReferenceInstruction(groqMessages[lastUserMsgIndexForTemplate].content);
-    if (templateInstruction) {
-      groqMessages[lastUserMsgIndexForTemplate].content += templateInstruction;
-    }
-  }
 
   if (body.userImage && typeof body.userImage === "string" && body.userImage.trim().length > 0) {
     const lastUserMsgIndex = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
@@ -884,7 +868,7 @@ Improve the design, make it more premium and modern.`;
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   // ── Local Model (Ollama) Graceful routing & fallback ─────────────────────────
-  if (shouldUseTemplateReferences) {
+  if (isLocalOrOllamaSelected) {
     try {
       const requestBody = JSON.stringify({
         model: OLLAMA_MODEL,
