@@ -1425,30 +1425,42 @@ Improve the design, make it more premium and modern.`;
         if (htmlBodyCode) {
           console.log("[Three-Stage] Stage 3 done. HTML body:", htmlBodyCode.length, "chars");
 
-          // ── Assembly: Combine CSS + HTML body into one inline HTML file ────
+          // ── Assembly: Output as separate files via ONI_FILES format ─────────
           const extractTitle = (text: string) => {
             const m = text.match(/PALETTE:\s*([^|]+)/i);
             return m ? m[1].trim() : "Website";
           };
-          const cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
-          const cleanBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
-          const bodyContent = cleanBody.startsWith("<body") ? cleanBody : `<body>\n${cleanBody}\n</body>`;
+          const siteTitle = extractTitle(planText);
 
-          const assembledHtml = `<!DOCTYPE html>
+          // Strip any markdown fences the model may have added
+          const cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          const rawBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+
+          // Extract <script> block from body for scripts.js
+          const scriptMatch = rawBody.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
+          const jsCode = scriptMatch ? scriptMatch[1].trim() : "";
+          // HTML without the inline <script> block (it'll be linked via scripts.js)
+          const htmlBodyNoScript = rawBody.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").trim();
+          const bodyContent = htmlBodyNoScript.startsWith("<body") ? htmlBodyNoScript : `<body>\n${htmlBodyNoScript}\n</body>`;
+
+          // index.html links styles.css and scripts.js as external files
+          const indexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${extractTitle(planText)}</title>
-  <style>
-${cleanCss}
-  </style>
+  <title>${siteTitle}</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 ${bodyContent}
+  <script src="scripts.js"></script>
+</body>
 </html>`;
 
-          const finalResponse = `${planText}\n\n<ONI_CODE>${assembledHtml}</ONI_CODE>`;
-          console.log(`[Three-Stage] Assembly complete. Total output: ${finalResponse.length} chars (~${Math.round(finalResponse.length / 4)} tokens displayed).`);
+          // Emit ONI_FILES block — the client parses this into separate file tabs
+          // and assembles them inline for the iframe preview
+          const finalResponse = `${planText}\n\n<ONI_FILES>\n<FILE name="index.html">\n${indexHtml}\n</FILE>\n<FILE name="styles.css">\n${cleanCss}\n</FILE>\n<FILE name="scripts.js">\n${jsCode}\n</FILE>\n</ONI_FILES>`;
+          console.log(`[Three-Stage] Multi-file output ready: index.html + styles.css (${cleanCss.length} chars) + scripts.js (${jsCode.length} chars).`);
 
           if (visitorId && creditCost > 0 && !body?.customApiKey) {
             void deductCredits(visitorId, creditCost);

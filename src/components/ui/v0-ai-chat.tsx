@@ -137,7 +137,58 @@ function sanitizeGeneratedHtml(html: string): string {
   return html;
 }
 
+/**
+ * Parse <ONI_FILES> multi-file output into a map of filename → content.
+ * Returns null if not an ONI_FILES response.
+ */
+function parseOniFiles(content: string): Record<string, string> | null {
+  if (!content.includes("<ONI_FILES>") && !content.includes("&lt;ONI_FILES&gt;")) return null;
+  const normalized = content.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const filesBlock = normalized.match(/<ONI_FILES>([\s\S]*?)<\/ONI_FILES>/i);
+  if (!filesBlock) return null;
+  const files: Record<string, string> = {};
+  const fileRegex = /<FILE\s+name="([^"]+)"\s*>([\s\S]*?)<\/FILE>/gi;
+  let match;
+  while ((match = fileRegex.exec(filesBlock[1])) !== null) {
+    files[match[1].trim()] = match[2].trim();
+  }
+  return Object.keys(files).length > 0 ? files : null;
+}
+
+/**
+ * Assemble separate HTML/CSS/JS files into a single inline HTML string for iframe srcDoc.
+ */
+function assembleFilesForPreview(files: Record<string, string>): string {
+  const html = files["index.html"] || "";
+  const css = files["styles.css"] || "";
+  const js = files["scripts.js"] || "";
+  // Strip external <link> and <script src> from html, inject inline instead
+  let assembled = html
+    .replace(/<link[^>]+rel=["']stylesheet["'][^>]*>/gi, "")
+    .replace(/<script[^>]+src=["'][^"']*["'][^>]*><\/script>/gi, "");
+  // Inject CSS into <head>
+  if (css) {
+    assembled = assembled.replace("</head>", `<style>\n${css}\n</style>\n</head>`);
+  }
+  // Inject JS before </body>
+  if (js) {
+    assembled = assembled.replace("</body>", `<script>\n${js}\n</script>\n</body>`);
+  }
+  return assembled;
+}
+
 function extractHtmlFromContent(content: string): { html: string; cleanText: string } {
+  // 0. ONI_FILES multi-file format (three-stage pipeline output)
+  const parsedFiles = parseOniFiles(content);
+  if (parsedFiles) {
+    const assembledHtml = assembleFilesForPreview(parsedFiles);
+    const cleanText = content
+      .replace(/<ONI_FILES>[\s\S]*?<\/ONI_FILES>/gi, "")
+      .replace(/&lt;ONI_FILES&gt;[\s\S]*?&lt;\/ONI_FILES&gt;/gi, "")
+      .trim();
+    return { html: assembledHtml, cleanText };
+  }
+
   // 1. Case-insensitive standard ONI_CODE tags (handles HTML entities too)
   const openRegex = /(?:<|&lt;)oni_code(?:\s+[^>]*)?(?:>|&gt;)/i;
   const closeRegex = /(?:<|&lt;)\/oni_code(?:>|&gt;)/i;
@@ -1338,7 +1389,15 @@ export function OniChat({
     }
   }, [input, isEnhancing, generating, isLoading, getActiveModel, showToast, adjustHeight]);
 
-  const projectFiles = useMemo(() => buildProjectFiles(generatedHtml), [generatedHtml]);
+  const lastAiRawContent = useMemo(() => {
+    const lastAiMsg = [...messages].reverse().find((m) => m.role === "assistant" && m.rawContent);
+    return lastAiMsg?.rawContent || "";
+  }, [messages]);
+
+  const projectFiles = useMemo(
+    () => buildProjectFiles(generatedHtml, lastAiRawContent),
+    [generatedHtml, lastAiRawContent]
+  );
   const activeFile = projectFiles.find((file) => file.path === activeFilePath) ?? projectFiles[0];
   const previewHtml = generatedHtml;
 
@@ -3875,7 +3934,7 @@ function IconButton({
   );
 }
 
-function buildProjectFiles(html: string): ProjectFile[] {
+function buildProjectFiles(html: string, rawContent?: string): ProjectFile[] {
   if (!html) {
     return [
       {
@@ -3887,6 +3946,35 @@ function buildProjectFiles(html: string): ProjectFile[] {
     ];
   }
 
+  // If the raw AI response contained ONI_FILES, build separate file tabs
+  if (rawContent) {
+    const parsedFiles = parseOniFiles(rawContent);
+    if (parsedFiles && Object.keys(parsedFiles).length >= 2) {
+      const files: ProjectFile[] = [];
+      const order = ["index.html", "styles.css", "scripts.js"];
+      const langMap: Record<string, string> = {
+        "index.html": "html",
+        "styles.css": "css",
+        "scripts.js": "javascript",
+      };
+      // Add files in defined order, then any extras
+      const allNames = [...new Set([...order, ...Object.keys(parsedFiles)])];
+      for (const name of allNames) {
+        if (parsedFiles[name] !== undefined) {
+          const ext = name.split(".").pop() || "";
+          files.push({
+            path: name,
+            label: name,
+            language: langMap[name] || ext,
+            content: parsedFiles[name],
+          });
+        }
+      }
+      return files;
+    }
+  }
+
+  // Fallback: single inline HTML file
   return [
     {
       path: "index.html",
