@@ -238,14 +238,7 @@ export function HomePage() {
     setAttachedFiles((current) => current.filter((file) => file.id !== id));
   };
 
-  // Detect if the prompt text fuzzy-matches a known template
-  const detectTemplateMatch = (text: string): string | null => {
-    const lower = text.toLowerCase();
-    for (const [key, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
-      if (keywords.some((kw) => lower.includes(kw))) return key;
-    }
-    return null;
-  };
+
 
   const handleQuickAction = (text: string) => {
     const cleanedText = getCleanedTemplatePrompt(text);
@@ -262,14 +255,8 @@ export function HomePage() {
   const handleSend = () => {
     const text = promptText.trim();
     if (!text && !attachedImage && attachedFiles.length === 0) return;
-    // If the input matches a template keyword, send the raw template prompt
-    // (WITH the "TEMPLATE: X" prefix) so the API can return the pre-built HTML.
-    const matchKey = detectTemplateMatch(text);
-    const finalPrompt = matchKey
-      ? (TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] ?? text)
-      : text;
     try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
-    setChatPrompt(finalPrompt);
+    setChatPrompt(text);
     setInitialImage(attachedImage);
     setInitialFiles(attachedFiles);
     setChatStarted(true);
@@ -281,24 +268,6 @@ export function HomePage() {
   const handleEnhancePrompt = async () => {
     if (isEnhancing || !promptText.trim() || promptText.trim().length < 3) return;
     setIsEnhancing(true);
-
-    const matchKey = detectTemplateMatch(promptText);
-    if (matchKey) {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 800)); // simulated load
-        // Set the RAW prompt (with TEMPLATE: prefix) so when the user hits send,
-        // the API receives "TEMPLATE: Velara Retreat\n..." and matches getExactTemplateResponse.
-        const rawPrompt = TEMPLATE_PROMPTS[matchKey as keyof typeof TEMPLATE_PROMPTS] || "";
-        setPromptText(rawPrompt);
-        showToast("Prompt enhanced!");
-        window.requestAnimationFrame(() => adjustTextareaHeight());
-      } catch (err) {
-        console.error("Enhancement error:", err);
-      } finally {
-        setIsEnhancing(false);
-      }
-      return;
-    }
 
     let activeModel = "oni-pro";
     if (typeof window !== "undefined") {

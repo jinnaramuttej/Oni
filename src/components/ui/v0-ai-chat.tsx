@@ -1295,33 +1295,6 @@ export function OniChat({
     if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
     setIsEnhancing(true);
 
-    // --- Template short-circuit: match input against known template keywords ---
-    const lower = input.trim().toLowerCase();
-    let matchedKey: string | null = null;
-    for (const [key, keywords] of Object.entries(TEMPLATE_KEYWORDS)) {
-      if (keywords.some((kw) => lower.includes(kw))) {
-        matchedKey = key;
-        break;
-      }
-    }
-    if (matchedKey) {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 600)); // brief shimmer
-        // Use the RAW prompt (with TEMPLATE: prefix) so when the user hits send,
-        // the API sees "TEMPLATE: Velara Retreat\n..." and matches getExactTemplateResponse.
-        const rawPrompt = TEMPLATE_PROMPTS[matchedKey as keyof typeof TEMPLATE_PROMPTS] || "";
-        setInput(rawPrompt);
-        showToast("Prompt enhanced!");
-        window.requestAnimationFrame(() => adjustHeight());
-      } catch (err) {
-        console.error("Template enhancement error:", err);
-      } finally {
-        setIsEnhancing(false);
-      }
-      return;
-    }
-    // --- End template short-circuit ---
-
     try {
       const response = await fetch("/api/enhance-prompt", {
         method: "POST",
