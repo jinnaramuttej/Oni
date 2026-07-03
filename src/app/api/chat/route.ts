@@ -118,16 +118,47 @@ RULES:
 - Do NOT write any HTML, CSS, JavaScript, or code of any kind.
 - Do NOT include markdown fences, explanations, or extra text.`;
 
-// Stage 2: Code model writes ONLY the HTML given the plan from Stage 1
-const ONI_CODE_SYSTEM_PROMPT = `You are an elite web developer. You will receive a design plan and a user's website request. Your ONLY job is to write the complete, production-ready, single-file HTML website based on that plan.
+// Stage 2: CSS-only generation (pure stylesheet, no HTML)
+const ONI_CSS_PROMPT = `You are an elite CSS architect. Given a website design plan, write ONLY the complete CSS stylesheet.
 
 OUTPUT RULES:
-- Output ONLY: <ONI_CODE>...your complete HTML here...</ONI_CODE>
-- The HTML must be a single self-contained file with ALL CSS inside <style> and ALL JS inside <script>
-- Do NOT repeat or summarize the design plan
-- Do NOT explain anything
-- Do NOT write any text before <ONI_CODE> or after </ONI_CODE>
-- Always end your output with </html> then </ONI_CODE> — never stop mid-generation`;
+- Start with @import url(...) for Google Fonts (the ones specified in the plan's FONTS field)
+- Define ALL :root CSS variables: --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t, plus the exact 5 palette colors from the plan
+- Write complete CSS for EVERY section and element:
+  * Global reset: * { margin:0; padding:0; box-sizing:border-box; }
+  * Base typography, body, selection
+  * .navbar (fixed, glassmorphism), .nav-links, .nav-link, .nav-cta, .navbar.scrolled
+  * .hero (min-height:100vh), .hero-content (z-index:2 position:relative), .orb, .orb-1, .orb-2, .orb-3 (each with radial-gradient + float animation)
+  * #features, #services (grid layouts, cards, hover effects)
+  * #testimonials (quote cards, star ratings)
+  * #contact (form layout, input styles, button)
+  * footer (dark bg, 4-column grid)
+  * .reveal, .reveal.in (scroll-reveal animation classes)
+  * Modal/drawer styles if relevant
+  * @keyframes (float, fadeIn, slideUp, marquee etc.)
+  * @media queries for mobile (<768px)
+- Target: 700-900 lines of CSS
+- Output ONLY raw CSS — no <style> tags, no HTML, no JavaScript, no explanations, no markdown fences`;
+
+// Stage 3: HTML body + JS generation (uses class names from Stage 2 CSS)
+const ONI_HTML_BODY_PROMPT = `You are an elite HTML and JavaScript developer. Given a website design plan and the CSS already written, write the complete HTML body markup and JavaScript.
+
+OUTPUT RULES:
+- Start output with <body> and end with </body>
+- Include ALL 7 required sections with fully real, specific content:
+  * #navbar: logo text (styled with CSS .logo class), .nav-links ul with .nav-link anchors, .nav-cta button
+  * .hero: div.hero-content containing H1, subtitle, two buttons; plus div.orb.orb-1, div.orb.orb-2, div.orb.orb-3 as direct children
+  * #features: grid of 3-4 feature cards with icons (unicode symbols), h3, p — real copy
+  * #services: grid of services with real prices
+  * #testimonials: 3 testimonial cards with real names, stars (★★★★★), real quotes
+  * #contact: info panel on left + contact form on right
+  * footer: 4-column grid with links, copyright bar
+- Use the EXACT CSS class names already defined in the stylesheet (.navbar, .nav-links, .nav-link, .hero, .hero-content, .orb, .orb-1, .orb-2, .orb-3, .reveal, etc.)
+- REAL content only: specific business name, real street address, real phone, real prices, real staff names. Zero placeholders, zero lorem ipsum.
+- At the end of <body>, include ONE <script> block with: navbar shrink on scroll, IntersectionObserver for .reveal elements, smooth anchor scroll, form submit toast feedback
+- NEVER use <link rel="stylesheet"> or <script src="..."> — no external file references
+- Output ONLY: <body>...</body> with the inline <script> inside. No <html>, no <head>, no <style> tags.`;
+
 const ONI_LEGACY_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
 
 RESPONSE FORMAT & SYSTEM MODES:
@@ -1306,118 +1337,135 @@ Improve the design, make it more premium and modern.`;
 
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
-  // ── Two-stage pipeline: Stage 1 = Groq plan, Stage 2 = Code model HTML ────────
+  // ── Three-stage pipeline: Plan → CSS → HTML+JS → Assemble ────────────────────
   const isBuildIntent = intent === "new_website" || intent === "full_redesign" || isLikelyBuildRequest(lastUserMsgText);
   const groqKey = process.env.GROQ_API_KEY?.trim() || "";
 
   if (isBuildIntent && !useFallbackPool && groqKey) {
-    console.log("[Two-Stage] Build request detected. Running Stage 1: Groq planning...");
+    console.log("[Three-Stage] Build request detected. Running Stage 1: Groq design planning...");
 
-    // Stage 1: Groq writes ONLY the ONI_THOUGHT + one sentence (no code)
-    let planText = "";
-    try {
-      const planRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [
-            { role: "system", content: ONI_PLANNING_PROMPT },
-            { role: "user", content: lastUserMsgText || "Build a premium website." },
-          ],
-          stream: false,
-          max_tokens: 500,
-          temperature: 0.85,
-        }),
-      });
-      if (planRes.ok) {
-        const planData = await planRes.json();
-        planText = planData?.choices?.[0]?.message?.content?.trim() || "";
-        console.log("[Two-Stage] Stage 1 complete. Plan length:", planText.length);
-      } else {
-        console.warn("[Two-Stage] Stage 1 failed, falling through to single-stage pipeline.");
+    // Helper: call any API non-streaming, return text or null
+    async function callNonStreaming(
+      apiUrl: string, apiKey: string, model: string, messages: object[], maxTokens: number
+    ): Promise<string | null> {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+      try {
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ model, messages, stream: false, max_tokens: maxTokens, temperature: 0.75 }),
+        });
+        if (!res.ok) {
+          console.warn(`[Three-Stage] API call to ${apiUrl} failed: ${res.status}`);
+          return null;
+        }
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content?.trim() || null;
+      } catch (err: any) {
+        console.warn(`[Three-Stage] API exception: ${err.message}`);
+        return null;
       }
-    } catch (err: any) {
-      console.warn("[Two-Stage] Stage 1 exception:", err.message);
     }
 
+    // Determine which model/endpoint to use for code stages
+    const codeApiUrl = isLocalOrOllamaSelected ? OLLAMA_CHAT_URL : "https://api.groq.com/openai/v1/chat/completions";
+    const codeApiKey = isLocalOrOllamaSelected ? "" : groqKey;
+    const codeModel = isLocalOrOllamaSelected ? OLLAMA_MODEL : GROQ_MODEL;
+    console.log(`[Three-Stage] Code stages will use: ${isLocalOrOllamaSelected ? "Ollama" : "Groq"} (${codeModel})`);
+
+    // Get matching template reference for CSS/HTML guidance
+    const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
+    const templateRef = matchingTemplate
+      ? `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`
+      : "";
+
+    // ── Stage 1: Groq → Design plan (ONI_THOUGHT + one sentence) ──────────────
+    const planText = await callNonStreaming(
+      "https://api.groq.com/openai/v1/chat/completions",
+      groqKey,
+      GROQ_MODEL,
+      [
+        { role: "system", content: ONI_PLANNING_PROMPT },
+        { role: "user", content: lastUserMsgText || "Build a premium website." },
+      ],
+      500
+    );
+
     if (planText) {
-      // Stage 2: Code model writes ONLY the HTML based on the plan
-      const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
-      let codeSystemPrompt = ONI_CODE_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
-      if (matchingTemplate) {
-        console.log(`[Two-Stage] Injecting ${matchingTemplate.name} template as reference for Stage 2.`);
-        codeSystemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_SAMPLE_CODE>\n\nBorrow grid structures, CSS patterns, interactive JS components, and section styles from this template. Adapt and improve them for the user's specific brand. Mix with other premium components freely.`;
-      }
+      console.log("[Three-Stage] Stage 1 done. Plan:", planText.length, "chars");
 
-      const codeMessages = [
-        { role: "system", content: codeSystemPrompt },
-        { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nNow write the complete HTML inside <ONI_CODE>...</ONI_CODE>. Start immediately with <ONI_CODE>.` },
-      ];
+      // ── Stage 2: Code model → Pure CSS stylesheet ──────────────────────────
+      const cssPromptWithContext = ONI_CSS_PROMPT + templateRef;
+      const cssCode = await callNonStreaming(
+        codeApiUrl, codeApiKey, codeModel,
+        [
+          { role: "system", content: cssPromptWithContext },
+          { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only.` },
+        ],
+        8000
+      );
 
-      // Prefer Ollama for code gen if running; else use Groq (same key, code-only prompt)
-      const codeTarget = isLocalOrOllamaSelected
-        ? { name: "Local Ollama (Qwen 2.5 Coder)", apiUrl: OLLAMA_CHAT_URL, apiKey: "", model: OLLAMA_MODEL, maxTokens: GROQ_MAX_TOKENS }
-        : { name: `Groq Code Gen (${GROQ_MODEL})`, apiUrl: "https://api.groq.com/openai/v1/chat/completions", apiKey: groqKey, model: GROQ_MODEL, maxTokens: GROQ_MAX_TOKENS };
+      if (cssCode) {
+        console.log("[Three-Stage] Stage 2 done. CSS:", cssCode.length, "chars");
 
-      console.log(`[Two-Stage] Stage 2 code generation via: ${codeTarget.name}`);
-
-      try {
-        const codeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-        if (codeTarget.apiKey) codeHeaders["Authorization"] = `Bearer ${codeTarget.apiKey}`;
-
-        const codeRes = await fetch(codeTarget.apiUrl, {
-          method: "POST",
-          headers: codeHeaders,
-          body: JSON.stringify({
-            model: codeTarget.model,
-            messages: codeMessages,
-            temperature: 0.7,
-            max_tokens: codeTarget.maxTokens,
-            stream: true,
-          }),
-        });
-
-        if (codeRes.ok && codeRes.body) {
-          console.log("[Two-Stage] Stage 2 streaming started. Combining plan + code stream.");
-          const encoder = new TextEncoder();
-          const planChunk = `data: ${JSON.stringify({ choices: [{ delta: { content: planText + "\n\n" } }] })}\n\n`;
-          const codeBody = codeRes.body;
-
-          const combined = new ReadableStream({
-            async start(controller) {
-              // Emit Stage 1 plan first
-              controller.enqueue(encoder.encode(planChunk));
-              // Pipe Stage 2 code stream
-              const reader = codeBody.getReader();
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  controller.enqueue(value);
-                }
-              } finally {
-                reader.releaseLock();
-              }
-              controller.close();
+        // ── Stage 3: Code model → HTML body + inline JS ───────────────────────
+        const htmlBodyCode = await callNonStreaming(
+          codeApiUrl, codeApiKey, codeModel,
+          [
+            { role: "system", content: ONI_HTML_BODY_PROMPT + templateRef },
+            {
+              role: "user",
+              content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${cssCode.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>.`,
             },
-          });
+          ],
+          8000
+        );
+
+        if (htmlBodyCode) {
+          console.log("[Three-Stage] Stage 3 done. HTML body:", htmlBodyCode.length, "chars");
+
+          // ── Assembly: Combine CSS + HTML body into one inline HTML file ────
+          const extractTitle = (text: string) => {
+            const m = text.match(/PALETTE:\s*([^|]+)/i);
+            return m ? m[1].trim() : "Website";
+          };
+          const cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          const cleanBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          const bodyContent = cleanBody.startsWith("<body") ? cleanBody : `<body>\n${cleanBody}\n</body>`;
+
+          const assembledHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${extractTitle(planText)}</title>
+  <style>
+${cleanCss}
+  </style>
+</head>
+${bodyContent}
+</html>`;
+
+          const finalResponse = `${planText}\n\n<ONI_CODE>${assembledHtml}</ONI_CODE>`;
+          console.log(`[Three-Stage] Assembly complete. Total output: ${finalResponse.length} chars (~${Math.round(finalResponse.length / 4)} tokens displayed).`);
 
           if (visitorId && creditCost > 0 && !body?.customApiKey) {
             void deductCredits(visitorId, creditCost);
           }
 
-          return new Response(combined, {
-            headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
-          });
+          return streamTextAsSse(finalResponse);
         } else {
-          console.warn("[Two-Stage] Stage 2 code gen failed, falling through to single-stage pipeline.");
+          console.warn("[Three-Stage] Stage 3 (HTML body) failed — falling through to single-stage pipeline.");
         }
-      } catch (err: any) {
-        console.warn("[Two-Stage] Stage 2 exception:", err.message, "— falling through to single-stage pipeline.");
+      } else {
+        console.warn("[Three-Stage] Stage 2 (CSS) failed — falling through to single-stage pipeline.");
       }
+    } else {
+      console.warn("[Three-Stage] Stage 1 (planning) failed — falling through to single-stage pipeline.");
     }
   }
+
 
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
 
