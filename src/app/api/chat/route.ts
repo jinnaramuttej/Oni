@@ -770,10 +770,83 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
 
 void getSystemPromptWithContext;
 
-const FREE_KEYS_POOL: Record<string, string[]> = {
-  "claude-opus-4-7": (process.env.FREE_KEYS_CLAUDE_OPUS || "").split(",").map(k => k.trim()).filter(Boolean),
-  "gemini-2.5-flash": (process.env.FREE_KEYS_GEMINI_FLASH || "").split(",").map(k => k.trim()).filter(Boolean)
-};
+interface FreeKeys {
+  "claude-opus-4-7": string[];
+  "gemini-2.5-flash": string[];
+}
+
+let cachedKeys: FreeKeys | null = null;
+let lastFetchedTime = 0;
+
+async function getLatestFreeKeys(): Promise<FreeKeys> {
+  const now = Date.now();
+  if (cachedKeys && (now - lastFetchedTime) < 10 * 60 * 1000) {
+    return cachedKeys;
+  }
+
+  const defaultKeys: FreeKeys = {
+    "claude-opus-4-7": (process.env.FREE_KEYS_CLAUDE_OPUS || "").split(",").map(k => k.trim()).filter(Boolean),
+    "gemini-2.5-flash": (process.env.FREE_KEYS_GEMINI_FLASH || "").split(",").map(k => k.trim()).filter(Boolean)
+  };
+
+  if (defaultKeys["claude-opus-4-7"].length === 0) {
+    defaultKeys["claude-opus-4-7"] = [
+      "sk-ceaWeoE6jZEMEEo6lSPXgjd5WIWA6OSoeIrzCa2Fw4n5hEDF",
+      "sk-K87O4HeIy4cvjUK9ZREqL1uBROCguGMULi9EPlgF28OaruKV",
+      "sk-1WRJ304InZANcQL3hmJP8XpGzVIrsDgYzkGa1k8m1Q5HoU7q",
+      "sk-rjS01TDLrNDEodBmQ8DQvhnUlJeNxsvrboT1jiHEMIPiYwPD",
+      "sk-jShIV7jFXenRsmJTydNNn6Vot3qfkpPoDmsgkuhReAb5my2B",
+      "sk-p9QZv4CxNHOuRKiWQZcDNkExHNzDdvVWnS4HIu3C16PpRrIA"
+    ];
+  }
+  if (defaultKeys["gemini-2.5-flash"].length === 0) {
+    defaultKeys["gemini-2.5-flash"] = [
+      "sk-QwZyiMIKBqnHIE0TTfUlr9K7IN7X6g7b7IEcbY3X094O63d8",
+      "sk-Yp8fC4w5D3k7oPuHfIvWJG7xc1YeKIWsQDMxHUALZSeO2yFs",
+      "sk-5Ual4RbNFDLf8i5eJRGiUELctMrj6FIkHNM4Hi2SGWCCOOTZ",
+      "sk-0VHlOaF6FAoYldbJeK2vfmbJrZy4PnjugCfiS9PmKoQg15Zz",
+      "sk-l7w0B50ExjZj3ELH7BGPuhjlu6K7Iz05SpYjpNNiMlO0JVr7",
+      "sk-53KrR1PrpH96kKTnLrn9Qk3doCfzfHRtFywfmYqLZQSObDJi"
+    ];
+  }
+
+  try {
+    const res = await fetch("https://raw.githubusercontent.com/alistaitsacle/free-llm-api-keys/main/README.md", {
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+    const text = await res.text();
+
+    const claudeKeys: string[] = [];
+    const geminiKeys: string[] = [];
+
+    const lines = text.split("\n");
+    for (const line of lines) {
+      if (line.includes("sk-")) {
+        const keyMatch = line.match(/`?(sk-[A-Za-z0-9]{48})`?/);
+        if (keyMatch) {
+          const key = keyMatch[1];
+          if (line.includes("claude-opus-4-7")) {
+            claudeKeys.push(key);
+          } else if (line.includes("gemini-2.5-flash")) {
+            geminiKeys.push(key);
+          }
+        }
+      }
+    }
+
+    cachedKeys = {
+      "claude-opus-4-7": claudeKeys.length > 0 ? claudeKeys : defaultKeys["claude-opus-4-7"],
+      "gemini-2.5-flash": geminiKeys.length > 0 ? geminiKeys : defaultKeys["gemini-2.5-flash"]
+    };
+    lastFetchedTime = now;
+    console.log(`[Free Keys] Dynamically loaded ${cachedKeys["claude-opus-4-7"].length} Claude keys & ${cachedKeys["gemini-2.5-flash"].length} Gemini keys from GitHub.`);
+    return cachedKeys;
+  } catch (err: any) {
+    console.error("[Free Keys] Failed to fetch latest keys from GitHub, using default fallback pool:", err.message);
+    return defaultKeys;
+  }
+}
 
 const FREE_BASE_URL = "https://aiapiv2.pekpik.com/v1/chat/completions";
 
@@ -927,6 +1000,7 @@ Improve the design, make it more premium and modern.`;
   }
 
   // ── Determine routing, custom settings, and model configuration ───────────────
+  const latestKeys = await getLatestFreeKeys();
   let selectedModel = body?.defaultModel || "oni-pro";
   let apiKey = "";
   let apiUrl = "";
@@ -943,19 +1017,19 @@ Improve the design, make it more premium and modern.`;
   } else if (useFallbackPool) {
     // Triggered because credits are <= 0
     const chosenModel = "gemini-2.5-flash"; // default fallback for credits
-    const keys = FREE_KEYS_POOL[chosenModel];
+    const keys = latestKeys[chosenModel];
     apiKey = keys[Math.floor(Math.random() * keys.length)];
     apiUrl = FREE_BASE_URL;
     selectedModel = chosenModel;
     isFreeFallback = true;
   } else {
     if (selectedModel === "claude-opus-4-7") {
-      const keys = FREE_KEYS_POOL["claude-opus-4-7"];
+      const keys = latestKeys["claude-opus-4-7"];
       apiKey = keys[Math.floor(Math.random() * keys.length)];
       apiUrl = FREE_BASE_URL;
       isFreeFallback = true;
     } else if (selectedModel === "gemini-2.5-flash") {
-      const keys = FREE_KEYS_POOL["gemini-2.5-flash"];
+      const keys = latestKeys["gemini-2.5-flash"];
       apiKey = keys[Math.floor(Math.random() * keys.length)];
       apiUrl = FREE_BASE_URL;
       isFreeFallback = true;
@@ -975,13 +1049,24 @@ Improve the design, make it more premium and modern.`;
     apiModelName = GROQ_MODEL;
   }
 
+  // Cap max_tokens to stay below Groq's 12k TPM rate limit
+  let maxTokensToUse = Math.min(GROQ_MAX_TOKENS, 6000);
+  if (apiModelName.includes("8b") || apiModelName.includes("instant")) {
+    maxTokensToUse = 2000;
+  } else if (apiModelName === "llama-3.3-70b-versatile" || apiModelName.includes("70b")) {
+    const promptTokensEst = Math.ceil(JSON.stringify(messagesToSend).length / 3.8);
+    // Keep sum of prompt and completion below 12000
+    maxTokensToUse = Math.max(3000, Math.min(6000, 11000 - promptTokensEst));
+    console.log(`[Token Budget] Est Prompt Tokens=${promptTokensEst}. Requesting max_tokens=${maxTokensToUse} (Groq 12k TPM Limit Safe).`);
+  }
+
   // ── Execute Request with Retries / Fallbacks ──────────────────────────────────
   try {
     const requestBody = JSON.stringify({
       model: apiModelName,
       messages: messagesToSend,
       temperature: 0.7,
-      max_tokens: GROQ_MAX_TOKENS,
+      max_tokens: maxTokensToUse,
       stream: true,
     });
 
@@ -999,7 +1084,7 @@ Improve the design, make it more premium and modern.`;
       const primaryErrorText = await response.clone().text().catch(() => "");
       console.warn(`[Fallback] Primary API call to ${apiUrl} with model ${apiModelName} failed with status ${response.status}: ${primaryErrorText}. Retrying with free Gemini fallback...`);
       const chosenModel = "gemini-2.5-flash";
-      const keys = FREE_KEYS_POOL[chosenModel];
+      const keys = latestKeys[chosenModel];
       const fallbackApiKey = keys[Math.floor(Math.random() * keys.length)];
       isFreeFallback = true;
 
@@ -1007,7 +1092,7 @@ Improve the design, make it more premium and modern.`;
         model: chosenModel,
         messages: messagesToSend,
         temperature: 0.7,
-        max_tokens: GROQ_MAX_TOKENS,
+        max_tokens: 6000, // Gemini supports 8192 output tokens
         stream: true,
       });
 
@@ -1049,14 +1134,14 @@ Improve the design, make it more premium and modern.`;
       try {
         console.warn(`[Fallback] API request caught error: ${err.message}. Retrying with free Gemini fallback...`);
         const chosenModel = "gemini-2.5-flash";
-        const keys = FREE_KEYS_POOL[chosenModel];
+        const keys = latestKeys[chosenModel];
         const fallbackApiKey = keys[Math.floor(Math.random() * keys.length)];
 
         const fallbackRequestBody = JSON.stringify({
           model: chosenModel,
           messages: messagesToSend,
           temperature: 0.7,
-          max_tokens: GROQ_MAX_TOKENS,
+          max_tokens: 6000,
           stream: true,
         });
 
@@ -1084,5 +1169,7 @@ Improve the design, make it more premium and modern.`;
     }
 
     const message = err instanceof Error ? err.message : String(err);
+    console.error("API connection/request failed:", err);
+    return new NextResponse(`API request failed: ${message}`, { status: 500 });
   }
 }
