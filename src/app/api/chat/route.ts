@@ -575,6 +575,19 @@ function getExactTemplateResponse(promptText: string): { thought: string; messag
   return null;
 }
 
+function getCompactHtml(html: string): string {
+  if (!html) return "";
+  // 1. Remove SVGs (which have huge path data and inflate token count enormously)
+  let clean = html.replace(/<svg[\s\S]*?<\/svg>/gi, "<!-- [SVG Icon] -->");
+  // 2. Remove base64 image strings if any
+  clean = clean.replace(/src="data:image\/[^;]+;base64,[^"]+"/gi, 'src="data:image/png;base64,..."');
+  // 3. Shorten any text content between tags longer than 80 chars to 50 chars to keep the code light
+  clean = clean.replace(/>([^<]{80,})</g, (match, text) => {
+    return `>${text.slice(0, 50)}... [truncated text] <`;
+  });
+  return clean;
+}
+
 function getMatchingTemplateHtml(promptText: string): { name: string; html: string } | null {
   const clean = promptText.toLowerCase();
 
@@ -1030,7 +1043,7 @@ export async function POST(req: Request) {
     const matchingTemplate = getMatchingTemplateHtml(userPromptText);
     if (matchingTemplate) {
       console.log(`[Templates] Matching user request to template: ${matchingTemplate.name}. Injecting component code reference.`);
-      systemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${matchingTemplate.html}\n</TEMPLATE_SAMPLE_CODE>\n\nINSTRUCTIONS FOR TEMPLATE ADAPTATION & COMPONENT EXTRACTION:
+      systemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_SAMPLE_CODE>\n\nINSTRUCTIONS FOR TEMPLATE ADAPTATION & COMPONENT EXTRACTION:
 1. You have access to a premium template sample above ("${matchingTemplate.name}") that matches the user's business type.
 2. Analyze the grid structures, CSS classes, interactive JS logic (e.g. modals, scroll reveals, tabs), and section styles in this template.
 3. Extract and borrow components and code snippets from it, adapt them to the user's specific request and brand (brand name, colors, fonts, content), and make them significantly better, more modern, and highly polished.
