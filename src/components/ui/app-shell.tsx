@@ -242,6 +242,18 @@ export function AppShell({ children, activePage }: AppShellProps) {
     } catch { /* ignore */ }
   };
 
+  const handleDeleteAllChats = () => {
+    try {
+      recentChats.forEach((c) => {
+        localStorage.removeItem(`oni_chat_${c.id}`);
+      });
+      setRecentChats([]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      sessionStorage.removeItem(SESSION_KEY);
+      window.location.href = "/";
+    } catch { /* ignore */ }
+  };
+
   const handleRenameChat = (chatId: string, newTitle: string) => {
     if (!newTitle.trim()) return;
     try {
@@ -406,15 +418,32 @@ export function AppShell({ children, activePage }: AppShellProps) {
           <div className="flex flex-col gap-1 mt-2">
             <div className="flex items-center justify-between px-2.5 py-1 text-xs font-semibold text-text-tertiary mb-1 relative">
               <span>Recents</span>
-              <button
-                onClick={() => setShowSortMenu(!showSortMenu)}
-                aria-label="Filter Recents"
-                className="hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-0.5 rounded hover:bg-surface-container text-text-secondary hover:text-primary"
-              >
-                <span className="material-symbols-outlined text-[12px] leading-none select-none">
-                  tune
-                </span>
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  aria-label="Filter Recents"
+                  className="hover:text-primary transition-colors cursor-pointer flex items-center justify-center p-0.5 rounded hover:bg-surface-container text-text-secondary hover:text-primary"
+                >
+                  <span className="material-symbols-outlined text-[12px] leading-none select-none">
+                    tune
+                  </span>
+                </button>
+                {recentChats.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to delete all chats? This cannot be undone.")) {
+                        handleDeleteAllChats();
+                      }
+                    }}
+                    aria-label="Delete All Chats"
+                    className="hover:text-error transition-colors cursor-pointer flex items-center justify-center p-0.5 rounded hover:bg-surface-container text-text-secondary hover:text-error"
+                  >
+                    <span className="material-symbols-outlined text-[12px] leading-none select-none">
+                      delete_sweep
+                    </span>
+                  </button>
+                )}
+              </div>
               {showSortMenu && (
                 <>
                   <div
