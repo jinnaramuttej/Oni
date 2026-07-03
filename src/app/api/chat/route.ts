@@ -482,7 +482,8 @@ function isLikelyBuildRequest(text: string): boolean {
   const buildKeywords = [
     "build", "create", "make", "design", "generate", "code", "website", "page", "html", "css", 
     "button", "navbar", "section", "hero", "footer", "card", "layout", "template", "portfolio", 
-    "dashboard", "blog", "landing", "style", "change", "modify", "update", "add", "remove", "fix"
+    "dashboard", "blog", "landing", "style", "change", "modify", "update", "add", "remove", "fix",
+    "continue", "go on", "finish", "complete"
   ];
   return buildKeywords.some(kw => clean.includes(kw));
 }
@@ -730,7 +731,25 @@ function prepareMessagesForGroq(
 
   let finalLastContent = lastContentTruncated;
   if (currentHtml && lastMessage.role === "user") {
-    if (isConversational) {
+    const isContinuation =
+      lastContentRaw.toLowerCase().trim() === "continue" ||
+      lastContentRaw.toLowerCase().trim() === "continue generating" ||
+      lastContentRaw.toLowerCase().trim() === "go on" ||
+      lastContentRaw.toLowerCase().trim() === "finish" ||
+      lastContentRaw.toLowerCase().trim() === "complete" ||
+      lastContentRaw.toLowerCase().trim() === "complete it";
+
+    if (isContinuation) {
+      finalLastContent = `User request: ${lastContentTruncated}
+      
+The previous website generation was cut off mid-way. Below is the incomplete, truncated HTML code. 
+
+You MUST output the COMPLETE, fully-functional, and polished website HTML inside a single <ONI_CODE>...</ONI_CODE> block. Read the truncated code, fill in all the missing CSS selectors, complete the body sections, write the necessary JavaScript scripts, and close all tags properly. Do not leave any section or style incomplete.
+
+<TRUNCATED_HTML_SO_FAR>
+${currentHtml}
+</TRUNCATED_HTML_SO_FAR>`;
+    } else if (isConversational) {
       finalLastContent = lastContentTruncated;
     } else {
       const htmlSliceLimit = Math.max(8000, Math.min(100000, remainingCharsForHtml - 1000));
