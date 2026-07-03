@@ -996,7 +996,8 @@ Improve the design, make it more premium and modern.`;
 
     // Fallback if primary fails
     if (!response.ok && !isCustom && !isFreeFallback) {
-      console.warn(`[Fallback] Primary API call failed with status ${response.status}. Retrying with free Gemini fallback...`);
+      const primaryErrorText = await response.clone().text().catch(() => "");
+      console.warn(`[Fallback] Primary API call to ${apiUrl} with model ${apiModelName} failed with status ${response.status}: ${primaryErrorText}. Retrying with free Gemini fallback...`);
       const chosenModel = "gemini-2.5-flash";
       const keys = FREE_KEYS_POOL[chosenModel];
       const fallbackApiKey = keys[Math.floor(Math.random() * keys.length)];
@@ -1022,6 +1023,7 @@ Improve the design, make it more premium and modern.`;
 
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error(`[API ERROR] Final response not ok. Status: ${response.status}. Body: ${errorBody}`);
       return new NextResponse(
         `API error ${response.status} ${response.statusText}: ${errorBody}`,
         { status: response.status }
