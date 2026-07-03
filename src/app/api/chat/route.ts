@@ -458,8 +458,140 @@ const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MAN
 16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
 17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.`;
 
+const PREMIUM_COMPONENTS_REFERENCE = `
+=========================================
+PREMIUM INTERACTIVE COMPONENT SNIPPETS (AVAILABLE FOR MIX-AND-MATCH ACROSS ALL INTENTS/INDUSTRIES):
+
+1. INTERACTIVE RESERVATION MODAL OVERLAY (From Fine-Dining Template):
+<!-- Modal Button Trigger -->
+<a href="#" class="nav-cta" onclick="openModal(); return false;">Book Now</a>
+
+<!-- Modal Overlay Markup -->
+<div id="modal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">&times;</button>
+    <h2>Make a Reservation</h2>
+    <div class="form-group">
+      <input type="text" placeholder="Your name" id="modal-name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <input type="date" id="modal-date">
+      </div>
+      <div class="form-group">
+        <select id="modal-time">
+          <option>6:00 PM</option>
+          <option>7:30 PM</option>
+          <option>9:00 PM</option>
+        </select>
+      </div>
+    </div>
+    <button class="form-submit-btn" onclick="submitModal()">Confirm Request</button>
+  </div>
+</div>
+
+/* CSS for Modal Overlay & Animation */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 8, 7, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-card {
+  background: #1C1917;
+  border: 1px solid rgba(212, 165, 116, 0.2);
+  padding: 48px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  transform: translateY(30px);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-overlay.open .modal-card { transform: translateY(0); }
+.modal-close {
+  position: absolute;
+  top: 20px; right: 20px;
+  background: none; border: none; color: #8C7C72;
+  font-size: 32px; cursor: pointer; transition: color 0.3s;
+}
+.modal-close:hover { color: #D4A574; }
+
+/* JS Modal Functions */
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function submitModal() {
+  const name = document.getElementById('modal-name').value;
+  alert('Thank you, ' + name + '! Your reservation is confirmed.');
+  closeModal();
+}
+
+2. INTERACTIVE TABBED SWITCHER (From Fine-Dining Menu):
+<!-- Tab Buttons -->
+<div class="menu-tabs">
+  <button class="menu-tab active" onclick="switchTab('tasting')">Tasting Menu</button>
+  <button class="menu-tab" onclick="switchTab('alacarte')">À La Carte</button>
+  <button class="menu-tab" onclick="switchTab('wine')">Wine Pairing</button>
+</div>
+
+<!-- Tab Panels -->
+<div id="tab-tasting" class="menu-panel active">...items...</div>
+<div id="tab-alacarte" class="menu-panel">...items...</div>
+<div id="tab-wine" class="menu-panel">...items...</div>
+
+/* CSS for Tab Switching & Fade-in animations */
+.menu-panel { display: none; opacity: 0; transition: opacity 0.4s ease; }
+.menu-panel.active { display: grid; opacity: 1; }
+
+/* JS Switch Function */
+function switchTab(id) {
+  document.querySelectorAll('.menu-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.menu-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+3. HORIZONTAL LOGO/BRAND MARQUEE TICKER (From Salon/Boutique Template):
+<div class="marquee-wrapper">
+  <div class="marquee-content">
+    <span>ELEVATE DAILY • </span><span>CRAFTED BLENDS • </span><span>LUXURY BEANS • </span>
+    <span>ELEVATE DAILY • </span><span>CRAFTED BLENDS • </span><span>LUXURY BEANS • </span>
+  </div>
+</div>
+
+/* CSS for Infinite Scrolling Marquee */
+.marquee-wrapper { overflow: hidden; width: 100%; white-space: nowrap; border-top: 1px solid rgba(212,165,116,0.2); border-bottom: 1px solid rgba(212,165,116,0.2); padding: 16px 0; }
+.marquee-content { display: inline-block; animation: marquee 20s linear infinite; }
+.marquee-content span { font-family: var(--font-display); font-size: 1.5rem; color: var(--s); margin-right: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+4. PREMIUM DENSE GRID GRID-CARDS WITH HOVER DEPTH (From Architecture/Studio Template):
+/* CSS Card depth and lift hover effects */
+.hover-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+}
+=========================================
+`;
+
 void ONI_LEGACY_SYSTEM_PROMPT;
 void ONI_QUALITY_RULES;
+void PREMIUM_COMPONENTS_REFERENCE;
 
 type GroqMessage = { role: string; content: string };
 
@@ -1052,7 +1184,7 @@ export async function POST(req: Request) {
     }
   }
 
-  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES;
+  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
   const userPromptText = body.prompt || "";
   const hasExistingHtml = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
   if (!hasExistingHtml && userPromptText) {
@@ -1063,7 +1195,8 @@ export async function POST(req: Request) {
 1. You have access to a premium template sample above ("${matchingTemplate.name}") that matches the user's business type.
 2. Analyze the grid structures, CSS classes, interactive JS logic (e.g. modals, scroll reveals, tabs), and section styles in this template.
 3. Extract and borrow components and code snippets from it, adapt them to the user's specific request and brand (brand name, colors, fonts, content), and make them significantly better, more modern, and highly polished.
-4. Ensure the output is a complete website containing at least 6-7 fully fleshed-out sections. Do not just copy-paste the template raw; extend it, refine the layout, add animations, and customize it uniquely for the user!`;
+4. Ensure the output is a complete website containing at least 6-7 fully fleshed-out sections. Do not just copy-paste the template raw; extend it, refine the layout, add animations, and customize it uniquely for the user!
+5. CROSS-INDUSTRY MIX-AND-MATCH FREEDOM: You are explicitly encouraged to mix, match, borrow, and adapt components, styles, grids, and script features from the component library snippets provided in the prompt reference (or from other templates) regardless of the industry. For example, if building a coffee shop or hotel website, you can use the interactive booking modal overlay, tabbed menus, scrolling marquee ribbons, or lift cards. Do not restrict yourself to industry boundaries—cross-pollinate features to build the most luxurious, interactive site possible!`;
     }
   }
 
