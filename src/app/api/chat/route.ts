@@ -98,6 +98,36 @@ const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
+
+// ── Two-stage pipeline prompts ─────────────────────────────────────────────────
+// Stage 1: Groq writes ONLY the design intent (fast, ~400 tokens, no code)
+const ONI_PLANNING_PROMPT = `You are Oni's creative director. When given a website build request, output ONLY a planning block in this EXACT format — no HTML, no CSS, no code:
+
+<ONI_THOUGHT>
+PALETTE: [descriptive palette name] | #hex1, #hex2, #hex3, #hex4, #hex5
+FONTS: [display font name] | [body font name] | [one sentence on why they suit this business]
+SIGNATURE: [one sentence describing the most unique interactive element or layout feature]
+LAYOUT: [one sentence describing the overall layout strategy]
+SECTIONS: navbar, hero, features, services, testimonials, contact, footer
+</ONI_THOUGHT>
+
+[ONE sentence intro like "Here's your coffee shop website."]
+
+RULES:
+- Output ONLY the <ONI_THOUGHT> block and the one-sentence intro.
+- Do NOT write any HTML, CSS, JavaScript, or code of any kind.
+- Do NOT include markdown fences, explanations, or extra text.`;
+
+// Stage 2: Code model writes ONLY the HTML given the plan from Stage 1
+const ONI_CODE_SYSTEM_PROMPT = `You are an elite web developer. You will receive a design plan and a user's website request. Your ONLY job is to write the complete, production-ready, single-file HTML website based on that plan.
+
+OUTPUT RULES:
+- Output ONLY: <ONI_CODE>...your complete HTML here...</ONI_CODE>
+- The HTML must be a single self-contained file with ALL CSS inside <style> and ALL JS inside <script>
+- Do NOT repeat or summarize the design plan
+- Do NOT explain anything
+- Do NOT write any text before <ONI_CODE> or after </ONI_CODE>
+- Always end your output with </html> then </ONI_CODE> — never stop mid-generation`;
 const ONI_LEGACY_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
 
 RESPONSE FORMAT & SYSTEM MODES:
@@ -1276,7 +1306,121 @@ Improve the design, make it more premium and modern.`;
 
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
+  // ── Two-stage pipeline: Stage 1 = Groq plan, Stage 2 = Code model HTML ────────
+  const isBuildIntent = intent === "new_website" || intent === "full_redesign" || isLikelyBuildRequest(lastUserMsgText);
+  const groqKey = process.env.GROQ_API_KEY?.trim() || "";
+
+  if (isBuildIntent && !useFallbackPool && groqKey) {
+    console.log("[Two-Stage] Build request detected. Running Stage 1: Groq planning...");
+
+    // Stage 1: Groq writes ONLY the ONI_THOUGHT + one sentence (no code)
+    let planText = "";
+    try {
+      const planRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [
+            { role: "system", content: ONI_PLANNING_PROMPT },
+            { role: "user", content: lastUserMsgText || "Build a premium website." },
+          ],
+          stream: false,
+          max_tokens: 500,
+          temperature: 0.85,
+        }),
+      });
+      if (planRes.ok) {
+        const planData = await planRes.json();
+        planText = planData?.choices?.[0]?.message?.content?.trim() || "";
+        console.log("[Two-Stage] Stage 1 complete. Plan length:", planText.length);
+      } else {
+        console.warn("[Two-Stage] Stage 1 failed, falling through to single-stage pipeline.");
+      }
+    } catch (err: any) {
+      console.warn("[Two-Stage] Stage 1 exception:", err.message);
+    }
+
+    if (planText) {
+      // Stage 2: Code model writes ONLY the HTML based on the plan
+      const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
+      let codeSystemPrompt = ONI_CODE_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
+      if (matchingTemplate) {
+        console.log(`[Two-Stage] Injecting ${matchingTemplate.name} template as reference for Stage 2.`);
+        codeSystemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_SAMPLE_CODE>\n\nBorrow grid structures, CSS patterns, interactive JS components, and section styles from this template. Adapt and improve them for the user's specific brand. Mix with other premium components freely.`;
+      }
+
+      const codeMessages = [
+        { role: "system", content: codeSystemPrompt },
+        { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nNow write the complete HTML inside <ONI_CODE>...</ONI_CODE>. Start immediately with <ONI_CODE>.` },
+      ];
+
+      // Prefer Ollama for code gen if running; else use Groq (same key, code-only prompt)
+      const codeTarget = isLocalOrOllamaSelected
+        ? { name: "Local Ollama (Qwen 2.5 Coder)", apiUrl: OLLAMA_CHAT_URL, apiKey: "", model: OLLAMA_MODEL, maxTokens: GROQ_MAX_TOKENS }
+        : { name: `Groq Code Gen (${GROQ_MODEL})`, apiUrl: "https://api.groq.com/openai/v1/chat/completions", apiKey: groqKey, model: GROQ_MODEL, maxTokens: GROQ_MAX_TOKENS };
+
+      console.log(`[Two-Stage] Stage 2 code generation via: ${codeTarget.name}`);
+
+      try {
+        const codeHeaders: Record<string, string> = { "Content-Type": "application/json" };
+        if (codeTarget.apiKey) codeHeaders["Authorization"] = `Bearer ${codeTarget.apiKey}`;
+
+        const codeRes = await fetch(codeTarget.apiUrl, {
+          method: "POST",
+          headers: codeHeaders,
+          body: JSON.stringify({
+            model: codeTarget.model,
+            messages: codeMessages,
+            temperature: 0.7,
+            max_tokens: codeTarget.maxTokens,
+            stream: true,
+          }),
+        });
+
+        if (codeRes.ok && codeRes.body) {
+          console.log("[Two-Stage] Stage 2 streaming started. Combining plan + code stream.");
+          const encoder = new TextEncoder();
+          const planChunk = `data: ${JSON.stringify({ choices: [{ delta: { content: planText + "\n\n" } }] })}\n\n`;
+          const codeBody = codeRes.body;
+
+          const combined = new ReadableStream({
+            async start(controller) {
+              // Emit Stage 1 plan first
+              controller.enqueue(encoder.encode(planChunk));
+              // Pipe Stage 2 code stream
+              const reader = codeBody.getReader();
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  controller.enqueue(value);
+                }
+              } finally {
+                reader.releaseLock();
+              }
+              controller.close();
+            },
+          });
+
+          if (visitorId && creditCost > 0 && !body?.customApiKey) {
+            void deductCredits(visitorId, creditCost);
+          }
+
+          return new Response(combined, {
+            headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
+          });
+        } else {
+          console.warn("[Two-Stage] Stage 2 code gen failed, falling through to single-stage pipeline.");
+        }
+      } catch (err: any) {
+        console.warn("[Two-Stage] Stage 2 exception:", err.message, "— falling through to single-stage pipeline.");
+      }
+    }
+  }
+
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
+
   const latestKeys = await getLatestFreeKeys();
   let selectedModel = body?.defaultModel || "oni-pro";
 
