@@ -8,7 +8,7 @@ import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
 import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
 import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
 import { createSupabaseAdminClientOrNull } from "@/lib/supabase";
-import { classifyIntent } from "@/lib/classifier";
+import { classifyIntent, Intent } from "@/lib/classifier";
 import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
@@ -851,7 +851,8 @@ function streamTextAsSse(content: string) {
 
 function prepareMessagesForGroq(
   messages: GroqMessage[],
-  currentHtml: string
+  currentHtml: string,
+  intent: Intent
 ): { messages: GroqMessage[]; maxTokens: number; isConversational: boolean } {
   const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES);
   const maxPromptTokensBudget = 40000; // Increased budget to allow full website context (e.g. up to 120k chars)
@@ -889,10 +890,11 @@ function prepareMessagesForGroq(
   const lastContentTruncated = truncateContent(lastContentRaw, 5000);
   const remainingCharsForHtml = Math.max(0, availableChars - lastContentTruncated.length);
 
-  const isConversational = isConversationalMessage(lastContentTruncated) || !isLikelyBuildRequest(lastContentTruncated);
+  const isConversational = intent === "casual";
+  const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
 
   let finalLastContent = lastContentTruncated;
-  if (currentHtml && lastMessage.role === "user") {
+  if (currentHtml && !isNewOrRedesign && lastMessage.role === "user") {
     const isContinuation =
       lastContentRaw.toLowerCase().trim() === "continue" ||
       lastContentRaw.toLowerCase().trim() === "continue generating" ||
@@ -943,7 +945,7 @@ ${currentHtml}
 
   return {
     messages: meaningfulMessages,
-    maxTokens: isConversational ? 1500 : 16000,
+    maxTokens: Math.max(4000, 16000 - Math.floor(estimateTokens(JSON.stringify(meaningfulMessages)) * 1.2)),
     isConversational,
   };
 }
@@ -1123,7 +1125,7 @@ export async function POST(req: Request) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
-  // ── Credit check ────────────────────────────────────────────────────────────
+  // ── Credit check & Intent classification ─────────────────────────────────────
   const visitorId = req.headers.get("x-visitor-id") || "";
   let creditCost = 0;
   let useFallbackPool = false;
@@ -1133,16 +1135,39 @@ export async function POST(req: Request) {
     const credits = await getOrCreateCredits(visitorId);
     if (credits && (credits.plan as string).startsWith("free::")) {
       if ((credits.credits_remaining as number) <= 0) {
-        // Instead of returning 402, use the free fallback keys pool
         useFallbackPool = true;
       }
     }
   }
 
-  const currentHtml =
-    typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0
-      ? body.currentHtml.slice(0, 80000)
-      : "";
+  const lastUserMsgText = body.prompt || (body.messages && body.messages.slice().reverse().find((m: any) => m.role === "user")?.content) || "";
+  let intent: Intent = "new_website";
+  if (lastUserMsgText) {
+    try {
+      const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
+      intent = await classifyIntent(lastUserMsgText.slice(0, 500), hasExistingWebsite);
+      const routeConfig = routeIntent(intent);
+      creditCost = routeConfig.creditCost;
+      console.log(`[Credits] intent=${intent} cost=${creditCost}`);
+    } catch (err) {
+      console.error("[Credits] classifier error:", err);
+      creditCost = 8;
+      // Fallback detection if classifier fails
+      const cleanLower = lastUserMsgText.toLowerCase();
+      if (cleanLower.includes("hi") || cleanLower.includes("hello") || cleanLower.includes("hey") || cleanLower.includes("explain")) {
+        intent = "casual";
+      }
+    }
+  }
+
+  const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
+  const effectiveHtml = (!isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0)
+    ? body.currentHtml.slice(0, 80000)
+    : "";
+
+  if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0) {
+    console.log(`[Intent] Classified intent = ${intent}. Bypassing existing HTML to trigger clean-sheet premium generation!`);
+  }
 
   let groqMessages: GroqMessage[] = [];
 
@@ -1151,7 +1176,7 @@ export async function POST(req: Request) {
       role: m.role,
       content: m.content,
     }));
-    const result = prepareMessagesForGroq(rawMessages, currentHtml);
+    const result = prepareMessagesForGroq(rawMessages, effectiveHtml, intent);
     groqMessages = result.messages;
   } else if (body.prompt) {
     const clean = sanitizeText(
@@ -1166,7 +1191,7 @@ export async function POST(req: Request) {
       return new NextResponse("Invalid prompt", { status: 400 });
     }
 
-    const result = prepareMessagesForGroq([{ role: "user", content: clean }], currentHtml);
+    const result = prepareMessagesForGroq([{ role: "user", content: clean }], effectiveHtml, intent);
     groqMessages = result.messages;
   } else {
     return new NextResponse("Bad request", { status: 400 });
@@ -1175,6 +1200,11 @@ export async function POST(req: Request) {
   const isLocalOrOllamaSelected =
     process.env.ONI_USE_OLLAMA === "true" ||
     body?.defaultModel === "local-ollama";
+
+  const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
+  if (lastUserMsg && intent !== "casual") {
+    lastUserMsg.content += `\n\nCRITICAL FORMATTING REQUIREMENT:\n- You MUST wrap the entire complete website HTML (including all CSS in <style> and all JS in <script>) inside <ONI_CODE>...</ONI_CODE> tags.\n- Do NOT output separate HTML, CSS, or JS code blocks.\n- Do NOT write notes like "This is a basic template" or "customize it as per your requirements". You MUST build the complete, fully styled premium website with real content and copy inside the <ONI_CODE> block.`;
+  }
 
   if (body.userImage && typeof body.userImage === "string" && body.userImage.trim().length > 0) {
     const lastUserMsgIndex = groqMessages.reduce((acc, msg, idx) => msg.role === "user" ? idx : acc, -1);
@@ -1186,7 +1216,7 @@ export async function POST(req: Request) {
 
   let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
   const userPromptText = body.prompt || "";
-  const hasExistingHtml = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
+  const hasExistingHtml = effectiveHtml.trim().length > 0;
   if (!hasExistingHtml && userPromptText) {
     const matchingTemplate = getMatchingTemplateHtml(userPromptText);
     if (matchingTemplate) {
@@ -1346,32 +1376,6 @@ Improve the design, make it more premium and modern.`;
           maxTokens: 6000,
         });
       }
-    }
-  }
-
-  // ── Classify intent & determine credit cost ────
-  let intent: any = "new_website";
-  const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
-  if (lastUserMsg) {
-    try {
-      const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
-      intent = await classifyIntent(lastUserMsg.content.slice(0, 500), hasExistingWebsite);
-      const routeConfig = routeIntent(intent);
-      creditCost = routeConfig.creditCost;
-      console.log(`[Credits] intent=${intent} cost=${creditCost}`);
-    } catch (err) {
-      console.error("[Credits] classifier error:", err);
-      creditCost = 8;
-      // Fallback detection if classifier fails
-      const cleanLower = lastUserMsg.content.toLowerCase();
-      if (cleanLower.includes("hi") || cleanLower.includes("hello") || cleanLower.includes("hey") || cleanLower.includes("explain")) {
-        intent = "casual";
-      }
-    }
-
-    // Append formatting prompt for any code generation intents
-    if (intent !== "casual") {
-      lastUserMsg.content += `\n\nCRITICAL FORMATTING REQUIREMENT:\n- You MUST wrap the entire complete website HTML (including all CSS in <style> and all JS in <script>) inside <ONI_CODE>...</ONI_CODE> tags.\n- Do NOT output separate HTML, CSS, or JS code blocks.\n- Do NOT write notes like "This is a basic template" or "customize it as per your requirements". You MUST build the complete, fully styled premium website with real content and copy inside the <ONI_CODE> block.`;
     }
   }
 
