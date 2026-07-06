@@ -235,10 +235,6 @@ export function AppShell({ children, activePage }: AppShellProps) {
       setRecentChats(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       localStorage.removeItem(`oni_chat_${chatId}`);
-      if (chatId === activeSessionId) {
-        sessionStorage.removeItem(SESSION_KEY);
-        window.location.href = "/";
-      }
 
       const visitorId = localStorage.getItem("oni_visitor_id");
       if (visitorId) {
@@ -248,6 +244,11 @@ export function AppShell({ children, activePage }: AppShellProps) {
             "x-visitor-id": visitorId,
           },
         }).catch((err) => console.error("Server delete failed:", err));
+      }
+
+      if (chatId === activeSessionId) {
+        sessionStorage.removeItem(SESSION_KEY);
+        window.location.href = "/";
       }
     } catch { /* ignore */ }
   };
@@ -260,7 +261,6 @@ export function AppShell({ children, activePage }: AppShellProps) {
       setRecentChats([]);
       localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       sessionStorage.removeItem(SESSION_KEY);
-      window.location.href = "/";
 
       const visitorId = localStorage.getItem("oni_visitor_id");
       if (visitorId) {
@@ -271,7 +271,11 @@ export function AppShell({ children, activePage }: AppShellProps) {
           },
         }).catch((err) => console.error("Server delete all failed:", err));
       }
-    } catch { /* ignore */ }
+
+      window.location.href = "/";
+    } catch {
+      window.location.href = "/";
+    }
   };
 
   const handleRenameChat = (chatId: string, newTitle: string) => {
