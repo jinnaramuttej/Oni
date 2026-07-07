@@ -2,11 +2,11 @@
 
 # 🔥 Oni
 
-**AI Website Builder — describe it, watch it appear.**
+**Advanced AI Website Builder SaaS — Describe, Synthesize, and Live-Preview.**
 
-Oni is a SaaS AI website builder where users describe any website in a chat interface and the AI generates a complete, production-ready HTML file that renders live in a side-by-side preview — no frameworks, no editor, just vibes.
+Oni is a high-fidelity SaaS platform that builds customized, premium websites in seconds. Users specify business details in a conversational chat interface, and the AI synthesizes complete, ready-to-use HTML/CSS/JS packages, rendered live in a split-screen, sandboxed preview.
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=nextdotjs)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=nextdotjs)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
 [![Groq](https://img.shields.io/badge/Groq-llama--3.3--70b-orange?style=flat-square)](https://groq.com)
@@ -16,90 +16,77 @@ Oni is a SaaS AI website builder where users describe any website in a chat inte
 
 ---
 
-## What it does
+## 🚀 Key Features
 
-You open Oni, type something like *"make me a luxury hotel website in dark gold"* — and within seconds you get a fully designed, multi-section website with real copy, real CSS animations, real responsive layouts. No placeholders, no lorem ipsum.
-
-Chat with it to refine: *"make the hero taller"*, *"add a pricing section"*, *"change the color to emerald"* — and it rewrites the whole thing.
-
----
-
-## Features
-
-- **AI Website Generation** — Full single-file HTML sites generated via Groq (llama-3.3-70b-versatile) with real-time SSE streaming
-- **Live Preview** — Split-pane UI with a sandboxed iframe that updates as the AI streams the response
-- **Conversation Mode** — Casual messages get casual replies; build requests trigger full website generation
-- **Website Editing** — Iterative refinement: send follow-up requests to modify the existing site (AI sees the current HTML)
-- **Model Selection** — Switch between Oni Pro (llama-3.3-70b) and Oni Flash (llama-3.1-8b-instant)
-- **File Attachments** — Upload images (PNG, JPEG, WebP, GIF, SVG, AVIF) or documents (PDF, MD, TXT, CSV, JSON, HTML, CSS, JS, TS, XLSX, and more) as context for generation
-- **Chat History** — Conversations persist to Supabase in production or to a local JSON file in development; synced across devices when Supabase is configured
-- **User Accounts** — Sign up / sign in with HMAC-SHA256 signed session cookies; dual-mode: Supabase Postgres or local `.data/users.json`
-- **Settings Panel** — Account, billing (UI), capabilities, privacy, and general preferences
-- **Dashboard** — Conversation list with sidebar navigation
-- **Security** — Input sanitization with DOMPurify, banned prompt-injection tokens, strict ID validation, session expiration, and rate limiting utilities
-- **Responsive Design** — Full mobile support across all pages
+*   **Three-Stage Generation Pipeline**: Generates complex website assets in a logical stream:
+    1.  **Stage 1 (Design Intent)**: Synthesizes design configuration (fonts, signatures, sections, and color palettes) inside `<ONI_THOUGHT>` tags.
+    2.  **Stage 2 (Stylesheet Generation)**: Generates highly detailed, custom CSS.
+    3.  **Stage 3 (HTML Body + Inline JS)**: Writes the full, semantic HTML DOM hierarchy and interactive scripts inside `<ONI_CODE>` tags.
+*   **Conversational Brand Intake Flow**: If the AI detects a new website build request, it determines the industry (Restaurant, Salon, Medical, Fitness, SaaS, Portfolio, General) and prompts the user with 4-5 quick intake questions.
+*   **Persistent Brand Memory**: Answers collected during the intake flow are structured and saved to the `project_brands` database. This brand metadata is injected into all subsequent refinement prompts to maintain color schemes, locations, and copy style consistency.
+*   **Competitor URL Scraping**: Automatically identifies inspiration keywords and URL attachments, scrapes site content via `/api/scrape`, and feeds the design structure directly into the brand context builder.
+*   **⚡ Credit Accounting**: Tracks usage via unique `visitor_id` structures, granting 50 free credits per session. Warning badges notify users on low credits, and developer tools auto-recharge credits in development mode.
+*   **Dual-Database Fallback**: Fully functional database fallback system. If Supabase keys are missing in the `.env.local` file, Oni stores profiles, chats, and brand context in local JSON stores (`.data/users.json`, `.data/history.json`).
+*   **Zero Auth Check Overhead**: Secure user accounts and sessions (using HMAC-SHA256 tokens) run in a decoupled mode, allowing instant workspace access without mandatory sign-ins.
+*   **Premium Design Themes**: Renders premium multi-section templates (Velara, Vox, Moehr, Âme, Maison Doré) matching the caliber of custom $10,000 agencies.
 
 ---
 
-## Tech Stack
+## 🛠 Tech Stack
 
-| Layer | Technology |
+| Layer | Technologies |
 |---|---|
-| **Framework** | [Next.js 16](https://nextjs.org) — App Router, React Server Components |
-| **Language** | [TypeScript 5](https://typescriptlang.org) |
-| **Styling** | [Tailwind CSS 4](https://tailwindcss.com) + custom CSS |
-| **UI Components** | [shadcn/ui](https://ui.shadcn.com), [Lucide React](https://lucide.dev), [Framer Motion](https://framer.motion.com) |
-| **AI Model** | [Groq API](https://groq.com) — `llama-3.3-70b-versatile` (primary), `llama-3.1-8b-instant` (flash) |
-| **Database** | [Supabase](https://supabase.com) (PostgreSQL) — with local JSON fallback |
-| **Auth** | Custom HMAC-SHA256 session tokens via Node.js `crypto` |
-| **Sanitization** | [isomorphic-dompurify](https://github.com/cure53/DOMPurify) |
-| **Animations** | [Framer Motion](https://www.framer.com/motion), [motion](https://motion.dev) |
+| **Frontend Framework** | Next.js 14 (App Router, Server Actions, API routes) |
+| **Language** | TypeScript 5 |
+| **Styles** | Vanilla CSS + Tailwind CSS 4 for the dashboard shell |
+| **Icons & Motion** | Lucide React, Framer Motion |
+| **AI LLM** | Groq API — `llama-3.3-70b-versatile` (Pro) & `llama-3.1-8b-instant` (Flash) |
+| **Database** | Supabase Postgres DB with Local JSON File Fallbacks |
+| **Auth** | Custom cookies backed by Node.js cryptographic hashing |
+| **Web Scraping** | Cheerio & Markdown Converters for competitor inspiration extraction |
 
 ---
 
-## Project Structure
+## 📁 Directory Structure
 
 ```
 src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── signin/          # POST — authenticate user, set session cookie
-│   │   │   ├── signup/          # POST — create user account
-│   │   │   ├── me/              # GET  — returns current user from session cookie
-│   │   │   └── logout/          # POST — clears session cookie
+│   │   │   ├── signin/          # User authentication and session setup
+│   │   │   ├── signup/          # User signup endpoint
+│   │   │   ├── me/              # Fetch currently logged-in user profile
+│   │   │   └── logout/          # Destroys cookie and logs out session
+│   │   ├── brands/              # GET/POST — manages project brand context
 │   │   ├── chat/
-│   │   │   ├── route.ts         # POST — Groq SSE streaming endpoint (primary)
-│   │   │   └── history/         # GET/POST — conversation persistence
-│   │   ├── generate/            # POST — non-streaming generation endpoint
-│   │   └── supabase/
-│   │       └── profiles/        # GET  — list profiles from Supabase
-│   ├── chat/                    # /chat page
-│   ├── dashboard/               # /dashboard page + settings
-│   ├── landing/                 # Marketing landing page
-│   ├── signin/                  # Sign in page
-│   ├── signup/                  # Sign up page
-│   └── page.tsx                 # Entry point (redirects to home)
+│   │   │   ├── route.ts         # POST — Groq SSE streaming endpoint
+│   │   │   └── history/         # GET/POST/DELETE — history sync and storage
+│   │   ├── credits/             # GET/POST — credit validation and depletion
+│   │   ├── enhance-prompt/      # Refines user prompts with context enhancements
+│   │   └── scrape/              # Scrapes competitor URLs for design assets
+│   ├── chat/                    # Workspace interface (/chat)
+│   ├── dashboard/               # Dashboard layout (/dashboard)
+│   ├── signin/                  # Sign-in UI
+│   ├── signup/                  # Sign-up UI
+│   └── page.tsx                 # Main entry / Guest landing page
 ├── components/ui/
-│   ├── v0-ai-chat.tsx           # Main chat + live preview UI (core component)
-│   ├── home-page.tsx            # Homepage with file/image upload entry
-│   ├── app-shell.tsx            # Authenticated app shell with sidebar
-│   ├── dashboard-shell.tsx      # Dashboard layout
-│   ├── settings-*.tsx           # Settings tab components
-│   ├── profile-menu.tsx         # User profile dropdown
-│   └── sign-in.tsx              # Sign in / sign up form component
+│   ├── v0-ai-chat.tsx           # Main workspace split-view builder UI
+│   ├── app-shell.tsx            # Navigation sidebar and local storage synchronizer
+│   ├── dashboard-shell.tsx      # Sidebar layouts for dashboard panels
+│   └── sign-in.tsx              # Sign-in and signup reusable form layouts
 └── lib/
-    ├── auth.ts                  # Auth logic, session tokens, user CRUD
-    ├── supabase.ts              # Supabase client factory (admin + browser)
-    ├── rate-limit.ts            # In-memory sliding-window rate limiter
-    └── utils.ts                 # Tailwind merge helper
+    ├── auth.ts                  # Session tokens and local user store CRUD
+    ├── supabase.ts              # Supabase admin client initialization
+    ├── rate-limit.ts            # Sliding-window rate limiter for public routes
+    └── utils.ts                 # Style concatenation and class formatting
 ```
 
 ---
 
-## Getting Started
+## ⚙ Getting Started
 
-### 1. Clone and install
+### 1. Clone & Install Dependencies
 
 ```bash
 git clone <your-repo-url>
@@ -107,42 +94,39 @@ cd oni
 npm install
 ```
 
-### 2. Set up environment variables
+### 2. Configure Environment Variables
 
-Create a `.env.local` file in the root:
+Create a `.env.local` file in the root directory:
 
-```bash
-# Required — get from https://console.groq.com
+```env
+# REQUIRED: Get your key from https://console.groq.com
 GROQ_API_KEY=gsk_your_groq_api_key
 
-# Optional — for Supabase persistence (strongly recommended for production)
+# OPTIONAL: Configure for Supabase DB Sync
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Optional — secret for signing session cookies (generate a random 32-byte hex string)
-INTERNAL_SECRET=your_random_secret_here
+# OPTIONAL: Session signing key (Recommended)
+INTERNAL_SECRET=your_32_byte_hex_string_here
 ```
 
-> **Without Supabase:** Chat history and user accounts fall back to local `.data/*.json` files. Great for development, not suitable for production.
-
-### 3. Run
+### 3. Launch Development Server
 
 ```bash
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) to start designing.
 
 ---
 
-## Supabase Setup
+## 🗄 Database Configuration
 
-If you want persistence and user accounts backed by Postgres, create these tables in your Supabase SQL editor:
+If you are using Supabase Postgres, execute the following SQL scripts in your Supabase database console:
 
 ```sql
--- User profiles
-CREATE TABLE profiles (
+-- User profiles schema
+CREATE TABLE public.profiles (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -151,8 +135,8 @@ CREATE TABLE profiles (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
--- Chat history
-CREATE TABLE chats (
+-- Chat conversations table
+CREATE TABLE public.chats (
   id UUID PRIMARY KEY,
   visitor_id UUID NOT NULL,
   title TEXT NOT NULL,
@@ -162,78 +146,45 @@ CREATE TABLE chats (
 );
 
 CREATE INDEX chats_visitor_id_idx ON chats (visitor_id);
+
+-- Brand contexts table (brand memory)
+CREATE TABLE public.project_brands (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES public.chats(id) ON DELETE CASCADE,
+  business_name TEXT,
+  industry TEXT,
+  primary_color TEXT,
+  secondary_color TEXT,
+  tone TEXT,
+  location TEXT,
+  custom_answers JSONB DEFAULT '{}'::jsonb,
+  logo_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Credits bookkeeping table
+CREATE TABLE public.user_credits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  credits_remaining INT NOT NULL DEFAULT 50,
+  credits_used INT NOT NULL DEFAULT 0,
+  plan TEXT,
+  reset_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
 ```
 
 ---
 
-## API Reference
+## 🔒 Security & Sanitization
 
-### `POST /api/chat`
-Main Groq streaming endpoint. Returns an SSE stream.
-
-```json
-{
-  "prompt": "make a restaurant website",
-  "messages": [{ "role": "user", "content": "..." }],
-  "currentHtml": "<html>...</html>",
-  "defaultModel": "oni-pro"
-}
-```
-
-Response format (SSE):
-```
-data: {"choices":[{"delta":{"content":"token"}}]}
-data: [DONE]
-```
-
-The full response contains `<ONI_THOUGHT>...</ONI_THOUGHT>` (internal reasoning) and `<ONI_CODE>...</ONI_CODE>` (the website HTML).
-
-### `POST /api/auth/signin`
-```json
-{ "email": "user@example.com", "password": "secret123" }
-```
-
-### `POST /api/auth/signup`
-```json
-{ "name": "Jane", "email": "jane@example.com", "password": "secret123", "confirmPassword": "secret123" }
-```
-
-### `GET /api/auth/me`
-Returns the current authenticated user from session cookie.
-
-### `GET /api/chat/history`
-Requires `x-visitor-id` header. Returns conversation list.
-
-### `POST /api/chat/history`
-Requires `x-visitor-id` header. Upserts a conversation.
+*   **Iframe Sandbox**: Code generated by the AI is loaded using an iframe with a restrictive `sandbox="allow-scripts"` setting (omitting `allow-same-origin`). This prevents custom scripts from accessing workspace local storage, parent elements, cookies, or hijacking navigations.
+*   **HTML Safety Filters**: Sanitizes raw generated content before embedding, stripping infinite loops, spam interval scripts, popups, redirections, and limit-refresh loops.
+*   **CSRF Checks**: Middleware validates incoming origin headers for state-changing routes (POST, DELETE, PUT, PATCH).
 
 ---
 
-## Environment Variable Reference
+## 📝 License
 
-| Variable | Required | Description |
-|---|---|---|
-| `GROQ_API_KEY` | ✅ Yes | Groq API key for AI generation |
-| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Supabase public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase service role key (server-side only) |
-| `INTERNAL_SECRET` | Recommended | HMAC secret for session cookie signing |
-
----
-
-## Deployment
-
-Deploy on [Vercel](https://vercel.com) — it's the simplest path:
-
-1. Push to GitHub
-2. Import the repo on Vercel
-3. Add all environment variables in the Vercel project settings
-4. Deploy
-
-The app is fully serverless-compatible. No persistent server required when using Supabase.
-
----
-
-## License
-
-Private project. All rights reserved.
+Private SaaS application. All rights reserved.
