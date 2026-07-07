@@ -89,9 +89,38 @@ export function DashboardShell({ children }: DashboardShellProps) {
   }, []);
 
   const handleLogout = async () => {
-    setProfileOpen(false);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/signin");
+    try {
+      setProfileOpen(false);
+
+      // Clear local storage and session data
+      if (typeof window !== "undefined") {
+        // Clear all chats from local storage
+        try {
+          const raw = localStorage.getItem("oni_conversations");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((c: any) => {
+                if (c?.id) localStorage.removeItem(`oni_chat_${c.id}`);
+              });
+            }
+          }
+        } catch { /* ignore */ }
+
+        localStorage.removeItem("oni_conversations");
+        localStorage.removeItem("oni_pins");
+        localStorage.removeItem("oni_recent_sort");
+        localStorage.removeItem("oni_visitor_id");
+        localStorage.removeItem("oni_settings");
+        sessionStorage.removeItem("oni_session");
+      }
+
+      await fetch("/api/auth/logout", { method: "POST" }).catch((err) => console.error("Logout request failed:", err));
+      
+      window.location.href = "/";
+    } catch {
+      window.location.href = "/";
+    }
   };
 
   const initials =

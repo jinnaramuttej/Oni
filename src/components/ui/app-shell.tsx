@@ -294,9 +294,28 @@ export function AppShell({ children, activePage }: AppShellProps) {
   };
 
   const handleLogout = async () => {
-    setProfileOpen(false);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/signin");
+    try {
+      setProfileOpen(false);
+      
+      // Clear local storage and session data
+      if (typeof window !== "undefined") {
+        recentChats.forEach((c) => {
+          localStorage.removeItem(`oni_chat_${c.id}`);
+        });
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem("oni_pins");
+        localStorage.removeItem("oni_recent_sort");
+        localStorage.removeItem("oni_visitor_id");
+        localStorage.removeItem("oni_settings");
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+
+      await fetch("/api/auth/logout", { method: "POST" }).catch((err) => console.error("Logout request failed:", err));
+      
+      window.location.href = "/";
+    } catch {
+      window.location.href = "/";
+    }
   };
 
   const displayNameToUse = customDisplayName || user?.name || "Oni User";
