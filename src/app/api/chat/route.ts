@@ -1350,6 +1350,10 @@ Improve the design, make it more premium and modern.`;
     ): Promise<string | null> {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+      if (apiUrl.includes("openrouter.ai")) {
+        headers["HTTP-Referer"] = "https://oni.build";
+        headers["X-Title"] = "Oni Website Builder";
+      }
       try {
         const res = await fetch(apiUrl, {
           method: "POST",
@@ -1369,10 +1373,28 @@ Improve the design, make it more premium and modern.`;
     }
 
     // Determine which model/endpoint to use for code stages
-    const codeApiUrl = isLocalOrOllamaSelected ? OLLAMA_CHAT_URL : "https://api.groq.com/openai/v1/chat/completions";
-    const codeApiKey = isLocalOrOllamaSelected ? "" : groqKey;
-    const codeModel = isLocalOrOllamaSelected ? OLLAMA_MODEL : GROQ_MODEL;
-    console.log(`[Three-Stage] Code stages will use: ${isLocalOrOllamaSelected ? "Ollama" : "Groq"} (${codeModel})`);
+    const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
+    const useOpenRouterForCode = !isLocalOrOllamaSelected && !!openRouterKey;
+
+    const codeApiUrl = isLocalOrOllamaSelected
+      ? OLLAMA_CHAT_URL
+      : useOpenRouterForCode
+        ? "https://openrouter.ai/api/v1/chat/completions"
+        : "https://api.groq.com/openai/v1/chat/completions";
+
+    const codeApiKey = isLocalOrOllamaSelected
+      ? ""
+      : useOpenRouterForCode
+        ? openRouterKey
+        : groqKey;
+
+    const codeModel = isLocalOrOllamaSelected
+      ? OLLAMA_MODEL
+      : useOpenRouterForCode
+        ? "nvidia/nemotron-3-ultra-550b-a55b"
+        : GROQ_MODEL;
+
+    console.log(`[Three-Stage] Code stages will use: ${isLocalOrOllamaSelected ? "Ollama" : useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
 
     // Get matching template reference for CSS/HTML guidance
     const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
