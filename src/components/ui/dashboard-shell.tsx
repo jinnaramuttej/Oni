@@ -48,7 +48,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   useEffect(() => {
     let active = true;
 
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return null;
         const data = (await response.json().catch(() => null)) as { user?: AuthUser | null } | null;
@@ -117,9 +117,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
       await fetch("/api/auth/logout", { method: "POST" }).catch((err) => console.error("Logout request failed:", err));
       
-      window.location.href = "/";
+      window.location.href = "/signin";
     } catch {
-      window.location.href = "/";
+      window.location.href = "/signin";
     }
   };
 

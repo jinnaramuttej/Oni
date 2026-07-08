@@ -118,7 +118,7 @@ export function AppShell({ children, activePage }: AppShellProps) {
   useEffect(() => {
     let active = true;
 
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return null;
         const data = (await response.json().catch(() => null)) as { user?: AuthUser | null } | null;
@@ -312,9 +312,9 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
       await fetch("/api/auth/logout", { method: "POST" }).catch((err) => console.error("Logout request failed:", err));
       
-      window.location.href = "/";
+      window.location.href = "/signin";
     } catch {
-      window.location.href = "/";
+      window.location.href = "/signin";
     }
   };
 
@@ -657,51 +657,68 @@ export function AppShell({ children, activePage }: AppShellProps) {
 
         {/* Sidebar Footer / User Profile */}
         <div className="p-3 border-t border-surface-container-high shrink-0 relative">
-          <AnimatePresence>
-            {profileOpen && (
-              <ProfileMenu
-                user={user}
-                onClose={() => setProfileOpen(false)}
-                onLogout={handleLogout}
-              />
-            )}
-          </AnimatePresence>
-          <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            className={cn(
-              "w-full flex items-center justify-between p-1.5 rounded-lg transition-colors cursor-pointer",
-              profileOpen ? "bg-surface-container-high border border-outline-variant" : "hover:bg-surface-container border border-transparent"
-            )}
-          >
-            <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <AnimatePresence>
+                {profileOpen && (
+                  <ProfileMenu
+                    user={user}
+                    onClose={() => setProfileOpen(false)}
+                    onLogout={handleLogout}
+                  />
+                )}
+              </AnimatePresence>
+              <button
+                onClick={() => setProfileOpen(!profileOpen)}
+                className={cn(
+                  "w-full flex items-center justify-between p-1.5 rounded-lg transition-colors cursor-pointer",
+                  profileOpen ? "bg-surface-container-high border border-outline-variant" : "hover:bg-surface-container border border-transparent"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-primary text-xs font-semibold shrink-0">
+                    {initials}
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="font-medium text-primary text-[13px] leading-tight">
+                      {customDisplayName || user?.name || "Oni User"}
+                    </span>
+                    <span className="text-xs text-text-tertiary">Free plan</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-text-tertiary">
+                  <svg
+                    className="ml-1"
+                    fill="none"
+                    height="16"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="m7 15 5 5 5-5"></path>
+                    <path d="m7 9 5-5 5 5"></path>
+                  </svg>
+                </div>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => router.push("/signin")}
+              className="w-full flex items-center gap-3 p-1.5 rounded-lg hover:bg-surface-container text-text-secondary hover:text-primary transition-colors cursor-pointer text-left"
+            >
               <div className="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-primary text-xs font-semibold shrink-0">
-                {initials}
+                <span className="material-symbols-outlined text-[16px]">login</span>
               </div>
               <div className="flex flex-col items-start text-left">
-                <span className="font-medium text-primary text-[13px] leading-tight">
-                  {customDisplayName || user?.name || "Oni User"}
-                </span>
-                <span className="text-xs text-text-tertiary">Free plan</span>
+                <span className="font-medium text-[13px] leading-tight">Sign In</span>
+                <span className="text-xs text-text-tertiary">Access your account</span>
               </div>
-            </div>
-            <div className="flex items-center gap-1 text-text-tertiary">
-              <svg
-                className="ml-1"
-                fill="none"
-                height="16"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="16"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="m7 15 5 5 5-5"></path>
-                <path d="m7 9 5-5 5 5"></path>
-              </svg>
-            </div>
-          </button>
+            </button>
+          )}
         </div>
       </motion.aside>
 

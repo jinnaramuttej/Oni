@@ -20,7 +20,7 @@ export function SettingsPage() {
   useEffect(() => {
     let active = true;
 
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return null;
         const data = (await response.json().catch(() => null)) as { user?: AuthUser | null } | null;

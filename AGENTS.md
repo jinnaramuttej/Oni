@@ -122,3 +122,34 @@ src/lib/auth.ts — exists but NOT used for now
 - After completing a task/response, you must commit and push your changes locally and to GitHub.
 - If needed, create multiple granular commits.
 - Use natural, non-AI-like commit messages (e.g. avoid robotic/generic phrases like "Refactored code" or "AI generated fixes", use direct human-like descriptions of the actual change).
+
+User: "make a luxury coffee cafe website"
+          │
+          ▼
+┌──────────────────────────────────────┐
+│  Stage 1 — Groq (500 tokens, fast)  │
+│  Writes ONLY the design intent:      │
+│  PALETTE, FONTS, SIGNATURE, LAYOUT,  │
+│  SECTIONS                            │
+└──────────────┬───────────────────────┘
+               │ design plan passed down
+               ▼
+┌──────────────────────────────────────┐
+│  Stage 2 — Code model (8000 tokens) │
+│  Writes ONLY raw CSS (700-900 lines) │
+│  @import, :root vars, every section, │
+│  animations, media queries           │
+└──────────────┬───────────────────────┘
+               │ CSS class names passed to Stage 3
+               ▼
+┌──────────────────────────────────────┐
+│  Stage 3 — Code model (8000 tokens) │
+│  Writes ONLY HTML body + inline JS  │
+│  Uses exact class names from Stage 2 │
+│  All 7 sections, real content        │
+└──────────────┬───────────────────────┘
+               │ server assembles
+               ▼
+     <style>[CSS]</style>
+     <body>[HTML]<script>[JS]</script></body>
+     → streamed as one complete inline file

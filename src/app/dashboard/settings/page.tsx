@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (!mounted) return;
