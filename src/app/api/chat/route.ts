@@ -119,7 +119,13 @@ RULES:
 - Do NOT include markdown fences, explanations, or extra text.`;
 
 // Stage 2: CSS-only generation (pure stylesheet, no HTML)
-const ONI_CSS_PROMPT = `You are an elite CSS architect. Given a website design plan, write ONLY the complete CSS stylesheet.
+const ONI_CSS_PROMPT = `You are a pure CSS code generator API. Given a website design plan, write ONLY the complete CSS stylesheet.
+
+CRITICAL INSTRUCTIONS:
+- You must NOT write any introductory text, chat responses, thought process, planning, checklists, or explanations.
+- Do NOT wrap your output in markdown code blocks (such as \`\`\`css ... \`\`\`).
+- Start your response immediately with the first character of the CSS code (e.g., @import).
+- Output ONLY raw CSS — no HTML, no <style> tags, no JavaScript.
 
 OUTPUT RULES:
 - Start with @import url(...) for Google Fonts (the ones specified in the plan's FONTS field)
@@ -137,11 +143,16 @@ OUTPUT RULES:
   * Modal/drawer styles if relevant
   * @keyframes (float, fadeIn, slideUp, marquee etc.)
   * @media queries for mobile (<768px)
-- Target: 700-900 lines of CSS
-- Output ONLY raw CSS — no <style> tags, no HTML, no JavaScript, no explanations, no markdown fences`;
+- Target: 700-900 lines of CSS`;
 
 // Stage 3: HTML body + JS generation (uses class names from Stage 2 CSS)
-const ONI_HTML_BODY_PROMPT = `You are an elite HTML and JavaScript developer. Given a website design plan and the CSS already written, write the complete HTML body markup and JavaScript.
+const ONI_HTML_BODY_PROMPT = `You are a pure HTML and JavaScript code generator API. Given a website design plan and the CSS already written, write the complete HTML body markup and JavaScript.
+
+CRITICAL INSTRUCTIONS:
+- You must NOT write any introductory text, chat responses, thought process, planning, checklists, or explanations.
+- Do NOT wrap your output in markdown code blocks (such as \`\`\`html ... \`\`\`).
+- Start your response immediately with the first character of the HTML code (i.e., <body>).
+- Output ONLY raw HTML and JavaScript — no <html>, no <head>, no <style> tags.
 
 OUTPUT RULES:
 - Start output with <body> and end with </body>
@@ -157,7 +168,7 @@ OUTPUT RULES:
 - REAL content only: specific business name, real street address, real phone, real prices, real staff names. Zero placeholders, zero lorem ipsum.
 - At the end of <body>, include ONE <script> block with: navbar shrink on scroll, IntersectionObserver for .reveal elements, smooth anchor scroll, form submit toast feedback
 - NEVER use <link rel="stylesheet"> or <script src="..."> — no external file references
-- Output ONLY: <body>...</body> with the inline <script> inside. No <html>, no <head>, no <style> tags.`;
+- Output ONLY: <body>...</body> with the inline <script> inside.`;
 
 const ONI_LEGACY_SYSTEM_PROMPT = `You are Oni, an elite AI website designer and builder. Every website you generate must be beautiful, production-ready, and worthy of a $50,000 agency.
 
@@ -1423,7 +1434,7 @@ Improve the design, make it more premium and modern.`;
         codeApiUrl, codeApiKey, codeModel,
         [
           { role: "system", content: cssPromptWithContext },
-          { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only.` },
+          { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only. Do NOT write any conversational text, explanations, or thought process. Start immediately with the first CSS selector or @import.` },
         ],
         8000
       );
@@ -1438,7 +1449,7 @@ Improve the design, make it more premium and modern.`;
             { role: "system", content: ONI_HTML_BODY_PROMPT + templateRef },
             {
               role: "user",
-              content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${cssCode.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>.`,
+              content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${cssCode.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>. Do NOT write any conversational text, explanations, or thought process. Start immediately with the <body> tag.`,
             },
           ],
           8000
@@ -1454,9 +1465,23 @@ Improve the design, make it more premium and modern.`;
           };
           const siteTitle = extractTitle(planText);
 
-          // Strip any markdown fences the model may have added
-          const cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
-          const rawBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          // Strip any markdown fences and isolate pure CSS/HTML contents
+          let cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          let cssStart = cleanCss.indexOf("@import");
+          if (cssStart === -1) cssStart = cleanCss.indexOf(":root");
+          if (cssStart === -1) cssStart = cleanCss.indexOf("*");
+          if (cssStart !== -1) {
+            cleanCss = cleanCss.slice(cssStart).trim();
+          }
+
+          let rawBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
+          let bodyStart = rawBody.indexOf("<body");
+          let bodyEnd = rawBody.lastIndexOf("</body>");
+          if (bodyStart !== -1 && bodyEnd !== -1) {
+            rawBody = rawBody.slice(bodyStart, bodyEnd + 7).trim();
+          } else if (bodyStart !== -1) {
+            rawBody = rawBody.slice(bodyStart).trim();
+          }
 
           // Extract <script> block from body for scripts.js
           const scriptMatch = rawBody.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
