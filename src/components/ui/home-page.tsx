@@ -341,7 +341,7 @@ export function HomePage() {
           forceNewSession
         />
       ) : (
-        <div className="flex-1 flex flex-col justify-start items-center relative overflow-y-auto bg-surface w-full h-full py-16 px-4 md:px-8">
+        <div className="flex-1 flex flex-col justify-center items-center relative overflow-y-auto bg-surface w-full h-full py-16 px-4 md:px-8">
           {/* Ambient monochrome background glow */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
             <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-white/5 to-transparent blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
@@ -426,7 +426,7 @@ export function HomePage() {
                   className="p-1.5 rounded-md text-text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
                 >
                   <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg">
-                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                     <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                   </svg>
                 </button>
                 <div className="flex items-center gap-1.5">
@@ -495,7 +495,7 @@ export function HomePage() {
                 <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>
               </div>
 
-              {/* Main 6 templates */}
+              {/* Main templates (top 3 only) */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   {
@@ -517,27 +517,6 @@ export function HomePage() {
                     desc: "Architecture studio, manifesto, project grid, and refined contact flow.",
                     prompt: TEMPLATE_PROMPTS.moehr,
                     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop",
-                    badge: "New",
-                  },
-                  {
-                    title: "Maison Doré",
-                    desc: "Hair atelier, couture hero, marquee services, and booking flow.",
-                    prompt: TEMPLATE_PROMPTS.maisonDore,
-                    image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop",
-                    badge: "New",
-                  },
-                  {
-                    title: "Âme Coffee",
-                    desc: "Specialty coffee atelier, farm origins, copper editorial.",
-                    prompt: TEMPLATE_PROMPTS.ameCoffee,
-                    image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop",
-                    badge: "New",
-                  },
-                  {
-                    title: "Foliant & Sons",
-                    desc: "Antiquarian bookshop, parchment palette, rare catalogue.",
-                    prompt: TEMPLATE_PROMPTS.foliantLibrary,
-                    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80&fit=crop",
                     badge: "New",
                   },
                 ].map((card, index) => (
@@ -590,6 +569,24 @@ export function HomePage() {
                 {showAllTemplates && (
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 animate-[fadeSlideUp_300ms_ease]">
                     {[
+                      {
+                        title: "Maison Doré",
+                        desc: "Hair atelier, couture hero, marquee services, and booking flow.",
+                        prompt: TEMPLATE_PROMPTS.maisonDore,
+                        image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop",
+                      },
+                      {
+                        title: "Âme Coffee",
+                        desc: "Specialty coffee atelier, farm origins, copper editorial.",
+                        prompt: TEMPLATE_PROMPTS.ameCoffee,
+                        image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop",
+                      },
+                      {
+                        title: "Foliant & Sons",
+                        desc: "Antiquarian bookshop, parchment palette, rare catalogue.",
+                        prompt: TEMPLATE_PROMPTS.foliantLibrary,
+                        image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80&fit=crop",
+                      },
                       {
                         title: "Studio Portfolio",
                         desc: "Dark portfolio, selected work grid, case studies.",
