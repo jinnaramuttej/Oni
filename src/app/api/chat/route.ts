@@ -1258,7 +1258,9 @@ export async function POST(req: Request) {
       const rawPrompt = TEMPLATE_PROMPTS[item.key as keyof typeof TEMPLATE_PROMPTS];
       if (rawPrompt) {
         const cleanTemplate = cleanTemplatePrompt(rawPrompt).trim().replace(/\r\n/g, "\n");
-        if (cleanUser === cleanTemplate) {
+        const normUser = cleanUser.toLowerCase().replace(/\s+/g, " ");
+        const normTemplate = cleanTemplate.toLowerCase().replace(/\s+/g, " ");
+        if (normUser === normTemplate) {
           console.log(`[Templates] Exact match for template prompt: ${item.name}. Bypassing AI pipeline.`);
           const sseResponse = `Here's your template for ${item.name}.\n\n<ONI_CODE>\n${item.html}\n</ONI_CODE>`;
           return streamTextAsSse(sseResponse);
