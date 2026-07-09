@@ -995,7 +995,7 @@ function prepareMessagesForGroq(
   const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
 
   let finalLastContent = lastContentTruncated;
-  if (currentHtml && !isNewOrRedesign && lastMessage.role === "user") {
+  if (currentHtml && lastMessage.role === "user") {
     const isContinuation =
       lastContentRaw.toLowerCase().trim() === "continue" ||
       lastContentRaw.toLowerCase().trim() === "continue generating" ||
@@ -1019,7 +1019,14 @@ ${currentHtml}
     } else {
       const htmlSliceLimit = Math.max(8000, Math.min(100000, remainingCharsForHtml - 1000));
       const slicedHtml = currentHtml.slice(0, htmlSliceLimit);
-      finalLastContent = `User request: ${lastContentTruncated}\n\nThe user is requesting an update, modification, or style change to the existing website below.\n\nCRITICAL DESIGN & REFINEMENT RULES:\n1. Do NOT make a lazy search-and-replace tweak. If the current HTML is simple, basic, or unstyled, you MUST completely upgrade and redesign the sections to make it look like a premium, $50,000 agency site.\n2. Ensure you have at least 6-7 complete, beautifully styled sections: navbar, hero, features grid, services/menu, testimonials, contact form, and footer.\n3. Every element must use var(--font-display) and var(--font-body) custom properties. Import modern Google Fonts at the top of <style>.\n4. All CSS custom variables used (like --shadow, --shadow-lg, transitions, custom gradients) MUST be explicitly declared in :root.\n5. Do NOT write explanations, chat tutorials, or markdown code blocks outside of <ONI_CODE>. Only write exactly one sentence before the code block.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+      
+      const isTemplateRequest = isNewOrRedesign && lastContentRaw.toLowerCase().includes("website with these exact design notes");
+      
+      if (isTemplateRequest) {
+        finalLastContent = `User request: ${lastContentTruncated}\n\nThe user wants to build a customized version of the premium template below.\n\nCRITICAL TEMPLATE CUSTOMIZATION RULES:\n1. Use the template HTML below as your exact starting codebase.\n2. Do NOT write a new site from scratch. Modify the text content, colors, images, and layout elements ONLY as requested by the user, while fully retaining the premium CSS styles, grid structures, custom fonts, animations, and JS interactions already present in this template.\n3. Keep the overall look and feel of the original template unless explicitly asked to modify it.\n4. You MUST output the complete modified code inside <ONI_CODE>...</ONI_CODE> tags.\n\n<TEMPLATE_BASE_HTML>\n${slicedHtml}\n</TEMPLATE_BASE_HTML>`;
+      } else {
+        finalLastContent = `User request: ${lastContentTruncated}\n\nThe user is requesting an update, modification, or style change to the existing website below.\n\nCRITICAL DESIGN & REFINEMENT RULES:\n1. Do NOT make a lazy search-and-replace tweak. If the current HTML is simple, basic, or unstyled, you MUST completely upgrade and redesign the sections to make it look like a premium, $50,000 agency site.\n2. Ensure you have at least 6-7 complete, beautifully styled sections: navbar, hero, features grid, services/menu, testimonials, contact form, and footer.\n3. Every element must use var(--font-display) and var(--font-body) custom properties. Import modern Google Fonts at the top of <style>.\n4. All CSS custom variables used (like --shadow, --shadow-lg, transitions, custom gradients) MUST be explicitly declared in :root.\n5. Do NOT write explanations, chat tutorials, or markdown code blocks outside of <ONI_CODE>. Only write exactly one sentence before the code block.\n\n<CURRENT_HTML>\n${slicedHtml}\n</CURRENT_HTML>`;
+      }
     }
   }
 
@@ -1226,6 +1233,40 @@ export async function POST(req: Request) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
+  // Check for exact template prompts to bypass AI generation and stream the template directly
+  const userPromptTextForBypass = body.prompt || "";
+  if (userPromptTextForBypass) {
+    const cleanUser = userPromptTextForBypass.trim().replace(/\r\n/g, "\n");
+    const templatesMapping = [
+      { key: "velara", html: VELARA_SAMPLE_HTML, name: "Velara Retreat" },
+      { key: "vox", html: VOX_SAMPLE_HTML, name: "Vox Restaurant" },
+      { key: "moehr", html: MOEHR_SAMPLE_HTML, name: "Moehr Atelier" },
+      { key: "maisonDore", html: MAISON_DORE_SAMPLE_HTML, name: "Maison Dore" },
+      { key: "ameCoffee", html: AME_COFFEE_SAMPLE_HTML, name: "Âme Coffee Atelier" },
+    ];
+    
+    const cleanTemplatePrompt = (rawPrompt: string): string => {
+      if (!rawPrompt) return "";
+      const lines = rawPrompt.split("\n");
+      if (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:")) {
+        return lines.slice(1).join("\n").trim();
+      }
+      return rawPrompt.trim();
+    };
+
+    for (const item of templatesMapping) {
+      const rawPrompt = TEMPLATE_PROMPTS[item.key as keyof typeof TEMPLATE_PROMPTS];
+      if (rawPrompt) {
+        const cleanTemplate = cleanTemplatePrompt(rawPrompt).trim().replace(/\r\n/g, "\n");
+        if (cleanUser === cleanTemplate) {
+          console.log(`[Templates] Exact match for template prompt: ${item.name}. Bypassing AI pipeline.`);
+          const sseResponse = `Here's your template for ${item.name}.\n\n<ONI_CODE>\n${item.html}\n</ONI_CODE>`;
+          return streamTextAsSse(sseResponse);
+        }
+      }
+    }
+  }
+
   // ── Credit check & Intent classification ─────────────────────────────────────
   const visitorId = req.headers.get("x-visitor-id") || "";
   let creditCost = 0;
@@ -1267,11 +1308,20 @@ export async function POST(req: Request) {
   }
 
   const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
-  const effectiveHtml = (!isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0)
+  let effectiveHtml = (!isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0)
     ? body.currentHtml.slice(0, 80000)
     : "";
 
-  if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0) {
+  // If starting a new website or redesign, and the prompt matches a template, pre-seed effectiveHtml
+  if (isNewOrRedesign && (!effectiveHtml || effectiveHtml.trim().length === 0) && lastUserMsgText) {
+    const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
+    if (matchingTemplate) {
+      effectiveHtml = matchingTemplate.html;
+      console.log(`[Templates] Pre-seeding effectiveHtml with matching template: ${matchingTemplate.name} for modified request.`);
+    }
+  }
+
+  if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0 && !getMatchingTemplateHtml(lastUserMsgText)) {
     console.log(`[Intent] Classified intent = ${intent}. Bypassing existing HTML to trigger clean-sheet premium generation!`);
   }
 
@@ -1349,7 +1399,7 @@ Improve the design, make it more premium and modern.`;
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   // ── Three-stage pipeline: Plan → CSS → HTML+JS → Assemble ────────────────────
-  const isBuildIntent = intent === "new_website" || intent === "full_redesign" || isLikelyBuildRequest(lastUserMsgText);
+  const isBuildIntent = (intent === "new_website" || intent === "full_redesign" || isLikelyBuildRequest(lastUserMsgText)) && !getMatchingTemplateHtml(lastUserMsgText);
   const groqKey = process.env.GROQ_API_KEY?.trim() || "";
 
   if (isBuildIntent && !useFallbackPool && groqKey) {
