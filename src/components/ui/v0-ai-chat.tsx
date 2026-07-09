@@ -3352,11 +3352,12 @@ function ChatComposer({
   return (
     <motion.div
       layoutId="composer-container"
+      transition={{ type: "spring", stiffness: 450, damping: 40 }}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       className={cn(
-        "rounded-2xl border border-surface-container-high bg-surface-container-low/60 backdrop-blur-md transition-all duration-300 shadow-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20",
+        "rounded-2xl border border-surface-container-high bg-surface-container-low/60 backdrop-blur-md transition-[border-color,box-shadow,background-color] duration-300 shadow-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20",
         isDragging && "border-primary/30 bg-primary/5"
       )}
     >

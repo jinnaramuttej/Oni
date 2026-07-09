@@ -358,7 +358,8 @@ export function HomePage() {
 
             <motion.div
               layoutId="composer-container"
-              className="w-full max-w-2xl bg-surface-container-low/60 backdrop-blur-md rounded-2xl border border-surface-container-high/70 p-4 flex flex-col gap-3 shadow-lg hover:shadow-xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-300 relative z-10"
+              transition={{ type: "spring", stiffness: 450, damping: 40 }}
+              className="w-full max-w-2xl bg-surface-container-low/60 backdrop-blur-md rounded-2xl border border-surface-container-high/70 p-4 flex flex-col gap-3 shadow-lg hover:shadow-xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-[border-color,box-shadow,background-color] duration-300 relative z-10"
             >
               <input
                 ref={fileInputRef}
