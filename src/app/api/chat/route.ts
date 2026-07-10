@@ -1262,7 +1262,7 @@ export async function POST(req: Request) {
         const normTemplate = cleanTemplate.toLowerCase().replace(/\s+/g, " ");
         if (normUser === normTemplate) {
           console.log(`[Templates] Exact match for template prompt: ${item.name}. Bypassing AI pipeline.`);
-          const sseResponse = `Here's your template for ${item.name}.\n\n<ONI_CODE>\n${item.html}\n</ONI_CODE>`;
+          const sseResponse = `Here's your website, ${item.name}.\n\n<ONI_CODE>\n${item.html}\n</ONI_CODE>`;
           return streamTextAsSse(sseResponse);
         }
       }
