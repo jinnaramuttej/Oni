@@ -500,10 +500,10 @@ export function HomePage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   {
-                    title: "Velara Retreat",
-                    desc: "Clifftop hotel, editorial rooms, deep navy and gold.",
-                    prompt: TEMPLATE_PROMPTS.velara,
-                    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop",
+                    title: "Âme Coffee",
+                    desc: "Specialty coffee atelier, farm origins, copper editorial.",
+                    prompt: TEMPLATE_PROMPTS.ameCoffee,
+                    image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop",
                     badge: "Featured",
                   },
                   {
@@ -577,10 +577,10 @@ export function HomePage() {
                         image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop",
                       },
                       {
-                        title: "Âme Coffee",
-                        desc: "Specialty coffee atelier, farm origins, copper editorial.",
-                        prompt: TEMPLATE_PROMPTS.ameCoffee,
-                        image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop",
+                        title: "Velara Retreat",
+                        desc: "Clifftop hotel, editorial rooms, deep navy and gold.",
+                        prompt: TEMPLATE_PROMPTS.velara,
+                        image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop",
                       },
                       {
                         title: "Foliant & Sons",
