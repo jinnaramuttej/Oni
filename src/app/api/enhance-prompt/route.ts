@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sanitizeText } from "@/lib/auth";
 import DOMPurify from "isomorphic-dompurify";
+import { TEMPLATE_PROMPTS, TEMPLATE_KEYWORDS } from "@/lib/template-prompts";
 
 const ENHANCE_SYSTEM_PROMPT = `You are an expert prompt engineer. Your task is to rewrite a simple website design request (e.g. "make a bakery website") into a detailed, high-fidelity website design prompt for an AI page builder.
 
@@ -11,7 +12,7 @@ CRITICAL RULES:
 4. Include concrete premium details: specific layout structures (e.g., asymmetric grids, full-screen hero orbs), modern color palettes (e.g., dark obsidian with gold accents, soft warm clays), premium typography (e.g., Cormorant Garamond headings and Jost body), interactive details (e.g., reservation modals, testimonials), and smooth entrance animations.
 
 Example Input: "make a luxury hotel website"
-Example Output: "Build a premium responsive website for a luxury clifftop hotel with a dark slate background, gold accents, Cormorant Garamond display typography, a modular room grid layout, and an interactive booking calendar modal."`;
+Example Output: "Build a responsive website for a luxury clifftop hotel with a dark slate background, gold accents, Cormorant Garamond display typography, a modular room grid layout, and an interactive booking calendar modal."`;
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -25,6 +26,36 @@ export async function POST(req: Request) {
 
   if (!cleanPrompt || cleanPrompt.length < 3) {
     return new NextResponse("Prompt is too short", { status: 400 });
+  }
+
+  const cleanLower = cleanPrompt.toLowerCase();
+  
+  // Find if prompt matches any template keyword
+  let matchedTemplatePrompt: string | null = null;
+  const templateKeys = Object.keys(TEMPLATE_KEYWORDS);
+  for (const key of templateKeys) {
+    const keywords = TEMPLATE_KEYWORDS[key];
+    const hasKeyword = keywords.some(keyword => cleanLower.includes(keyword.toLowerCase()));
+    if (hasKeyword) {
+      const rawPrompt = TEMPLATE_PROMPTS[key as keyof typeof TEMPLATE_PROMPTS];
+      if (rawPrompt) {
+        const cleanTemplatePrompt = (raw: string): string => {
+          if (!raw) return "";
+          const lines = raw.split("\n");
+          if (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:")) {
+            return lines.slice(1).join("\n").trim();
+          }
+          return raw.trim();
+        };
+        matchedTemplatePrompt = cleanTemplatePrompt(rawPrompt);
+        break;
+      }
+    }
+  }
+
+  if (matchedTemplatePrompt) {
+    console.log(`[Enhance Prompt] Matched keyword to template. Returning template prompt.`);
+    return NextResponse.json({ enhancedPrompt: matchedTemplatePrompt });
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
