@@ -54,7 +54,9 @@ export async function POST(req: Request) {
   }
 
   if (matchedTemplatePrompt) {
-    console.log(`[Enhance Prompt] Matched keyword to template. Returning template prompt.`);
+    console.log(`[Enhance Prompt] Matched keyword to template. Simulating AI thinking delay...`);
+    const randomDelay = Math.floor(Math.random() * 5000) + 10000; // 10 to 15 seconds
+    await new Promise((resolve) => setTimeout(resolve, randomDelay));
     return NextResponse.json({ enhancedPrompt: matchedTemplatePrompt });
   }
 
