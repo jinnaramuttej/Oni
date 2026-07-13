@@ -940,12 +940,15 @@ function prepareMessagesForGroq(
   currentHtml: string,
   intent: Intent
 ): { messages: GroqMessage[]; maxTokens: number; isConversational: boolean } {
+  // Trim the conversation history to only the last 6 messages to prevent context overflow
+  const trimmedMessages = messages.slice(-6);
+
   const systemTokens = estimateTokens(ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES);
   const maxPromptTokensBudget = 40000; // Increased budget to allow full website context (e.g. up to 120k chars)
   const remainingBudget = maxPromptTokensBudget - systemTokens;
 
   // Process historical messages (everything except the last one), keeping them extremely compact
-  const history = messages.slice(0, -1).map((m) => ({
+  const history = trimmedMessages.slice(0, -1).map((m) => ({
     role: m.role,
     content:
       m.role === "assistant"
@@ -953,7 +956,7 @@ function prepareMessagesForGroq(
         : truncateContent(m.content, 1200),
   }));
 
-  const lastMessage = messages[messages.length - 1];
+  const lastMessage = trimmedMessages[trimmedMessages.length - 1];
   if (!lastMessage) {
     return {
       messages: [],
