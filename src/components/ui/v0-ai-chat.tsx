@@ -33,6 +33,8 @@ import {
   Loader2,
   Sparkles,
   LayoutGrid,
+  Upload,
+  SkipForward,
 } from "lucide-react";
 import {
   useCallback,
@@ -90,6 +92,15 @@ async function resizeImageToBase64(file: File, maxWidth = 800, maxHeight = 800):
       img.src = readerEvent.target?.result as string;
     };
     reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
@@ -670,6 +681,7 @@ interface BrandContext {
     location: string;
     colors: string[];
   };
+  logoBase64?: string;
 }
 
 const BRAND_QUESTIONS: Record<BrandIndustry, string[]> = {
@@ -854,6 +866,13 @@ function detectIndustry(prompt: string): BrandIndustry {
   return 'general';
 }
 
+function getIntakeQuestions(industry: BrandIndustry, questionsList?: string[]): string[] {
+  const base = questionsList || BRAND_QUESTIONS[industry] || BRAND_QUESTIONS.general;
+  const hasLogoQ = base.some(q => q.toLowerCase().includes("logo to upload") || q.toLowerCase().includes("logo question"));
+  if (hasLogoQ) return base;
+  return [...base, "Do you have a logo to upload? (Optional: Upload your logo, or skip to generate a text-based logo)"];
+}
+
 function isFreshBuildRequest(prompt: string): boolean {
   const p = prompt.toLowerCase();
   const hasBuildWord = /\b(make|build|create|design|generate)\b/.test(p);
@@ -897,7 +916,8 @@ Use ALL of this brand context. Generate real content specific to this exact busi
 function extractBrandFields(
   industry: BrandIndustry | '',
   answers: Record<number, string>,
-  extractedInfo?: { name: string; location: string; colors: string[] }
+  extractedInfo?: { name: string; location: string; colors: string[] },
+  logoBase64?: string
 ) {
   const businessName = extractedInfo?.name || answers[0] || '';
   const location = extractedInfo?.location || answers[4] || answers[3] || answers[2] || '';
@@ -911,6 +931,7 @@ function extractBrandFields(
     primaryColor,
     secondaryColor,
     tone,
+    logoBase64: logoBase64 || '',
   };
 }
 
@@ -1680,6 +1701,79 @@ export function OniChat({
   // Ref so handleSend can always call the latest handleSendToAI without a TDZ issue
   const handleSendToAIRef = useRef<(prompt: string, image: ImageAttachment | null | undefined, files: FileAttachment[]) => Promise<void>>(async () => {});
 
+  const onAnswerLogo = useCallback(async (base64?: string) => {
+    if (!brandContext.isCollecting) return;
+    const questions = brandContext.questionsList || getIntakeQuestions(brandContext.industry as BrandIndustry || 'general', []);
+    const qIdx = brandContext.currentQuestionIndex;
+    
+    // Check if the current question is indeed the logo question
+    const isLogoQ = questions[qIdx]?.toLowerCase().includes("logo to upload");
+    if (!isLogoQ) return;
+
+    const answerText = base64 ? "Uploaded brand logo successfully." : "Skip logo upload (use dynamic text-based logo).";
+    const newAnswers = { ...brandContext.answers, [qIdx]: answerText };
+    
+    // Add user message to chat
+    const userAnswerMsg: ChatMessage = { id: createId(), role: 'user', content: answerText };
+    setMessages(prev => [...prev, userAnswerMsg]);
+    setInput('');
+    
+    const isLastQuestion = qIdx >= questions.length - 1;
+    
+    if (!isLastQuestion) {
+      const nextQ = questions[qIdx + 1];
+      const nextQMsg: ChatMessage = { id: createId(), role: 'assistant', content: nextQ };
+      setMessages(prev => [...prev, nextQMsg]);
+      setBrandContext(prev => ({
+        ...prev,
+        currentQuestionIndex: qIdx + 1,
+        answers: newAnswers,
+        logoBase64: base64 || prev.logoBase64,
+      }));
+      return;
+    }
+
+    // All questions answered — build the enriched prompt and fire the AI
+    const businessName = brandContext.extractedInfo?.name || newAnswers[0] || '';
+    const confirmMsg: ChatMessage = {
+      id: createId(),
+      role: 'assistant',
+      content: `Perfect! Building your${businessName ? ` ${businessName}` : ''} website now ✦`,
+    };
+    setMessages(prev => [...prev, confirmMsg]);
+
+    const enrichedPrompt = buildBrandPrompt(
+      brandContext.originalPrompt,
+      brandContext.industry as BrandIndustry,
+      newAnswers,
+      questions,
+      brandContext.extractedInfo
+    );
+
+    setBrandContext(prev => ({
+      isCollecting: false,
+      industry: prev.industry,
+      currentQuestionIndex: 0,
+      answers: newAnswers,
+      originalPrompt: prev.originalPrompt,
+      competitorContent: prev.competitorContent,
+      competitorTitle: prev.competitorTitle,
+      questionsList: questions,
+      extractedInfo: prev.extractedInfo,
+      logoBase64: base64 || prev.logoBase64,
+    }));
+
+    // Small delay so the confirm message renders first
+    await new Promise(r => setTimeout(r, 300));
+
+    // Kick off AI generation with enriched prompt
+    void handleSendToAIRef.current(
+      enrichedPrompt,
+      null,
+      []
+    );
+  }, [brandContext, setMessages, setInput, handleSendToAIRef]);
+
   const handleSend = useCallback(async (overrideText?: string) => {
     const prompt = (overrideText ?? input).trim();
     if ((!prompt && !attachedImage && attachedFiles.length === 0) || generating || isLoading) return;
@@ -1798,12 +1892,14 @@ export function OniChat({
             return updated;
           });
 
+          const qList = getIntakeQuestions(industry, []);
           setBrandContext({
             isCollecting: true,
             industry,
             currentQuestionIndex: 0,
             answers: {},
             originalPrompt: prompt,
+            questionsList: qList,
             competitorContent: data.content || '',
             competitorTitle: data.title || '',
           });
@@ -1829,12 +1925,14 @@ export function OniChat({
             return updated;
           });
 
+          const qList = getIntakeQuestions(industry, []);
           setBrandContext({
             isCollecting: true,
             industry,
             currentQuestionIndex: 0,
             answers: {},
             originalPrompt: prompt,
+            questionsList: qList,
             competitorContent: '',
             competitorTitle: '',
           });
@@ -1894,8 +1992,9 @@ export function OniChat({
               filteredQuestions.push(q);
             });
 
-            if (filteredQuestions.length > 0) {
-              const firstQ = filteredQuestions[0];
+            const allQuestions = getIntakeQuestions(industry as BrandIndustry, filteredQuestions);
+            if (allQuestions.length > 0) {
+              const firstQ = allQuestions[0];
               const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
               setMessages(prev => [...prev, oniQ]);
               setIsLoading(false);
@@ -1906,7 +2005,7 @@ export function OniChat({
                 currentQuestionIndex: 0,
                 answers: {},
                 originalPrompt: prompt,
-                questionsList: filteredQuestions,
+                questionsList: allQuestions,
                 extractedInfo: classification.extractedInfo,
               });
               return;
@@ -1944,11 +2043,12 @@ export function OniChat({
 
     let finalPrompt = prompt;
     if (brandContext.industry && !brandContext.isCollecting && (generatedHtml || messages.length > 0)) {
-      const fields = extractBrandFields(brandContext.industry, brandContext.answers);
+      const fields = extractBrandFields(brandContext.industry, brandContext.answers, brandContext.extractedInfo, brandContext.logoBase64);
       finalPrompt = `EXISTING BRAND:
 Business: ${fields.businessName}, Industry: ${brandContext.industry}
 Colors: primary=${fields.primaryColor} secondary=${fields.secondaryColor}
 Tone: ${fields.tone}
+${fields.logoBase64 ? 'Logo: Custom Base64 Logo Provided' : 'Logo: Text/SVG Dynamic Logo'}
 Maintain this brand identity in all changes.
 
 ${prompt}`;
@@ -2014,7 +2114,7 @@ ${prompt}`;
           userImage: base64Image,
           customApiKey,
           brandAnswers: brandContext.industry && !brandContext.isCollecting 
-            ? extractBrandFields(brandContext.industry, brandContext.answers) 
+            ? extractBrandFields(brandContext.industry, brandContext.answers, brandContext.extractedInfo, brandContext.logoBase64) 
             : undefined,
           industry: brandContext.industry || undefined,
         }),
@@ -2675,6 +2775,8 @@ ${basePrompt}`;
             isWritingCode={isWritingCode}
             generatedHtml={generatedHtml}
             creditsRemaining={creditsRemaining}
+            brandContext={brandContext}
+            onAnswerLogo={onAnswerLogo}
           />
         </section>
 
@@ -2776,6 +2878,8 @@ interface ChatPanelProps {
   isWritingCode: boolean;
   generatedHtml: string;
   creditsRemaining: number | null;
+  brandContext: BrandContext;
+  onAnswerLogo: (base64?: string) => Promise<void>;
 }
 
 function ChatPanel({
@@ -2818,6 +2922,8 @@ function ChatPanel({
   isWritingCode,
   generatedHtml,
   creditsRemaining,
+  brandContext,
+  onAnswerLogo,
 }: ChatPanelProps) {
   return (
     <>
@@ -2909,17 +3015,52 @@ function ChatPanel({
                 message.role === "user" ? (
                   <UserMessage key={message.id} message={message} chatFont={chatFont} compactMode={compactMode} />
                 ) : (
-                  <AssistantMessage
-                    key={message.id}
-                    message={message}
-                    chatFont={chatFont}
-                    compactMode={compactMode}
-                    onCopy={() => onCopy(message.content)}
-                    onRegenerate={onRegenerate}
-                    isStreaming={isGenerating && index === messages.length - 1}
-                    isWritingCode={isWritingCode}
-                    buildStatusText={isGenerating && index === messages.length - 1 && isWritingCode ? getBuildStatusText(generatedHtml) : ""}
-                  />
+                  <div key={message.id}>
+                    <AssistantMessage
+                      message={message}
+                      chatFont={chatFont}
+                      compactMode={compactMode}
+                      onCopy={() => onCopy(message.content)}
+                      onRegenerate={onRegenerate}
+                      isStreaming={isGenerating && index === messages.length - 1}
+                      isWritingCode={isWritingCode}
+                      buildStatusText={isGenerating && index === messages.length - 1 && isWritingCode ? getBuildStatusText(generatedHtml) : ""}
+                    />
+                    {brandContext.isCollecting &&
+                      index === messages.length - 1 &&
+                      message.content.toLowerCase().includes("logo to upload") && (
+                        <div className="mt-3 flex flex-wrap gap-3 animate-fade-in pl-8 pb-3">
+                          <label className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 hover:bg-primary/20 hover:border-primary/45 px-4 py-2.5 text-xs font-bold text-primary transition-all cursor-pointer shadow-md active:scale-95">
+                            <Upload className="h-4 w-4" />
+                            <span>Upload Logo Image</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const base64 = await fileToBase64(file);
+                                    void onAnswerLogo(base64);
+                                  } catch (err) {
+                                    console.error("Error reading logo:", err);
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => { void onAnswerLogo(); }}
+                            className="flex items-center gap-2 rounded-xl border border-surface-container-high bg-surface-container-low hover:bg-surface-container-high px-4 py-2.5 text-xs font-bold text-text-secondary hover:text-text-primary transition-all active:scale-95 cursor-pointer shadow-sm"
+                          >
+                            <SkipForward className="h-4 w-4" />
+                            <span>Skip & Use Text Logo</span>
+                          </button>
+                        </div>
+                      )}
+                  </div>
                 )
               )}
             </div>

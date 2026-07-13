@@ -277,6 +277,12 @@ export function buildBrandInjection(brandAnswers: any): string {
   if (brandAnswers.secondaryColor) parts.push(`Secondary Brand Color: ${brandAnswers.secondaryColor}`);
   if (brandAnswers.tone) parts.push(`Brand Tone: ${brandAnswers.tone}`);
   
+  if (brandAnswers.logoBase64 && brandAnswers.logoBase64.trim().length > 0) {
+    parts.push(`Logo Selection: The user uploaded a custom logo. You MUST use the following exact base64 image string as the src attribute for the brand logo/image in the header/navbar: <img src="${brandAnswers.logoBase64}" alt="${brandAnswers.businessName || 'Logo'}" style="max-height: 40px; width: auto;" />. Do NOT invent a text/SVG placeholder for the logo if this base64 string is provided.`);
+  } else {
+    parts.push(`Logo Selection: Generate an inline, gorgeous, modern, vector SVG logo using the business name (${brandAnswers.businessName || 'Brand'}) and brand colors. The SVG logo must look high-end, geometric, and professional, containing the brand name or initials styled beautifully with the brand colors.`);
+  }
+
   if (parts.length === 0) return "";
   return `=== USER BRAND PROFILE ===\n${parts.join("\n")}\n==========================\n`;
 }
