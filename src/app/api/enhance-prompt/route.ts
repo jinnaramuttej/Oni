@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { sanitizeText } from "@/lib/auth";
 import DOMPurify from "isomorphic-dompurify";
-import { TEMPLATE_PROMPTS, TEMPLATE_KEYWORDS } from "@/lib/template-prompts";
 
 const ENHANCE_SYSTEM_PROMPT = `You are an expert prompt engineer. Your task is to rewrite a simple website design request (e.g. "make a bakery website") into a detailed, high-fidelity website design prompt for an AI page builder.
 
@@ -26,38 +25,6 @@ export async function POST(req: Request) {
 
   if (!cleanPrompt || cleanPrompt.length < 3) {
     return new NextResponse("Prompt is too short", { status: 400 });
-  }
-
-  const cleanLower = cleanPrompt.toLowerCase();
-  
-  // Find if prompt matches any template keyword
-  let matchedTemplatePrompt: string | null = null;
-  const templateKeys = Object.keys(TEMPLATE_KEYWORDS);
-  for (const key of templateKeys) {
-    const keywords = TEMPLATE_KEYWORDS[key];
-    const hasKeyword = keywords.some(keyword => cleanLower.includes(keyword.toLowerCase()));
-    if (hasKeyword) {
-      const rawPrompt = TEMPLATE_PROMPTS[key as keyof typeof TEMPLATE_PROMPTS];
-      if (rawPrompt) {
-        const cleanTemplatePrompt = (raw: string): string => {
-          if (!raw) return "";
-          const lines = raw.split("\n");
-          if (lines.length > 0 && lines[0].toUpperCase().startsWith("TEMPLATE:")) {
-            return lines.slice(1).join("\n").trim();
-          }
-          return raw.trim();
-        };
-        matchedTemplatePrompt = cleanTemplatePrompt(rawPrompt);
-        break;
-      }
-    }
-  }
-
-  if (matchedTemplatePrompt) {
-    console.log(`[Enhance Prompt] Matched keyword to template. Simulating AI thinking delay...`);
-    const randomDelay = Math.floor(Math.random() * 5000) + 10000; // 10 to 15 seconds
-    await new Promise((resolve) => setTimeout(resolve, randomDelay));
-    return NextResponse.json({ enhancedPrompt: matchedTemplatePrompt });
   }
 
   const defaultModelInput = body?.defaultModel || "oni-pro";
