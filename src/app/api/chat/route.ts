@@ -13,7 +13,7 @@ import { classifyIntent, Intent } from "@/lib/classifier";
 import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
-import { buildTemplateInjection } from "@/lib/templates";
+import { buildTemplateInjection, buildFullBrandContext } from "@/lib/templates";
 
 // ── Runtime config ─────────────────────────────────────────────────────────────
 // Force Node.js runtime (required for fs/path, Supabase, and long-running streams)
@@ -904,6 +904,24 @@ async function getLatestFreeKeys(): Promise<FreeKeys> {
 
 const FREE_BASE_URL = "https://aiapiv2.pekpik.com/v1/chat/completions";
 
+function extractFontLinks(cssCode: string): { fontLinks: string; cleanedCss: string } {
+  let cleanedCss = cssCode;
+  const links: string[] = [];
+  const importRegex = new RegExp("@import\\s+(?:url\\(['\"]?([^'\"]+)['\"]?\\)|['\"]([^'\"]+)['\"]\\);?", "gi");
+  let match;
+  while ((match = importRegex.exec(cssCode)) !== null) {
+    const url = match[1] || match[2];
+    if (url) {
+      links.push(`<link rel="stylesheet" href="${url}">`);
+    }
+  }
+  cleanedCss = cleanedCss.replace(importRegex, "").trim();
+  return {
+    fontLinks: links.join("\n  "),
+    cleanedCss
+  };
+}
+
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
   const ip = getClientIp(req);
@@ -1123,169 +1141,173 @@ Improve the design, make it more premium and modern.`;
   const isBuildIntent = (intent === "build_request" || isLikelyBuildRequest(lastUserMsgText)) && !getMatchingTemplateHtml(lastUserMsgText);
   const groqKey = process.env.GROQ_API_KEY?.trim() || "";
 
-  if (isBuildIntent && !useFallbackPool && groqKey) {
-    console.log("[Three-Stage] Build request detected. Running Stage 1: Groq design planning...");
+  let threeStageSuccess = false;
+  let finalResponse = "";
 
-    // Helper: call any API non-streaming, return text or null
-    async function callNonStreaming(
-      apiUrl: string, apiKey: string, model: string, messages: object[], maxTokens: number
-    ): Promise<string | null> {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-      if (apiUrl.includes("openrouter.ai")) {
-        headers["HTTP-Referer"] = "https://oni.build";
-        headers["X-Title"] = "Oni Website Builder";
-      }
-      try {
-        const res = await fetch(apiUrl, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ model, messages, stream: false, max_tokens: maxTokens, temperature: 0.75 }),
+  if (isBuildIntent && !useFallbackPool && groqKey) {
+    console.log("[Three-Stage] Build request detected. Running 3-stage pipeline...");
+
+    // Helper: call API non-streaming with custom fallback targets list
+    async function executeStage(
+      messages: any[],
+      maxTokens: number
+    ): Promise<string> {
+      const isLocalDev = IS_LOCAL_DEV;
+      const groqKey = process.env.GROQ_API_KEY?.trim() || "";
+      const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
+
+      // List of API targets to try in order
+      const targets = [];
+      if (isLocalDev) {
+        targets.push({
+          name: "Local Ollama",
+          url: OLLAMA_CHAT_URL,
+          key: "",
+          model: OLLAMA_MODEL
         });
-        if (!res.ok) {
-          console.warn(`[Three-Stage] API call to ${apiUrl} failed: ${res.status}`);
-          return null;
+      } else {
+        if (groqKey) {
+          targets.push({
+            name: "Groq Primary",
+            url: "https://api.groq.com/openai/v1/chat/completions",
+            key: groqKey,
+            model: GROQ_MODEL
+          });
         }
-        const data = await res.json();
-        return data?.choices?.[0]?.message?.content?.trim() || null;
-      } catch (err: any) {
-        console.warn(`[Three-Stage] API exception: ${err.message}`);
-        return null;
+        if (openRouterKey) {
+          targets.push({
+            name: "OpenRouter Fallback",
+            url: "https://openrouter.ai/api/v1/chat/completions",
+            key: openRouterKey,
+            model: "nvidia/nemotron-3-ultra-550b-a55b"
+          });
+        }
       }
+
+      if (targets.length === 0) {
+        throw new Error("No API keys/targets available for 3-stage generation");
+      }
+
+      for (const target of targets) {
+        console.log(`[Three-Stage] Attempting with ${target.name} (${target.model})...`);
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (target.key) headers["Authorization"] = `Bearer ${target.key}`;
+        if (target.url.includes("openrouter.ai")) {
+          headers["HTTP-Referer"] = "https://oni.build";
+          headers["X-Title"] = "Oni Website Builder";
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout per attempt
+
+          const res = await fetch(target.url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              model: target.model,
+              messages,
+              stream: false,
+              max_tokens: maxTokens,
+              temperature: 0.7
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) {
+            console.warn(`[Three-Stage] ${target.name} failed with status: ${res.status}`);
+            continue;
+          }
+
+          const data = await res.json();
+          const text = data?.choices?.[0]?.message?.content?.trim();
+          if (text) {
+            console.log(`[Three-Stage] ${target.name} succeeded.`);
+            return text;
+          }
+        } catch (err: any) {
+          console.warn(`[Three-Stage] ${target.name} exception:`, err.message);
+        }
+      }
+
+      throw new Error("All targets failed for this stage");
     }
 
-    // Determine code stage provider: Ollama in local dev; Groq primary, OpenRouter fallback in prod
-    const isLocalDev = IS_LOCAL_DEV;
-    const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
-    const useOpenRouterForCode = !isLocalDev && !groqKey && !!openRouterKey;
+    try {
+      const brandContextStr = buildFullBrandContext(brandAnswers);
+      const userMessageContent = `${brandContextStr}\n\nUSER REQUEST: ${lastUserMsgText || "Build a premium website."}`;
 
-    const codeApiUrl = isLocalDev
-      ? OLLAMA_CHAT_URL
-      : useOpenRouterForCode
-        ? "https://openrouter.ai/api/v1/chat/completions"
-        : "https://api.groq.com/openai/v1/chat/completions";
+      // Get matching template reference for CSS/HTML guidance
+      const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
+      const templateRef = matchingTemplate
+        ? `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`
+        : "";
 
-    const codeApiKey = isLocalDev ? "" : (useOpenRouterForCode ? openRouterKey : groqKey);
-    const codeModel = isLocalDev ? OLLAMA_MODEL : (useOpenRouterForCode ? "nvidia/nemotron-3-ultra-550b-a55b" : GROQ_MODEL);
-
-    console.log(`[Three-Stage] Code stages will use: ${isLocalDev ? "Ollama (local dev)" : useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
-
-    // Get matching template reference for CSS/HTML guidance
-    const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
-    const templateRef = matchingTemplate
-      ? `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`
-      : "";
-
-    // ── Stage 1: Groq → Design plan (ONI_THOUGHT + one sentence) ──────────────
-    const planText = await callNonStreaming(
-      "https://api.groq.com/openai/v1/chat/completions",
-      groqKey,
-      GROQ_MODEL,
-      [
+      // ── STAGE 1: Planning Call ───────────────────────────────────────────────
+      console.log("[Three-Stage] Starting Stage 1: Planning...");
+      const planStartTime = Date.now();
+      const planText = await executeStage([
         { role: "system", content: ONI_PLANNING_PROMPT },
-        { role: "user", content: lastUserMsgText || "Build a premium website." },
-      ],
-      500
-    );
+        { role: "user", content: userMessageContent }
+      ], 500);
+      console.log(`[Three-Stage] Stage 1 completed in ${Date.now() - planStartTime}ms`);
 
-    if (planText) {
-      console.log("[Three-Stage] Stage 1 done. Plan:", planText.length, "chars");
+      const thoughtMatch = planText.match(/<ONI_THOUGHT>([\s\S]*?)<\/ONI_THOUGHT>/i);
+      const parsedThought = thoughtMatch ? thoughtMatch[0] : `<ONI_THOUGHT>\n${planText}\n</ONI_THOUGHT>`;
 
-      // ── Stage 2: Code model → Pure CSS stylesheet ──────────────────────────
-      const cssPromptWithContext = ONI_CSS_PROMPT + templateRef;
-      const cssCode = await callNonStreaming(
-        codeApiUrl, codeApiKey, codeModel,
-        [
-          { role: "system", content: cssPromptWithContext },
-          { role: "user", content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only. Do NOT write any conversational text, explanations, or thought process. Start immediately with the first CSS selector or @import.` },
-        ],
-        8000
-      );
+      // ── STAGE 2: CSS Generation Call ─────────────────────────────────────────
+      console.log("[Three-Stage] Starting Stage 2: CSS generation...");
+      const cssStartTime = Date.now();
+      const rawCss = await executeStage([
+        { role: "system", content: ONI_CSS_PROMPT + templateRef },
+        { role: "user", content: `DESIGN PLAN:\n${parsedThought}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only. Do NOT write any conversational text, explanations, or thought process. Start immediately with the first CSS selector or @import.` }
+      ], 8000);
+      console.log(`[Three-Stage] Stage 2 completed in ${Date.now() - cssStartTime}ms`);
 
-      if (cssCode) {
-        console.log("[Three-Stage] Stage 2 done. CSS:", cssCode.length, "chars");
+      // ── STAGE 3: HTML+JS Generation Call ─────────────────────────────────────
+      console.log("[Three-Stage] Starting Stage 3: HTML+JS generation...");
+      const htmlStartTime = Date.now();
+      const rawHtmlJs = await executeStage([
+        { role: "system", content: ONI_HTML_BODY_PROMPT + templateRef },
+        {
+          role: "user",
+          content: `DESIGN PLAN:\n${parsedThought}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${rawCss.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>. Do NOT write any conversational text, explanations, or thought process. Start immediately with the <body> tag.`,
+        }
+      ], 8000);
+      console.log(`[Three-Stage] Stage 3 completed in ${Date.now() - htmlStartTime}ms`);
 
-        // ── Stage 3: Code model → HTML body + inline JS ───────────────────────
-        const htmlBodyCode = await callNonStreaming(
-          codeApiUrl, codeApiKey, codeModel,
-          [
-            { role: "system", content: ONI_HTML_BODY_PROMPT + templateRef },
-            {
-              role: "user",
-              content: `DESIGN PLAN:\n${planText}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${cssCode.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>. Do NOT write any conversational text, explanations, or thought process. Start immediately with the <body> tag.`,
-            },
-          ],
-          8000
-        );
+      // ── FINAL ASSEMBLY ───────────────────────────────────────────────────────
+      const { fontLinks, cleanedCss } = extractFontLinks(rawCss);
+      let htmlContent = rawHtmlJs.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
 
-        if (htmlBodyCode) {
-          console.log("[Three-Stage] Stage 3 done. HTML body:", htmlBodyCode.length, "chars");
-
-          // ── Assembly: Output as separate files via ONI_FILES format ─────────
-          const extractTitle = (text: string) => {
-            const m = text.match(/PALETTE:\s*([^|]+)/i);
-            return m ? m[1].trim() : "Website";
-          };
-          const siteTitle = extractTitle(planText);
-
-          // Strip any markdown fences and isolate pure CSS/HTML contents
-          let cleanCss = cssCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
-          let cssStart = cleanCss.indexOf("@import");
-          if (cssStart === -1) cssStart = cleanCss.indexOf(":root");
-          if (cssStart === -1) cssStart = cleanCss.indexOf("*");
-          if (cssStart !== -1) {
-            cleanCss = cleanCss.slice(cssStart).trim();
-          }
-
-          let rawBody = htmlBodyCode.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
-          let bodyStart = rawBody.indexOf("<body");
-          let bodyEnd = rawBody.lastIndexOf("</body>");
-          if (bodyStart !== -1 && bodyEnd !== -1) {
-            rawBody = rawBody.slice(bodyStart, bodyEnd + 7).trim();
-          } else if (bodyStart !== -1) {
-            rawBody = rawBody.slice(bodyStart).trim();
-          }
-
-          // Extract <script> block from body for scripts.js
-          const scriptMatch = rawBody.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
-          const jsCode = scriptMatch ? scriptMatch[1].trim() : "";
-          // HTML without the inline <script> block (it'll be linked via scripts.js)
-          const htmlBodyNoScript = rawBody.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").trim();
-          const bodyContent = htmlBodyNoScript.startsWith("<body") ? htmlBodyNoScript : `<body>\n${htmlBodyNoScript}\n</body>`;
-
-          // index.html links styles.css and scripts.js as external files
-          const indexHtml = `<!DOCTYPE html>
-<html lang="en">
+      // Ensure htmlContent starts with <body> tag, link styles and scripts inline
+      const assembledHtml = `<!DOCTYPE html>
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${siteTitle}</title>
-  <link rel="stylesheet" href="styles.css">
+  ${fontLinks}
+  <style>
+    ${cleanedCss}
+  </style>
 </head>
-${bodyContent}
-  <script src="scripts.js"></script>
-</body>
+${htmlContent}
 </html>`;
 
-          // Emit ONI_FILES block — the client parses this into separate file tabs
-          // and assembles them inline for the iframe preview
-          const finalResponse = `${planText}\n\n<ONI_FILES>\n<FILE name="index.html">\n${indexHtml}\n</FILE>\n<FILE name="styles.css">\n${cleanCss}\n</FILE>\n<FILE name="scripts.js">\n${jsCode}\n</FILE>\n</ONI_FILES>`;
-          console.log(`[Three-Stage] Multi-file output ready: index.html + styles.css (${cleanCss.length} chars) + scripts.js (${jsCode.length} chars).`);
-
-          if (visitorId && creditCost > 0 && !body?.customApiKey) {
-            void deductCredits(visitorId, creditCost);
-          }
-
-          return streamTextAsSse(finalResponse);
-        } else {
-          console.warn("[Three-Stage] Stage 3 (HTML body) failed — falling through to single-stage pipeline.");
-        }
-      } else {
-        console.warn("[Three-Stage] Stage 2 (CSS) failed — falling through to single-stage pipeline.");
-      }
-    } else {
-      console.warn("[Three-Stage] Stage 1 (planning) failed — falling through to single-stage pipeline.");
+      finalResponse = `${planText}\n\n<ONI_CODE>\n${assembledHtml}\n</ONI_CODE>`;
+      threeStageSuccess = true;
+      console.log("[Three-Stage] Assembly successfully completed.");
+    } catch (err: any) {
+      console.warn("[Three-Stage] 3-stage pipeline failed or timed out. Falling back to single-shot flow:", err.message);
     }
+  }
+
+  if (threeStageSuccess) {
+    if (visitorId && creditCost > 0 && !body?.customApiKey) {
+      void deductCredits(visitorId, creditCost);
+    }
+    return streamTextAsSse(finalResponse);
   }
 
 
