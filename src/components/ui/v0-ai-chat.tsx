@@ -925,6 +925,8 @@ function extractBrandFields(
   const secondaryColor = (extractedInfo?.colors && extractedInfo.colors[1]) || '';
   const tone = answers[1] || 'Professional';
 
+  const services = answers[1] || '';
+
   return {
     businessName,
     location,
@@ -932,6 +934,8 @@ function extractBrandFields(
     secondaryColor,
     tone,
     logoBase64: logoBase64 || '',
+    services,
+    industry,
   };
 }
 
