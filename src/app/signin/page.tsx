@@ -60,7 +60,6 @@ const SignInPageRoute = () => {
   };
 
   const handleGoogleSignIn = () => {
-    console.log("Continue with Google clicked");
     alert("Continue with Google clicked");
   };
   
