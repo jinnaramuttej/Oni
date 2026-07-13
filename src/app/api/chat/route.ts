@@ -14,6 +14,12 @@ import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
 
+// ── Runtime config ─────────────────────────────────────────────────────────────
+// Force Node.js runtime (required for fs/path, Supabase, and long-running streams)
+export const runtime = "nodejs";
+// Allow up to 5 minutes for long AI generation streams on Vercel Pro
+export const maxDuration = 300;
+
 // ── Credit helpers ────────────────────────────────────────────────────────────
 
 async function getOrCreateCredits(visitorId: string) {
@@ -944,8 +950,10 @@ function streamTextAsSse(content: string) {
     {
       headers: {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        // Disable Vercel/nginx proxy buffering so chunks stream immediately
+        "X-Accel-Buffering": "no",
       },
     }
   );
@@ -1775,8 +1783,10 @@ ${bodyContent}
   return new Response(successResponse.body, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      // Disable Vercel/nginx proxy buffering so chunks reach the client immediately
+      "X-Accel-Buffering": "no",
     },
   });
 }

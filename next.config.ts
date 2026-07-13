@@ -35,7 +35,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://randomuser.me https://images.unsplash.com",
-      "connect-src 'self'",
+      "connect-src 'self' https://api.groq.com https://openrouter.ai https://aiapiv2.pekpik.com https://raw.githubusercontent.com",
       "frame-src 'none'",
       "frame-ancestors 'none'",
       "object-src 'none'",
