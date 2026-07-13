@@ -13,6 +13,7 @@ import { classifyIntent, Intent } from "@/lib/classifier";
 import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
+import { buildTemplateInjection } from "@/lib/templates";
 
 // ── Runtime config ─────────────────────────────────────────────────────────────
 // Force Node.js runtime (required for fs/path, Supabase, and long-running streams)
@@ -510,34 +511,9 @@ Build mode rules:
 - CSS animations and hover effects throughout
 - Mobile responsive with media queries
 - No mention of Oni or AI anywhere in the output HTML
-- Minimum 1000 lines of HTML/CSS/JS`;
+- Minimum 300 lines of HTML`;
 
-const ONI_QUALITY_RULES = `CRITICAL FORMATTING & QUALITY RULES — THESE ARE MANDATORY, NOT SUGGESTIONS:
-1. OUTPUT LENGTH: You MUST write a minimum of 1000 lines of code total. The website code must be highly detailed, complete, and production-ready. Write extensive, verbose CSS (aim for 500-700 lines of CSS in <style>), thorough JS, and a rich HTML body. Never output a basic skeleton, stub, or shortened suggestion.
-2. CSS VARIABLES: Declare ALL variables in :root including --bg, --p, --s, --light, --text, --text-muted, --font-display, --font-body, --grad, --shadow, --shadow-lg, --r, --t. Never hardcode hex values inline.
-3. FONTS: Import TWO Google Fonts at the very top of <style> (one display serif, one body sans). Set --font-display and --font-body in :root. Use them everywhere via CSS variables.
-4. ORBS: Hero section MUST have exactly three orb divs as children: <div class="orb orb-1"></div>, <div class="orb orb-2"></div>, <div class="orb orb-3"></div>. Each orb must float and have radial-gradient background.
-5. DOCUMENT STRUCTURE & STYLE COMPLETENESS: Write the complete HTML file as one coherent document: <!DOCTYPE html> → <head> with Google Fonts links → <style> block (all CSS) → </head> → <body> (all HTML sections) → <script> → </body> → </html>. The <style> block must be rich, detailed, and verbose (target 600-800 lines of CSS) covering: :root variables, reset, typography, navbar, hero + orbs, all section layouts, card grids, hover effects, animations, keyframes, scroll-reveal classes, modal/drawer styles, form styles, footer, and mobile @media queries. After the closing </style> tag, immediately write the full <body> — do NOT stop between CSS and HTML. The CSS and HTML must be generated as a single continuous output inside one <ONI_CODE> block.
-6. BUILD ALL 7 SECTIONS (HTML must contain all of these, fully populated with real, premium copy and rich components):
-   a. #navbar — fixed, glassmorphism bg, links, right CTA button with gradient.
-   b. .hero — min-height:100vh, 3 orb divs, H1 gradient-text, subtitle, 2 buttons, 3 stat items.
-   c. #features — grid of cards, icons, H3, real copy.
-   d. #services — grid of services, prices, hover effects.
-   e. #testimonials — grid of cards, quotation mark, stars, quotes.
-   f. #contact — grid with left info panel + right contact form.
-   g. footer — dark bg, 4-column grid, bottom copyright bar.
-7. JAVASCRIPT: Include navbar shrink on scroll, IntersectionObserver scroll-reveal for all .reveal elements, smooth anchor scroll, form submit feedback.
-8. CONTENT: Real specific business name, real addresses, real prices, real testimonial names. Zero lorem ipsum. Zero placeholder text.
-9. WRAP: The entire HTML document goes inside <ONI_CODE>...</ONI_CODE>.
-10. ONE SENTENCE before <ONI_CODE> only. No explanations, no markdown outside the code block.
-11. IMAGES: You MUST include real, high-quality images in the site. Use Unsplash image URLs in the exact format: <img src="https://images.unsplash.com/photo-[ID]?w=800&q=80&fit=crop" alt="description">. For example, for restaurant food use photo ID 1504674900247-0877df9cc836, and for hotel rooms use 1590490360182-c33d57733427. Never use empty image tags or placeholder URLs.
-12. BANNED FRAMEWORKS: NEVER use Bootstrap classes (.col-md-4, .row, .container, .col-*). NEVER use Font Awesome or any icon CDN. Bootstrap is not imported and will break the layout. Use CSS Grid with grid-template-columns instead. For icons, use Unicode symbols only: ★ ✦ ◆ ✓ → ✉ ☎ ◎ or decorative text characters.
-13. LIGHT SECTION TEXT COLORS: Sections with a light background (#features, #testimonials) MUST override text to dark: set color: #111 on the section itself, h2/h3 { color: #111 }, p { color: #444 }. White text on a white/light card is completely unreadable — this is a CRITICAL bug.
-14. ORBS IN HTML: The hero section HTML MUST physically contain these exact three divs as direct children inside the hero element: <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>. Without them in the HTML the orb CSS has nothing to apply to.
-15. NAV LINKS: The <nav> element inside the navbar MUST have class="nav-links" so the flex layout CSS applies. Without this class the links stack vertically. Each link inside uses class="nav-link".
-16. BOX SIZING: Include at the very top of <style>: * { margin: 0; padding: 0; box-sizing: border-box; } This prevents input fields and padded elements from overflowing their containers.
-17. HERO CONTENT Z-INDEX: All text/button content inside the hero MUST be wrapped in <div class="hero-content"> with style position:relative; z-index:2 so it renders above the orbs and background image.
-18. NEVER STOP MID-GENERATION: You MUST output the complete, finished HTML document in one single pass ending with </html> and then </ONI_CODE>. Do NOT stop after writing CSS. Do NOT write CSS-only output. If the CSS is verbose, make it slightly more concise to leave room for the full HTML body. A complete body with all 7 sections is more important than exhaustive CSS. Always finish.`;
+const ONI_QUALITY_RULES = ``;
 
 const PREMIUM_COMPONENTS_REFERENCE = `
 =========================================
@@ -1377,8 +1353,41 @@ export async function POST(req: Request) {
     }
   }
 
-  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
+  const getIndustryFromPrompt = (promptText: string): string => {
+    const clean = promptText.toLowerCase();
+    if (clean.includes("coffee") || clean.includes("cafe") || clean.includes("restaurant") || clean.includes("food") || clean.includes("bistro") || clean.includes("steak") || clean.includes("dining") || clean.includes("bakery") || clean.includes("kitchen")) {
+      return "restaurant";
+    }
+    if (clean.includes("salon") || clean.includes("beauty") || clean.includes("hair") || clean.includes("spa") || clean.includes("stylist") || clean.includes("makeup") || clean.includes("cosmetic")) {
+      return "salon";
+    }
+    if (clean.includes("medical") || clean.includes("clinic") || clean.includes("hospital") || clean.includes("dentist") || clean.includes("doctor") || clean.includes("health")) {
+      return "medical";
+    }
+    if (clean.includes("fitness") || clean.includes("gym") || clean.includes("workout") || clean.includes("trainer") || clean.includes("coach") || clean.includes("athlete")) {
+      return "fitness";
+    }
+    if (clean.includes("saas") || clean.includes("tech") || clean.includes("software") || clean.includes("dashboard") || clean.includes("app") || clean.includes("startup")) {
+      return "saas";
+    }
+    if (clean.includes("legal") || clean.includes("lawyer") || clean.includes("law") || clean.includes("attorney") || clean.includes("firm")) {
+      return "legal";
+    }
+    if (clean.includes("education") || clean.includes("school") || clean.includes("university") || clean.includes("college") || clean.includes("course") || clean.includes("academy") || clean.includes("learn")) {
+      return "education";
+    }
+    if (clean.includes("portfolio") || clean.includes("design") || clean.includes("creative") || clean.includes("architecture") || clean.includes("developer") || clean.includes("resume") || clean.includes("cv")) {
+      return "portfolio";
+    }
+    return "general";
+  };
+
   const userPromptText = body.prompt || "";
+  const industry = body.industry || getIndustryFromPrompt(userPromptText || lastUserMsgText);
+  const brandAnswers = body.brandAnswers || null;
+  const templateInjection = buildTemplateInjection(industry as any, brandAnswers);
+
+  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + templateInjection + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
   const hasExistingHtml = effectiveHtml.trim().length > 0;
   if (!hasExistingHtml && userPromptText) {
     const matchingTemplate = getMatchingTemplateHtml(userPromptText);

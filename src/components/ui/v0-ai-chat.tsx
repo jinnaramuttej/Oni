@@ -1842,11 +1842,10 @@ ${prompt}`;
           defaultModel: getActiveModel(),
           userImage: base64Image,
           customApiKey,
-          customBaseUrl,
-          competitorReference: brandContext.competitorContent ? {
-            title: brandContext.competitorTitle || '',
-            content: brandContext.competitorContent,
-          } : undefined,
+          brandAnswers: brandContext.industry && !brandContext.isCollecting 
+            ? extractBrandFields(brandContext.industry, brandContext.answers) 
+            : undefined,
+          industry: brandContext.industry || undefined,
         }),
       });
 
@@ -2084,6 +2083,10 @@ ${basePrompt}`;
           defaultModel: getActiveModel(),
           customApiKey,
           customBaseUrl,
+          brandAnswers: brandContext.industry && !brandContext.isCollecting 
+            ? extractBrandFields(brandContext.industry, brandContext.answers) 
+            : undefined,
+          industry: brandContext.industry || undefined,
         }),
       });
 
