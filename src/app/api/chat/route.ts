@@ -96,6 +96,9 @@ const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
+const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
+const IS_LOCAL_DEV = process.env.NODE_ENV === "development";
 
 // ── Two-stage pipeline prompts ─────────────────────────────────────────────────
 // Stage 1: Groq writes ONLY the design intent (fast, ~400 tokens, no code)
@@ -1429,18 +1432,21 @@ Improve the design, make it more premium and modern.`;
       }
     }
 
-    // Determine code stage provider: Groq primary, OpenRouter fallback
+    // Determine code stage provider: Ollama in local dev; Groq primary, OpenRouter fallback in prod
+    const isLocalDev = IS_LOCAL_DEV;
     const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
-    const useOpenRouterForCode = !groqKey && !!openRouterKey;
+    const useOpenRouterForCode = !isLocalDev && !groqKey && !!openRouterKey;
 
-    const codeApiUrl = useOpenRouterForCode
-      ? "https://openrouter.ai/api/v1/chat/completions"
-      : "https://api.groq.com/openai/v1/chat/completions";
+    const codeApiUrl = isLocalDev
+      ? OLLAMA_CHAT_URL
+      : useOpenRouterForCode
+        ? "https://openrouter.ai/api/v1/chat/completions"
+        : "https://api.groq.com/openai/v1/chat/completions";
 
-    const codeApiKey = useOpenRouterForCode ? openRouterKey : groqKey;
-    const codeModel = useOpenRouterForCode ? "nvidia/nemotron-3-ultra-550b-a55b" : GROQ_MODEL;
+    const codeApiKey = isLocalDev ? "" : (useOpenRouterForCode ? openRouterKey : groqKey);
+    const codeModel = isLocalDev ? OLLAMA_MODEL : (useOpenRouterForCode ? "nvidia/nemotron-3-ultra-550b-a55b" : GROQ_MODEL);
 
-    console.log(`[Three-Stage] Code stages will use: ${useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
+    console.log(`[Three-Stage] Code stages will use: ${isLocalDev ? "Ollama (local dev)" : useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
 
     // Get matching template reference for CSS/HTML guidance
     const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
@@ -1588,6 +1594,17 @@ ${bodyContent}
       apiKey: body.customApiKey.trim(),
       model: selectedModel === "oni-pro" ? GROQ_MODEL : selectedModel,
       maxTokens: GROQ_MAX_TOKENS,
+    });
+  } else if (IS_LOCAL_DEV) {
+    // In local development: use Ollama exclusively
+    console.log("[Pipeline] Local dev detected — routing all requests to Ollama.");
+    targets.push({
+      name: "Local Ollama (dev)",
+      apiUrl: OLLAMA_CHAT_URL,
+      apiKey: "",
+      model: OLLAMA_MODEL,
+      maxTokens: GROQ_MAX_TOKENS,
+      timeoutMs: 120000,
     });
   } else {
     // 1. Groq primary
