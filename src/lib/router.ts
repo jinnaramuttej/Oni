@@ -10,49 +10,19 @@ export interface RouteConfig {
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const INTENT_ROUTE_MAP: Record<Intent, RouteConfig> = {
-  change_text: {
-    model: "llama-3.1-8b-instant",
-    apiUrl: GROQ_API_URL,
-    maxTokens: 2000,
-    creditCost: 1,
-  },
-  change_color: {
-    model: "llama-3.1-8b-instant",
-    apiUrl: GROQ_API_URL,
-    maxTokens: 2000,
-    creditCost: 1,
-  },
-  change_layout: {
-    model: "llama-3.1-8b-instant",
-    apiUrl: GROQ_API_URL,
-    maxTokens: 2000,
-    creditCost: 1,
-  },
-  add_section: {
-    model: "llama-3.3-70b-versatile",
-    apiUrl: GROQ_API_URL,
-    maxTokens: 6000,
-    creditCost: 3,
-  },
-  remove_section: {
-    model: "llama-3.3-70b-versatile",
-    apiUrl: GROQ_API_URL,
-    maxTokens: 6000,
-    creditCost: 3,
-  },
-  new_website: {
+  build_request: {
     model: "llama-3.3-70b-versatile",
     apiUrl: GROQ_API_URL,
     maxTokens: 16000,
     creditCost: 8,
   },
-  full_redesign: {
+  edit_request: {
     model: "llama-3.3-70b-versatile",
     apiUrl: GROQ_API_URL,
     maxTokens: 16000,
-    creditCost: 12,
+    creditCost: 3,
   },
-  casual: {
+  casual_chat: {
     model: "llama-3.1-8b-instant",
     apiUrl: GROQ_API_URL,
     maxTokens: 200,

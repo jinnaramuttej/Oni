@@ -633,7 +633,28 @@ function getCleanUserMessageContent(content: string): string {
 
 // ── Brand Intake Flow ─────────────────────────────────────────────────────────
 
-type BrandIndustry = 'restaurant' | 'salon' | 'medical' | 'fitness' | 'portfolio' | 'saas' | 'general';
+type BrandIndustry = 
+  | 'fine_dining'
+  | 'south_indian'
+  | 'pizza_fast_food'
+  | 'cafe_coffee'
+  | 'bakery_desserts'
+  | 'hair_salon'
+  | 'barbershop'
+  | 'yoga_meditation'
+  | 'gym_fitness'
+  | 'spa_wellness'
+  | 'medical_clinic'
+  | 'dental_practice'
+  | 'law_firm'
+  | 'accounting_firm'
+  | 'real_estate'
+  | 'saas_landing'
+  | 'creative_agency'
+  | 'portfolio'
+  | 'photography'
+  | 'coaching_tutoring'
+  | 'general';
 
 interface BrandContext {
   isCollecting: boolean;
@@ -643,57 +664,161 @@ interface BrandContext {
   originalPrompt: string;
   competitorContent?: string;
   competitorTitle?: string;
+  questionsList?: string[];
+  extractedInfo?: {
+    name: string;
+    location: string;
+    colors: string[];
+  };
 }
 
 const BRAND_QUESTIONS: Record<BrandIndustry, string[]> = {
-  restaurant: [
-    "Love it! A few quick questions ✦\n\nWhat's your restaurant name?",
-    "What cuisine and vibe — casual family, fine dining, street food?",
-    "Which city and area?",
-    "Any brand colors? Or I'll pick something perfect for your cuisine.",
-    "Name 3-4 signature dishes I should feature.",
+  fine_dining: [
+    "What is the restaurant's name and tagline?",
+    "What type of cuisine and dining experience do you offer?",
+    "Do you want customers to reserve tables, view the menu, or both?",
+    "What makes your restaurant unique? (Chef, tasting menu, wine, ambience, Michelin-style, etc.)",
+    "What are your address, opening hours, phone number, and social links?"
   ],
-  salon: [
-    "Let's build something stunning ✦\n\nWhat's your salon name?",
-    "Main services — haircuts, color, keratin, bridal, nails, full beauty?",
-    "Target clients and price range — budget, mid-range, or luxury?",
-    "Brand colors or aesthetic — rose gold, black minimal, warm earthy?",
-    "Which city and area?",
+  south_indian: [
+    "What is your restaurant's name?",
+    "Which cuisines or specialties do you serve? (Andhra, Telangana, Tamil, Kerala, Karnataka, etc.)",
+    "Do you offer dine-in, takeaway, delivery, or catering?",
+    "What are your signature dishes?",
+    "Where are you located and how can customers contact you?"
   ],
-  medical: [
-    "Let's build a professional clinic website ✦\n\nClinic name?",
-    "Specialization — general, dental, derma, pediatrics, ortho?",
-    "Lead doctor name and qualifications?",
-    "Which city and area?",
-    "Color preference or should I use medical blue and white?",
+  pizza_fast_food: [
+    "What's your restaurant name?",
+    "What food categories do you serve? (Pizza, Burgers, Wraps, Pasta, etc.)",
+    "Do you offer online ordering, delivery, takeaway, or dine-in?",
+    "What are your best-selling items or combo offers?",
+    "Where are you located and how should customers order?"
   ],
-  fitness: [
-    "Let's build something energetic ✦\n\nGym or studio name?",
-    "Type — gym, yoga, crossfit, martial arts, dance, wellness?",
-    "Target audience and price range?",
-    "Any brand colors or energy you want — dark & intense, clean & minimal, vibrant?",
-    "Which city and area?",
+  cafe_coffee: [
+    "What's your café's name?",
+    "What kind of café is it? (Specialty coffee, bakery café, coworking, brunch, etc.)",
+    "What drinks or food are your signature items?",
+    "Do you want customers to order online, reserve tables, or simply visit?",
+    "Where are you located and what are your opening hours?"
+  ],
+  bakery_desserts: [
+    "What's your bakery's name?",
+    "What products do you specialize in?",
+    "Do you take custom cake or event orders?",
+    "Which products are your best sellers?",
+    "How can customers place an order or visit?"
+  ],
+  hair_salon: [
+    "What's your salon's name?",
+    "What services do you offer?",
+    "Do customers book appointments online?",
+    "What makes your salon different?",
+    "Where are you located and how can customers contact you?"
+  ],
+  barbershop: [
+    "What's your barbershop called?",
+    "What grooming services do you provide?",
+    "Do you accept walk-ins, appointments, or both?",
+    "Do you specialize in any haircut or beard styles?",
+    "What are your location and business hours?"
+  ],
+  yoga_meditation: [
+    "What's your studio's name?",
+    "What classes or programs do you offer?",
+    "Are classes online, offline, or hybrid?",
+    "What philosophy or experience do you want visitors to feel?",
+    "How can students book or contact you?"
+  ],
+  gym_fitness: [
+    "What's your gym's name?",
+    "What memberships or training services do you provide?",
+    "What equipment or facilities make your gym stand out?",
+    "Do you want online membership signup?",
+    "Where is your gym located?"
+  ],
+  spa_wellness: [
+    "What's your spa's name?",
+    "What treatments or wellness services do you offer?",
+    "Can customers book appointments online?",
+    "What atmosphere or experience do you want to highlight?",
+    "What are your contact details and opening hours?"
+  ],
+  medical_clinic: [
+    "What's the clinic or doctor's name?",
+    "Which specialties or treatments do you provide?",
+    "Do patients book appointments online?",
+    "What should new patients know before visiting?",
+    "What are your clinic location and contact details?"
+  ],
+  dental_practice: [
+    "What's your dental clinic's name?",
+    "Which dental services do you provide?",
+    "Do patients schedule appointments online?",
+    "Do you have any featured doctors or technology?",
+    "What are your clinic details and timings?"
+  ],
+  law_firm: [
+    "What's your firm's name?",
+    "Which legal services or practice areas do you specialize in?",
+    "Who are your ideal clients?",
+    "Should visitors request a consultation online?",
+    "What are your office location and contact details?"
+  ],
+  accounting_firm: [
+    "What's your firm's name?",
+    "What accounting or financial services do you offer?",
+    "Who do you primarily serve? (Individuals, startups, businesses, etc.)",
+    "Should clients book consultations online?",
+    "What are your business contact details?"
+  ],
+  real_estate: [
+    "What's your agency's name?",
+    "Do you focus on buying, selling, renting, or all three?",
+    "Which property types or locations do you specialize in?",
+    "Should visitors browse listings or contact an agent first?",
+    "What are your office and contact details?"
+  ],
+  saas_landing: [
+    "What's your product name and one-line value proposition?",
+    "What problem does your product solve?",
+    "Who is your target audience?",
+    "What are the key features or benefits?",
+    "What's your primary call-to-action? (Sign up, Book Demo, Start Free Trial, etc.)"
+  ],
+  creative_agency: [
+    "What's your agency's name?",
+    "Which creative services do you offer?",
+    "What type of clients do you work with?",
+    "Which projects or case studies should be highlighted?",
+    "What's your preferred contact method?"
   ],
   portfolio: [
-    "Let's craft your portfolio ✦\n\nYour name or studio name?",
-    "What do you do — designer, developer, photographer, writer, agency?",
-    "Top 3 skills or specializations?",
-    "Style direction — minimal, bold, dark, editorial?",
-    "Any specific projects or work you want featured?",
+    "What's your name and profession?",
+    "What services do you offer?",
+    "Which projects should be featured?",
+    "What style best represents your personal brand?",
+    "How should potential clients contact you?"
   ],
-  saas: [
-    "Let's build something that converts ✦\n\nProduct name?",
-    "One sentence — what it does and who it's for?",
-    "3 main features or benefits?",
-    "Pricing tiers if any — plan names and prices?",
-    "Color style — dark futuristic, clean minimal, bold colorful?",
+  photography: [
+    "What's your studio's name?",
+    "Which photography genres do you specialize in?",
+    "What portfolio categories should be showcased?",
+    "Do clients book sessions online?",
+    "What's your location and contact information?"
+  ],
+  coaching_tutoring: [
+    "What's your institute's name?",
+    "Which subjects, exams, or courses do you teach?",
+    "Who are your target students?",
+    "Should students enroll or book demo classes online?",
+    "Where are you located and how can students contact you?"
   ],
   general: [
-    "Let's make this perfect ✦\n\nBusiness name?",
-    "What does your business do?",
-    "Any brand colors?",
-    "Tone: reply with a number\n1. Luxury\n2. Professional\n3. Friendly\n4. Bold\n5. Minimal",
-  ],
+    "What is the name of your business or website?",
+    "What services or products do you offer?",
+    "Who is your target audience?",
+    "Where are you located and how can customers contact you?"
+  ]
 };
 
 const TONE_MAP: Record<string, string> = {
@@ -706,12 +831,26 @@ const TONE_MAP: Record<string, string> = {
 
 function detectIndustry(prompt: string): BrandIndustry {
   const p = prompt.toLowerCase();
-  if (/restaurant|cafe|food|dhaba|bistro|dining|eatery|cuisine|diner/.test(p)) return 'restaurant';
-  if (/salon|hair|beauty|spa|nail|barber|grooming/.test(p)) return 'salon';
-  if (/clinic|doctor|hospital|medical|dental|health|physician|specialist|ortho|derma|pediatric/.test(p)) return 'medical';
-  if (/gym|fitness|yoga|wellness|crossfit|pilates|workout|martial/.test(p)) return 'fitness';
-  if (/portfolio|agency|freelance|creative|designer|photographer|architect|studio/.test(p)) return 'portfolio';
-  if (/saas|app|startup|software|tech|platform|tool|product|dashboard/.test(p)) return 'saas';
+  if (/fine dining|luxury restaurant|michelin/.test(p)) return 'fine_dining';
+  if (/south indian|andhra|telangana|tamil|kerala|karnataka|dosa|idli/.test(p)) return 'south_indian';
+  if (/pizza|burger|fast food|wrap|pasta|delivery/.test(p)) return 'pizza_fast_food';
+  if (/coffee|cafe|bakery café|brunch|barista|espresso/.test(p)) return 'cafe_coffee';
+  if (/bakery|dessert|cake|pastry|cookie|sweet/.test(p)) return 'bakery_desserts';
+  if (/hair salon|salon|haircut|stylist|colorist/.test(p)) return 'hair_salon';
+  if (/barber|barbershop|grooming|beard/.test(p)) return 'barbershop';
+  if (/yoga|meditation|studio|pilates/.test(p)) return 'yoga_meditation';
+  if (/gym|fitness|crossfit|workout|weight/.test(p)) return 'gym_fitness';
+  if (/spa|wellness|massage|treatment/.test(p)) return 'spa_wellness';
+  if (/medical|clinic|doctor|physician|pediatric|derma/.test(p)) return 'medical_clinic';
+  if (/dental|dentist|teeth|ortho/.test(p)) return 'dental_practice';
+  if (/law|legal|attorney|firm|lawyer/.test(p)) return 'law_firm';
+  if (/ca |accounting|audit|financial|tax/.test(p)) return 'accounting_firm';
+  if (/real estate|realtor|agency|apartment|house|listing/.test(p)) return 'real_estate';
+  if (/saas|software|landing page|product page/.test(p)) return 'saas_landing';
+  if (/creative agency|marketing agency|studio/.test(p)) return 'creative_agency';
+  if (/portfolio|freelancer|resume|cv/.test(p)) return 'portfolio';
+  if (/photography|photo studio|photographer/.test(p)) return 'photography';
+  if (/coaching|tutoring|course|school|academy|class/.test(p)) return 'coaching_tutoring';
   return 'general';
 }
 
@@ -722,73 +861,49 @@ function isFreshBuildRequest(prompt: string): boolean {
   return hasBuildWord && hasSiteWord;
 }
 
-function buildBrandPrompt(originalPrompt: string, industry: BrandIndustry, answers: Record<number, string>): string {
-  // Map answer index -> semantic label depending on industry
-  const labelMap: Record<BrandIndustry, string[]> = {
-    restaurant: ['Business Name', 'Cuisine & Vibe', 'Location', 'Brand Colors', 'Signature Dishes'],
-    salon: ['Business Name', 'Services', 'Target Clients & Price Range', 'Brand Aesthetic', 'Location'],
-    medical: ['Clinic Name', 'Specialization', 'Lead Doctor', 'Location', 'Color Preference'],
-    fitness: ['Business Name', 'Type', 'Target Audience & Price Range', 'Brand Energy', 'Location'],
-    portfolio: ['Name / Studio', 'Profession', 'Skills / Specializations', 'Style Direction', 'Featured Projects'],
-    saas: ['Product Name', 'Product Description', 'Key Features', 'Pricing Tiers', 'Color Style'],
-    general: ['Business Name', 'What the Business Does', 'Brand Colors', 'Tone'],
-  };
-
-  const labels = labelMap[industry];
-  const lines = Object.entries(answers).map(([idx, val]) => {
-    const label = labels[Number(idx)] ?? `Detail ${Number(idx) + 1}`;
-    // For the general tone question, translate the number
-    if (industry === 'general' && Number(idx) === 3) {
-      const tone = TONE_MAP[val.trim()] ?? val;
-      return `${label}: ${tone}`;
+function buildBrandPrompt(
+  originalPrompt: string,
+  industry: BrandIndustry,
+  answers: Record<number, string>,
+  questionsList: string[],
+  extractedInfo?: { name: string; location: string; colors: string[] }
+): string {
+  const qaLines: string[] = [];
+  questionsList.forEach((q, idx) => {
+    if (answers[idx]) {
+      qaLines.push(`Q: ${q}\nA: ${answers[idx]}`);
     }
-    return `${label}: ${val}`;
   });
 
-  const businessName = answers[0] ?? '';
+  const infoLines: string[] = [];
+  if (extractedInfo) {
+    if (extractedInfo.name) infoLines.push(`Business Name: ${extractedInfo.name}`);
+    if (extractedInfo.location) infoLines.push(`Location: ${extractedInfo.location}`);
+    if (extractedInfo.colors && extractedInfo.colors.length > 0) {
+      infoLines.push(`Mentions Colors: ${extractedInfo.colors.join(", ")}`);
+    }
+  }
 
   return `${originalPrompt}
 
 BRAND CONTEXT:
-Industry: ${industry}
-${lines.join('\n')}
+Industry Category: ${industry}
+${infoLines.join('\n')}
+${qaLines.join('\n')}
 
-Use ALL of this brand context. Generate real content specific to this exact business. Every section — headings, body copy, testimonials, pricing, menu items — must be written specifically for ${businessName || 'this business'}, not generic. No placeholders.`;
+Use ALL of this brand context. Generate real content specific to this exact business. Every section — headings, body copy, testimonials, pricing, menu items — must be written specifically for the business, not generic. No placeholders.`;
 }
 
-function extractBrandFields(industry: BrandIndustry | '', answers: Record<number, string>) {
-  const businessName = answers[0] || '';
-  let location = '';
-  let primaryColor = '';
-  let secondaryColor = '';
-  let tone = '';
-
-  if (industry === 'restaurant') {
-    location = answers[2] || '';
-    primaryColor = answers[3] || '';
-    tone = answers[1] || '';
-  } else if (industry === 'salon') {
-    location = answers[4] || '';
-    primaryColor = answers[3] || '';
-    tone = answers[2] || '';
-  } else if (industry === 'medical') {
-    location = answers[3] || '';
-    primaryColor = answers[4] || '';
-    tone = answers[1] || '';
-  } else if (industry === 'fitness') {
-    location = answers[4] || '';
-    primaryColor = answers[3] || '';
-    tone = answers[2] || '';
-  } else if (industry === 'portfolio') {
-    primaryColor = answers[3] || '';
-    tone = answers[1] || '';
-  } else if (industry === 'saas') {
-    primaryColor = answers[4] || '';
-    tone = answers[1] || '';
-  } else if (industry === 'general') {
-    primaryColor = answers[2] || '';
-    tone = TONE_MAP[answers[3]?.trim()] || answers[3] || '';
-  }
+function extractBrandFields(
+  industry: BrandIndustry | '',
+  answers: Record<number, string>,
+  extractedInfo?: { name: string; location: string; colors: string[] }
+) {
+  const businessName = extractedInfo?.name || answers[0] || '';
+  const location = extractedInfo?.location || answers[4] || answers[3] || answers[2] || '';
+  const primaryColor = (extractedInfo?.colors && extractedInfo.colors[0]) || answers[3] || answers[2] || '';
+  const secondaryColor = (extractedInfo?.colors && extractedInfo.colors[1]) || '';
+  const tone = answers[1] || 'Professional';
 
   return {
     businessName,
@@ -1571,7 +1686,7 @@ export function OniChat({
 
     // ── Brand Intake: handle answer to current question ────────────────────────
     if (brandContext.isCollecting) {
-      const questions = BRAND_QUESTIONS[brandContext.industry as BrandIndustry];
+      const questions = brandContext.questionsList || BRAND_QUESTIONS[brandContext.industry as BrandIndustry || 'general'];
       const qIdx = brandContext.currentQuestionIndex;
       const newAnswers = { ...brandContext.answers, [qIdx]: prompt };
 
@@ -1597,7 +1712,7 @@ export function OniChat({
       }
 
       // All questions answered — build the enriched prompt and fire the AI
-      const businessName = newAnswers[0] ?? '';
+      const businessName = brandContext.extractedInfo?.name || newAnswers[0] || '';
       const confirmMsg: ChatMessage = {
         id: createId(),
         role: 'assistant',
@@ -1609,7 +1724,9 @@ export function OniChat({
       const enrichedPrompt = buildBrandPrompt(
         brandContext.originalPrompt,
         brandContext.industry as BrandIndustry,
-        newAnswers
+        newAnswers,
+        questions,
+        brandContext.extractedInfo
       );
       setBrandContext({
         isCollecting: false,
@@ -1619,6 +1736,8 @@ export function OniChat({
         originalPrompt: brandContext.originalPrompt,
         competitorContent: brandContext.competitorContent,
         competitorTitle: brandContext.competitorTitle,
+        questionsList: questions,
+        extractedInfo: brandContext.extractedInfo,
       });
 
       // Small delay so the confirm message renders first
@@ -1724,31 +1843,83 @@ export function OniChat({
       return;
     }
 
-    // ── Brand Intake: intercept fresh build requests ───────────────────────────
-    if (isFresh && isFreshBuildRequest(prompt) && !overrideText) {
-      const industry = detectIndustry(prompt);
-      const questions = BRAND_QUESTIONS[industry];
-      const firstQ = questions[0];
-
+    // ── Normal send (with backend classification) ──────────────────────────────
+    if (!overrideText) {
       const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
-      const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
-      setMessages(prev => [...prev, userMsg, oniQ]);
+      setMessages(prev => [...prev, userMsg]);
       setInput('');
       adjustHeight(true);
       if (!hasStarted) setHasStarted(true);
-      setBrandContext({
-        isCollecting: true,
-        industry,
-        currentQuestionIndex: 0,
-        answers: {},
-        originalPrompt: prompt,
-        competitorContent: '',
-        competitorTitle: '',
-      });
-      return;
+
+      setIsLoading(true);
+
+      try {
+        const history = messages.map(m => ({ role: m.role, content: m.content }));
+        const classifyRes = await fetch("/api/classify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt, history })
+        });
+        
+        if (classifyRes.ok) {
+          const classification = await classifyRes.json();
+          console.log("[Client Classifier] Result:", classification);
+
+          if (classification.intent === "build_request") {
+            const industry = classification.industry || "general";
+            const rawQuestions = BRAND_QUESTIONS[industry as BrandIndustry] || BRAND_QUESTIONS.general;
+            
+            // Filter out questions based on extractedInfo
+            const filteredQuestions: string[] = [];
+            const extName = classification.extractedInfo?.name || "";
+            const extLocation = classification.extractedInfo?.location || "";
+            
+            rawQuestions.forEach((q) => {
+              const qLower = q.toLowerCase();
+              
+              // Skip name question if name is extracted
+              const isNameQuestion = qLower.includes("name") || qLower.includes("called") || qLower.includes("name?");
+              if (isNameQuestion && extName) {
+                console.log(`[Intake] Skipping name question: "${q}" because name is already: "${extName}"`);
+                return;
+              }
+              
+              // Skip location question if location is extracted
+              const isLocationQuestion = qLower.includes("located") || qLower.includes("location") || qLower.includes("address") || qLower.includes("where are you");
+              if (isLocationQuestion && extLocation) {
+                console.log(`[Intake] Skipping location question: "${q}" because location is already: "${extLocation}"`);
+                return;
+              }
+              
+              filteredQuestions.push(q);
+            });
+
+            if (filteredQuestions.length > 0) {
+              const firstQ = filteredQuestions[0];
+              const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
+              setMessages(prev => [...prev, oniQ]);
+              setIsLoading(false);
+              
+              setBrandContext({
+                isCollecting: true,
+                industry,
+                currentQuestionIndex: 0,
+                answers: {},
+                originalPrompt: prompt,
+                questionsList: filteredQuestions,
+                extractedInfo: classification.extractedInfo,
+              });
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Classification failed, falling through to direct AI dispatch:", err);
+      }
+
+      setIsLoading(false);
     }
 
-    // ── Normal send (no intake or overrideText) ────────────────────────────────
     void handleSendToAIRef.current(prompt, attachedImage, attachedFiles);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adjustHeight, attachedFiles, attachedImage, brandContext, generatedHtml, generating, hasStarted, input, isLoading, messages]);

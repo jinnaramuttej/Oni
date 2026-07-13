@@ -979,8 +979,8 @@ function prepareMessagesForGroq(
   const lastContentTruncated = truncateContent(lastContentRaw, 5000);
   const remainingCharsForHtml = Math.max(0, availableChars - lastContentTruncated.length);
 
-  const isConversational = intent === "casual";
-  const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
+  const isConversational = intent === "casual_chat";
+  const isNewOrRedesign = intent === "build_request";
 
   let finalLastContent = lastContentTruncated;
   if (currentHtml && lastMessage.role === "user") {
@@ -1278,11 +1278,15 @@ export async function POST(req: Request) {
   }
 
   const lastUserMsgText = body.prompt || (body.messages && body.messages.slice().reverse().find((m: any) => m.role === "user")?.content) || "";
-  let intent: Intent = "new_website";
+  let intent: Intent = "build_request";
   if (lastUserMsgText) {
     try {
-      const hasExistingWebsite = typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0;
-      intent = await classifyIntent(lastUserMsgText.slice(0, 500), hasExistingWebsite);
+      const rawMessages = body.messages ? body.messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })) : [];
+      const classification = await classifyIntent(lastUserMsgText, rawMessages);
+      intent = classification.intent;
       const routeConfig = routeIntent(intent);
       creditCost = routeConfig.creditCost;
       console.log(`[Credits] intent=${intent} cost=${creditCost}`);
@@ -1292,12 +1296,12 @@ export async function POST(req: Request) {
       // Fallback detection if classifier fails
       const cleanLower = lastUserMsgText.toLowerCase();
       if (cleanLower.includes("hi") || cleanLower.includes("hello") || cleanLower.includes("hey") || cleanLower.includes("explain")) {
-        intent = "casual";
+        intent = "casual_chat";
       }
     }
   }
 
-  const isNewOrRedesign = intent === "new_website" || intent === "full_redesign";
+  const isNewOrRedesign = intent === "build_request";
   let effectiveHtml = (!isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0)
     ? body.currentHtml.slice(0, 80000)
     : "";
@@ -1344,7 +1348,7 @@ export async function POST(req: Request) {
   }
 
   const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
-  if (lastUserMsg && intent !== "casual") {
+  if (lastUserMsg && intent !== "casual_chat") {
     lastUserMsg.content += `\n\nCRITICAL FORMATTING REQUIREMENT:\n- You MUST wrap the entire complete website HTML (including all CSS in <style> and all JS in <script>) inside <ONI_CODE>...</ONI_CODE> tags.\n- Do NOT output separate HTML, CSS, or JS code blocks.\n- Do NOT write notes like "This is a basic template" or "customize it as per your requirements". You MUST build the complete, fully styled premium website with real content and copy inside the <ONI_CODE> block.`;
   }
 
@@ -1418,7 +1422,7 @@ Improve the design, make it more premium and modern.`;
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   // ── Three-stage pipeline: Plan → CSS → HTML+JS → Assemble ────────────────────
-  const isBuildIntent = (intent === "new_website" || intent === "full_redesign" || isLikelyBuildRequest(lastUserMsgText)) && !getMatchingTemplateHtml(lastUserMsgText);
+  const isBuildIntent = (intent === "build_request" || isLikelyBuildRequest(lastUserMsgText)) && !getMatchingTemplateHtml(lastUserMsgText);
   const groqKey = process.env.GROQ_API_KEY?.trim() || "";
 
   if (isBuildIntent && !useFallbackPool && groqKey) {
