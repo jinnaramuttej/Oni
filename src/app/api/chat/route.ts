@@ -96,8 +96,6 @@ const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
-const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
 
 // ── Two-stage pipeline prompts ─────────────────────────────────────────────────
 // Stage 1: Groq writes ONLY the design intent (fast, ~400 tokens, no code)
@@ -1058,7 +1056,7 @@ ${currentHtml}
   };
 }
 
-function getSystemPromptWithContext(promptText: string, maxContextChars = 30000, isOllama = false): string {
+function getSystemPromptWithContext(promptText: string, maxContextChars = 30000): string {
   const cleanPrompt = promptText.toLowerCase();
   let contextText = "\n\n=== WORKSPACE DESIGN SYSTEM GUIDELINES ===\n";
 
@@ -1112,12 +1110,12 @@ function getSystemPromptWithContext(promptText: string, maxContextChars = 30000,
       totalChars += content.length;
     }
 
-    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${numFiles} files (budget: ${maxContextChars} chars, model: ${isOllama ? 'Ollama' : 'Groq'}).`);
+    console.log(`[Oni Context] Loaded ${totalChars} chars of context from ${numFiles} files (budget: ${maxContextChars} chars).`);
   } catch (err) {
     console.error("Error loading design context from workspace:", err);
   }
 
-  return isOllama ? contextText : (ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES) + contextText;
+  return (ONI_SYSTEM_PROMPT + "\n\n" + ONI_QUALITY_RULES) + contextText;
 }
 
 void getSystemPromptWithContext;
@@ -1355,10 +1353,6 @@ export async function POST(req: Request) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
-  const isLocalOrOllamaSelected =
-    process.env.ONI_USE_OLLAMA === "true" ||
-    body?.defaultModel === "local-ollama";
-
   const lastUserMsg = groqMessages.slice().reverse().find((m) => m.role === "user");
   if (lastUserMsg && intent !== "casual") {
     lastUserMsg.content += `\n\nCRITICAL FORMATTING REQUIREMENT:\n- You MUST wrap the entire complete website HTML (including all CSS in <style> and all JS in <script>) inside <ONI_CODE>...</ONI_CODE> tags.\n- Do NOT output separate HTML, CSS, or JS code blocks.\n- Do NOT write notes like "This is a basic template" or "customize it as per your requirements". You MUST build the complete, fully styled premium website with real content and copy inside the <ONI_CODE> block.`;
@@ -1435,29 +1429,18 @@ Improve the design, make it more premium and modern.`;
       }
     }
 
-    // Determine which model/endpoint to use for code stages
+    // Determine code stage provider: Groq primary, OpenRouter fallback
     const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
-    const useOpenRouterForCode = !isLocalOrOllamaSelected && !!openRouterKey;
+    const useOpenRouterForCode = !groqKey && !!openRouterKey;
 
-    const codeApiUrl = isLocalOrOllamaSelected
-      ? OLLAMA_CHAT_URL
-      : useOpenRouterForCode
-        ? "https://openrouter.ai/api/v1/chat/completions"
-        : "https://api.groq.com/openai/v1/chat/completions";
+    const codeApiUrl = useOpenRouterForCode
+      ? "https://openrouter.ai/api/v1/chat/completions"
+      : "https://api.groq.com/openai/v1/chat/completions";
 
-    const codeApiKey = isLocalOrOllamaSelected
-      ? ""
-      : useOpenRouterForCode
-        ? openRouterKey
-        : groqKey;
+    const codeApiKey = useOpenRouterForCode ? openRouterKey : groqKey;
+    const codeModel = useOpenRouterForCode ? "nvidia/nemotron-3-ultra-550b-a55b" : GROQ_MODEL;
 
-    const codeModel = isLocalOrOllamaSelected
-      ? OLLAMA_MODEL
-      : useOpenRouterForCode
-        ? "nvidia/nemotron-3-ultra-550b-a55b"
-        : GROQ_MODEL;
-
-    console.log(`[Three-Stage] Code stages will use: ${isLocalOrOllamaSelected ? "Ollama" : useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
+    console.log(`[Three-Stage] Code stages will use: ${useOpenRouterForCode ? "OpenRouter" : "Groq"} (${codeModel})`);
 
     // Get matching template reference for CSS/HTML guidance
     const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
@@ -1607,19 +1590,7 @@ ${bodyContent}
       maxTokens: GROQ_MAX_TOKENS,
     });
   } else {
-    // 1. Local Ollama (Only if explicit local selection or in local dev)
-    if (isLocalOrOllamaSelected) {
-      targets.push({
-        name: "Local Ollama (Qwen 2.5 Coder)",
-        apiUrl: OLLAMA_CHAT_URL,
-        apiKey: "",
-        model: OLLAMA_MODEL,
-        maxTokens: GROQ_MAX_TOKENS,
-        timeoutMs: 45000,
-      });
-    }
-
-    // 2. Primary Selected Model (Default to Groq)
+    // 1. Groq primary
     let primaryModel = selectedModel;
     if (selectedModel === "oni-pro" || selectedModel === "oni-creative" || selectedModel === "local-ollama") {
       primaryModel = GROQ_MODEL;
@@ -1657,18 +1628,30 @@ ${bodyContent}
         maxTokens: 6000,
       });
     } else {
-      let groqMaxTokens = GROQ_MAX_TOKENS;
-
+      // Groq primary
       targets.push({
         name: `Primary Groq (${primaryModel})`,
         apiUrl: "https://api.groq.com/openai/v1/chat/completions",
         apiKey: process.env.GROQ_API_KEY?.trim() || "",
         model: primaryModel,
-        maxTokens: groqMaxTokens,
+        maxTokens: GROQ_MAX_TOKENS,
       });
+
+      // OpenRouter as first fallback if key is available
+      const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
+      if (openRouterKey) {
+        targets.push({
+          name: "Fallback OpenRouter (Groq failed)",
+          apiUrl: "https://openrouter.ai/api/v1/chat/completions",
+          apiKey: openRouterKey,
+          model: "nvidia/nemotron-3-ultra-550b-a55b",
+          maxTokens: GROQ_MAX_TOKENS,
+        });
+        console.log("[Pipeline] OpenRouter fallback registered.");
+      }
     }
 
-    // 3. Fallback Gemini Flash
+    // Fallback Gemini Flash
     if (selectedModel !== "gemini-2.5-flash" && !useFallbackPool) {
       const keys = latestKeys["gemini-2.5-flash"];
       if (keys && keys.length > 0) {
