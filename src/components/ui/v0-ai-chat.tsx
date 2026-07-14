@@ -74,6 +74,7 @@ type Question = {
   question: string
   placeholder: string
   optional?: boolean
+  options?: string[]
 }
 
 const QUESTIONS: Record<string, Question[]> = {
@@ -83,14 +84,33 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Dakshin, Spice Garden" },
     { field: 'cuisine',
       question: "What cuisine and vibe?",
-      placeholder: "e.g. South Indian, casual family style" },
+      placeholder: "e.g. South Indian, casual family style",
+      options: [
+        "South Indian, casual style",
+        "North Indian Dhaba & Grill",
+        "Fine Dining / Michelin Vibe",
+        "Italian Café & Pizza Bistro",
+        "Continental / Modern Fusion"
+      ] },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Banjara Hills, Hyderabad" },
+      placeholder: "e.g. Banjara Hills, Hyderabad",
+      options: [
+        "Banjara Hills, Hyderabad",
+        "Jubilee Hills, Hyderabad",
+        "Gachibowli, Hyderabad",
+        "Kondapur, Hyderabad"
+      ] },
     { field: 'colors',
       question: "Brand colors? (skip to auto-pick)",
       placeholder: "e.g. saffron and deep green",
-      optional: true },
+      optional: true,
+      options: [
+        "Warm saffron and deep forest green",
+        "Elegant black and premium gold",
+        "Minimalist cream, bronze, and charcoal",
+        "Bright terracotta, teal, and beige"
+      ] },
     { field: 'specialItems',
       question: "3-4 signature dishes to feature?",
       placeholder: "e.g. Biryani, Pesarattu, Gongura Mutton",
@@ -102,17 +122,41 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Lumière, Glam Studio" },
     { field: 'services',
       question: "Main services offered?",
-      placeholder: "e.g. haircuts, color, keratin, bridal" },
+      placeholder: "e.g. haircuts, color, keratin, bridal",
+      options: [
+        "Haircuts, styling, and creative color",
+        "Bridal makeup, skin treatments, and nails",
+        "Premium male grooming and beard styling",
+        "All-in-one luxury salon & day spa experience"
+      ] },
     { field: 'targetClient',
       question: "Target clients and price range?",
-      placeholder: "e.g. women, luxury pricing" },
+      placeholder: "e.g. women, luxury pricing",
+      options: [
+        "Premium / Luxury high-end clientele",
+        "Trendy / Gen-Z affordable luxury",
+        "Family-friendly casual pricing",
+        "Strictly male grooming / premium barbershop"
+      ] },
     { field: 'colors',
       question: "Brand colors or aesthetic?",
       placeholder: "e.g. rose gold, black minimal",
-      optional: true },
+      optional: true,
+      options: [
+        "Rose gold, blush pink, and warm white",
+        "Sleek minimal black, white, and chrome",
+        "Warm oak wood, gold, and hunter green",
+        "Clean lavender, beige, and matte silver"
+      ] },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Jubilee Hills, Hyderabad" }
+      placeholder: "e.g. Jubilee Hills, Hyderabad",
+      options: [
+        "Jubilee Hills, Hyderabad",
+        "Banjara Hills, Hyderabad",
+        "Gachibowli, Hyderabad",
+        "Kondapur, Hyderabad"
+      ] }
   ],
   medical: [
     { field: 'businessName',
@@ -120,18 +164,36 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Smile Dental, HealthFirst Clinic" },
     { field: 'specialization',
       question: "Specialization?",
-      placeholder: "e.g. dental, derma, general medicine" },
+      placeholder: "e.g. dental, derma, general medicine",
+      options: [
+        "Premium Dental & Orthodontic Care",
+        "Dermatology, Aesthetics & Laser Clinic",
+        "Pediatrics & Family Medicine Clinic",
+        "General Health & Wellness Practice"
+      ] },
     { field: 'doctorName',
       question: "Lead doctor's name and qualifications?",
       placeholder: "e.g. Dr. Ramesh Kumar MBBS MD",
       optional: true },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Kondapur, Hyderabad" },
+      placeholder: "e.g. Kondapur, Hyderabad",
+      options: [
+        "Kondapur, Hyderabad",
+        "Gachibowli, Hyderabad",
+        "Jubilee Hills, Hyderabad",
+        "Madhapur, Hyderabad"
+      ] },
     { field: 'colors',
       question: "Color preference?",
       placeholder: "e.g. blue and white, or skip for auto",
-      optional: true }
+      optional: true,
+      options: [
+        "Clinical clean teal and white",
+        "Soothing royal blue, beige, and gray",
+        "Luxury rose gold, peach, and white",
+        "Minimal slate gray and light olive"
+      ] }
   ],
   fitness: [
     { field: 'businessName',
@@ -139,14 +201,32 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. IronEdge, FitZone" },
     { field: 'services',
       question: "What do you offer?",
-      placeholder: "e.g. gym, yoga, crossfit, personal training" },
+      placeholder: "e.g. gym, yoga, crossfit, personal training",
+      options: [
+        "Full cardio & strength gym with steam",
+        "Yoga, pilates, and mindfulness classes",
+        "CrossFit, boxing, and high-intensity HIIT",
+        "Bespoke personal training & nutrition coaching"
+      ] },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Madhapur, Hyderabad" },
+      placeholder: "e.g. Madhapur, Hyderabad",
+      options: [
+        "Madhapur, Hyderabad",
+        "Gachibowli, Hyderabad",
+        "Kondapur, Hyderabad",
+        "Jubilee Hills, Hyderabad"
+      ] },
     { field: 'colors',
       question: "Brand colors?",
       placeholder: "e.g. black and electric green",
-      optional: true }
+      optional: true,
+      options: [
+        "Gritty matte black and electric yellow",
+        "Clean minimal white, concrete gray, and teal",
+        "Zen light wood, sand beige, and sage green",
+        "High-energy neon orange and dark navy"
+      ] }
   ],
   saas: [
     { field: 'businessName',
@@ -165,7 +245,13 @@ const QUESTIONS: Record<string, Question[]> = {
     { field: 'colors',
       question: "Color style?",
       placeholder: "e.g. dark purple, clean minimal, bold colorful",
-      optional: true }
+      optional: true,
+      options: [
+        "Cyberpunk dark violet, neon pink, and black",
+        "Clean modern corporate blue, white, and gray",
+        "Eco-friendly warm forest green, beige, and cream",
+        "High-contrast canary yellow and dark carbon"
+      ] }
   ],
   legal: [
     { field: 'businessName',
@@ -173,14 +259,26 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Sharma & Associates" },
     { field: 'practiceAreas',
       question: "Practice areas?",
-      placeholder: "e.g. corporate law, family law, criminal defense" },
+      placeholder: "e.g. corporate law, family law, criminal defense",
+      options: [
+        "Corporate, Startup & intellectual property law",
+        "Criminal defense, civil litigation & appeals",
+        "Family law, estate planning & real estate",
+        "All-practice comprehensive legal advice"
+      ] },
     { field: 'lawyerName',
       question: "Lead attorney name?",
       placeholder: "e.g. Advocate Priya Sharma LLB LLM",
       optional: true },
     { field: 'location',
       question: "Which city?",
-      placeholder: "e.g. Hyderabad" }
+      placeholder: "e.g. Hyderabad",
+      options: [
+        "Hyderabad",
+        "Delhi NCR",
+        "Mumbai",
+        "Bengaluru"
+      ] }
   ],
   education: [
     { field: 'businessName',
@@ -188,17 +286,41 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Sunrise Coaching, BrightMinds Academy" },
     { field: 'courses',
       question: "What do you teach?",
-      placeholder: "e.g. JEE, NEET, Class 10-12 Maths, English" },
+      placeholder: "e.g. JEE, NEET, Class 10-12 Maths, English",
+      options: [
+        "IIT-JEE & NEET entrance preparation",
+        "CBSE/ICSE school coaching (Class 6-10)",
+        "Spoken English, soft skills & IELTS prep",
+        "Coding, STEM & robotics classes for kids"
+      ] },
     { field: 'targetStudents',
       question: "Target students?",
-      placeholder: "e.g. Class 11-12, JEE aspirants" },
+      placeholder: "e.g. Class 11-12, JEE aspirants",
+      options: [
+        "Class 11-12 board and competitive aspirants",
+        "High school students (Class 6-10)",
+        "Working professionals and adults",
+        "Young kids aged 6-14"
+      ] },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Dilsukhnagar, Hyderabad" },
+      placeholder: "e.g. Dilsukhnagar, Hyderabad",
+      options: [
+        "Dilsukhnagar, Hyderabad",
+        "Kukatpally, Hyderabad",
+        "SR Nagar, Hyderabad",
+        "Madhapur, Hyderabad"
+      ] },
     { field: 'colors',
       question: "Color preference?",
       placeholder: "e.g. blue and yellow, or skip",
-      optional: true }
+      optional: true,
+      options: [
+        "Classic trust royal blue and white",
+        "Energetic yellow, navy, and slate",
+        "Creative teal, orange, and cream",
+        "Minimalist beige and charcoal forest"
+      ] }
   ],
   portfolio: [
     { field: 'businessName',
@@ -206,14 +328,26 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Uttej Jinnaram, Pixel Studio" },
     { field: 'services',
       question: "What do you do?",
-      placeholder: "e.g. UI/UX design, web development, branding" },
+      placeholder: "e.g. UI/UX design, web development, branding",
+      options: [
+        "Full-stack Web and App Development",
+        "Creative UI/UX & Product Design",
+        "Graphic design, brand identity & packaging",
+        "Freelance photography & videography"
+      ] },
     { field: 'description',
       question: "One line about yourself or agency?",
       placeholder: "e.g. Building digital products for startups" },
     { field: 'colors',
       question: "Personal brand colors?",
       placeholder: "e.g. black and purple, minimal white",
-      optional: true }
+      optional: true,
+      options: [
+        "Dark mode: Charcoal black and neon purple",
+        "Light mode: Paper white and ink blue",
+        "Warm mode: Terracotta, sage, and oatmeal",
+        "High contrast: Bright yellow, carbon, and white"
+      ] }
   ],
   general: [
     { field: 'businessName',
@@ -224,15 +358,33 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. we sell handmade jewellery online" },
     { field: 'location',
       question: "Which city?",
-      placeholder: "e.g. Hyderabad" },
+      placeholder: "e.g. Hyderabad",
+      options: [
+        "Hyderabad",
+        "Bengaluru",
+        "Mumbai",
+        "Delhi NCR"
+      ] },
     { field: 'colors',
       question: "Brand colors?",
       placeholder: "e.g. gold and black, or skip for auto",
-      optional: true },
+      optional: true,
+      options: [
+        "Luxury black and bright gold",
+        "Clean minimal white, gray, and blue",
+        "Energetic orange, purple, and beige",
+        "Natural forest green, wood, and white"
+      ] },
     { field: 'tone',
       question: "Website vibe?",
       placeholder: "e.g. luxury, friendly, minimal, bold",
-      optional: true }
+      optional: true,
+      options: [
+        "Ultra Luxury & Premium",
+        "Minimal & Ultra Clean",
+        "High-Energy, Bold & Modern",
+        "Warm, Friendly & Organic"
+      ] }
   ]
 }
 
@@ -343,6 +495,29 @@ function EnhanceModal({
     }
   }
 
+  function handleOptionSelect(optionVal: string) {
+    const currentQ = questions[step]
+    const updatedAnswers = {
+      ...answers,
+      [currentQ.field]: optionVal
+    }
+    setAnswers(updatedAnswers)
+    setCurrentInput('')
+
+    if (step + 1 >= questions.length) {
+      const enhanced = buildEnhancedPrompt(
+        originalPrompt,
+        industry,
+        updatedAnswers
+      )
+      setEnhancedPrompt(enhanced)
+      setDone(true)
+    } else {
+      setStep(step + 1)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
   function handleSkip() {
     const currentQ = questions[step]
     const updatedAnswers = { ...answers, [currentQ.field]: '' }
@@ -422,15 +597,44 @@ function EnhanceModal({
               {questions[step].optional && (
                 <div className="enhance-optional">optional</div>
               )}
-              <input
-                ref={inputRef}
-                type="text"
-                value={currentInput}
-                onChange={e => setCurrentInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={questions[step].placeholder}
-                className="enhance-input"
-              />
+              
+              {questions[step].options ? (
+                <div className="enhance-options-list">
+                  {questions[step].options.map((opt, idx) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleOptionSelect(opt)}
+                      className="enhance-option-row"
+                    >
+                      <span className="enhance-option-num">{idx + 1}</span>
+                      <span className="enhance-option-text">{opt}</span>
+                    </button>
+                  ))}
+                  <div className="enhance-option-custom">
+                    <span className="enhance-option-custom-icon">✎</span>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Something else"
+                      value={currentInput}
+                      onChange={e => setCurrentInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="enhance-option-custom-input"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={currentInput}
+                  onChange={e => setCurrentInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={questions[step].placeholder}
+                  className="enhance-input"
+                />
+              )}
             </div>
 
             {/* Actions */}
