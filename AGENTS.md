@@ -123,6 +123,10 @@ src/lib/auth.ts — exists but NOT used for now
 - If needed, create multiple granular commits.
 - Use natural, non-AI-like commit messages (e.g. avoid robotic/generic phrases like "Refactored code" or "AI generated fixes", use direct human-like descriptions of the actual change).
 
+### 13. Prompt Enhancement Flow
+When the user clicks the "Enhance prompt" or Sparkles button and a website has not yet been generated (initial build setup), the application must ALWAYS show the interactive, multi-step questions modal (`EnhanceModal`) to gather industry-specific details. Do NOT bypass this interactive modal with a direct call to the `/api/enhance-prompt` API at this stage. The API-based cloud prompt enhancement is only utilized in subsequent chat messages once a website has already been generated.
+
+
 User: "make a luxury coffee cafe website"
           │
           ▼
