@@ -440,7 +440,7 @@ function buildEnhancedPrompt(
   return parts.filter(Boolean).join('. ')
 }
 
-function EnhanceModal({
+export function EnhanceModal({
   isOpen,
   onClose,
   originalPrompt,
@@ -622,6 +622,15 @@ function EnhanceModal({
                       onKeyDown={handleKeyDown}
                       className="enhance-option-custom-input"
                     />
+                    {currentInput.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        className="text-xs text-white bg-purple-600 hover:bg-purple-500 font-semibold px-3 py-1.5 rounded-lg shrink-0 ml-2"
+                      >
+                        {step + 1 >= questions.length ? 'Done' : 'Next'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -637,27 +646,31 @@ function EnhanceModal({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="enhance-actions">
-              <button
-                className="enhance-skip"
-                onClick={handleSkip}
-              >
-                Skip
-              </button>
-              <button
-                className="enhance-next"
-                onClick={handleNext}
-                disabled={
-                  !currentInput.trim() && 
-                  !questions[step].optional
-                }
-              >
-                {step + 1 >= questions.length
-                  ? 'Build Prompt →'
-                  : 'Next →'}
-              </button>
-            </div>
+            {/* Actions (only visible when not presenting multiple choice, or if the question is optional so skip makes sense) */}
+            {(!questions[step].options || questions[step].optional) && (
+              <div className="enhance-actions">
+                <button
+                  className="enhance-skip"
+                  onClick={handleSkip}
+                >
+                  Skip
+                </button>
+                {!questions[step].options && (
+                  <button
+                    className="enhance-next"
+                    onClick={handleNext}
+                    disabled={
+                      !currentInput.trim() && 
+                      !questions[step].optional
+                    }
+                  >
+                    {step + 1 >= questions.length
+                      ? 'Build Prompt →'
+                      : 'Next →'}
+                  </button>
+                )}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -1667,6 +1680,7 @@ export function OniChat({
   const [generating, setGenerating] = useState(false);
   const [isWritingCode, setIsWritingCode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [editorTab, setEditorTab] = useState<EditorTab>("preview");
   const [previewSize, setPreviewSize] = useState<PreviewSize>("desktop");
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
@@ -2134,19 +2148,10 @@ export function OniChat({
     }, 2400);
   }, []);
 
-  const [isEnhancing, setIsEnhancing] = useState(false);
-
   const handleEnhancePrompt = useCallback(async () => {
     if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
 
-    const buildKeywords = ["make", "build", "create", "design", "generate"];
-    const siteKeywords = ["website", "site", "page", "landing"];
-    const lowerValue = input.toLowerCase();
-    const hasBuildKeyword = buildKeywords.some(kw => lowerValue.includes(kw));
-    const hasSiteKeyword = siteKeywords.some(kw => lowerValue.includes(kw));
-    const isBuildRequest = hasBuildKeyword && hasSiteKeyword;
-
-    if (isBuildRequest && !generatedHtml) {
+    if (!generatedHtml) {
       setEnhanceOpen(true);
       return;
     }

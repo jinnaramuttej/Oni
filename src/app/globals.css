@@ -499,24 +499,92 @@
   font-family: 'Inter', sans-serif;
 }
 
-.enhance-btn {
-  display: inline-flex;
+.enhance-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.enhance-option-row {
+  display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.85);
   font-family: 'Inter', sans-serif;
-  color: rgba(255,255,255,0.6);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 999px;
-  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  text-align: left;
 }
-.enhance-btn:hover {
+
+.enhance-option-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
   color: white;
-  border-color: rgba(124,58,237,0.5);
-  background: rgba(124,58,237,0.1);
+  transform: translateX(4px);
 }
+
+.enhance-option-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.enhance-option-text {
+  flex-grow: 1;
+}
+
+.enhance-option-custom {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.enhance-option-custom:focus-within {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.enhance-option-custom-icon {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.enhance-option-custom-input {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  padding: 0.4rem 0;
+}
+
+.enhance-option-custom-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
 
