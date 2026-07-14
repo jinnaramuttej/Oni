@@ -1144,7 +1144,8 @@ Improve the design, make it more premium and modern.`;
   let threeStageSuccess = false;
   let finalResponse = "";
 
-  if (isBuildIntent && !useFallbackPool && groqKey) {
+  // Disabled to comply with Rule 3: Always use real Groq streaming
+  if (false && isBuildIntent && !useFallbackPool && groqKey) {
     console.log("[Three-Stage] Build request detected. Running 3-stage pipeline...");
 
     // Helper: call API non-streaming with custom fallback targets list
@@ -1339,9 +1340,9 @@ ${htmlContent}
       model: selectedModel === "oni-pro" ? GROQ_MODEL : selectedModel,
       maxTokens: GROQ_MAX_TOKENS,
     });
-  } else if (IS_LOCAL_DEV) {
-    // In local development: use Ollama exclusively
-    console.log("[Pipeline] Local dev detected — routing all requests to Ollama.");
+  } else if (IS_LOCAL_DEV && selectedModel === "local-ollama") {
+    // In local development: use Ollama if selected
+    console.log("[Pipeline] Local dev: routing request to Ollama because it was selected.");
     targets.push({
       name: "Local Ollama (dev)",
       apiUrl: OLLAMA_CHAT_URL,
