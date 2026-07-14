@@ -1934,6 +1934,19 @@ export function OniChat({
 
   const handleEnhancePrompt = useCallback(async () => {
     if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
+
+    const buildKeywords = ["make", "build", "create", "design", "generate"];
+    const siteKeywords = ["website", "site", "page", "landing"];
+    const lowerValue = input.toLowerCase();
+    const hasBuildKeyword = buildKeywords.some(kw => lowerValue.includes(kw));
+    const hasSiteKeyword = siteKeywords.some(kw => lowerValue.includes(kw));
+    const isBuildRequest = hasBuildKeyword && hasSiteKeyword;
+
+    if (isBuildRequest && !generatedHtml) {
+      setEnhanceOpen(true);
+      return;
+    }
+
     setIsEnhancing(true);
 
     try {
@@ -1963,7 +1976,7 @@ export function OniChat({
     } finally {
       setIsEnhancing(false);
     }
-  }, [input, isEnhancing, generating, isLoading, getActiveModel, showToast, adjustHeight]);
+  }, [input, isEnhancing, generating, isLoading, getActiveModel, showToast, adjustHeight, generatedHtml]);
 
   const lastAiRawContent = useMemo(() => {
     const lastAiMsg = [...messages].reverse().find((m) => m.role === "assistant" && m.rawContent);
