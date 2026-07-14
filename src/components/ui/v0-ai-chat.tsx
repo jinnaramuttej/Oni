@@ -55,7 +55,7 @@ import { motion } from "framer-motion";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { TEMPLATE_KEYWORDS, TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 
-function detectIndustry(prompt: string): string {
+function detectIndustryForEnhance(prompt: string): string {
   const p = prompt.toLowerCase()
   if (p.match(/restaurant|cafe|food|dhaba|biryani|hotel|dining|eat/)) return 'restaurant'
   if (p.match(/salon|hair|beauty|spa|nail|parlour|makeup/)) return 'salon'
@@ -299,7 +299,7 @@ function EnhanceModal({
   originalPrompt: string
   onEnhanced: (enhancedPrompt: string) => void
 }) {
-  const industry = detectIndustry(originalPrompt)
+  const industry = detectIndustryForEnhance(originalPrompt)
   const questions = QUESTIONS[industry] || QUESTIONS.general
   
   const [step, setStep] = useState(0)
