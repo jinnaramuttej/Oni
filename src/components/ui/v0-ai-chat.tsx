@@ -55,6 +55,441 @@ import { motion } from "framer-motion";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { TEMPLATE_KEYWORDS, TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 
+function detectIndustry(prompt: string): string {
+  const p = prompt.toLowerCase()
+  if (p.match(/restaurant|cafe|food|dhaba|biryani|hotel|dining|eat/)) return 'restaurant'
+  if (p.match(/salon|hair|beauty|spa|nail|parlour|makeup/)) return 'salon'
+  if (p.match(/clinic|doctor|hospital|medical|dental|health/)) return 'medical'
+  if (p.match(/gym|fitness|yoga|workout|training/)) return 'fitness'
+  if (p.match(/saas|app|startup|software|tech|platform/)) return 'saas'
+  if (p.match(/law|legal|advocate|lawyer|firm/)) return 'legal'
+  if (p.match(/school|coaching|tutor|education|institute/)) return 'education'
+  if (p.match(/portfolio|agency|freelance|creative/)) return 'portfolio'
+  if (p.match(/real estate|property|realty|housing/)) return 'realestate'
+  return 'general'
+}
+
+type Question = {
+  field: string
+  question: string
+  placeholder: string
+  optional?: boolean
+}
+
+const QUESTIONS: Record<string, Question[]> = {
+  restaurant: [
+    { field: 'businessName',
+      question: "What's your restaurant name?",
+      placeholder: "e.g. Dakshin, Spice Garden" },
+    { field: 'cuisine',
+      question: "What cuisine and vibe?",
+      placeholder: "e.g. South Indian, casual family style" },
+    { field: 'location',
+      question: "Which city and area?",
+      placeholder: "e.g. Banjara Hills, Hyderabad" },
+    { field: 'colors',
+      question: "Brand colors? (skip to auto-pick)",
+      placeholder: "e.g. saffron and deep green",
+      optional: true },
+    { field: 'specialItems',
+      question: "3-4 signature dishes to feature?",
+      placeholder: "e.g. Biryani, Pesarattu, Gongura Mutton",
+      optional: true }
+  ],
+  salon: [
+    { field: 'businessName',
+      question: "What's your salon name?",
+      placeholder: "e.g. Lumière, Glam Studio" },
+    { field: 'services',
+      question: "Main services offered?",
+      placeholder: "e.g. haircuts, color, keratin, bridal" },
+    { field: 'targetClient',
+      question: "Target clients and price range?",
+      placeholder: "e.g. women, luxury pricing" },
+    { field: 'colors',
+      question: "Brand colors or aesthetic?",
+      placeholder: "e.g. rose gold, black minimal",
+      optional: true },
+    { field: 'location',
+      question: "Which city and area?",
+      placeholder: "e.g. Jubilee Hills, Hyderabad" }
+  ],
+  medical: [
+    { field: 'businessName',
+      question: "What's your clinic name?",
+      placeholder: "e.g. Smile Dental, HealthFirst Clinic" },
+    { field: 'specialization',
+      question: "Specialization?",
+      placeholder: "e.g. dental, derma, general medicine" },
+    { field: 'doctorName',
+      question: "Lead doctor's name and qualifications?",
+      placeholder: "e.g. Dr. Ramesh Kumar MBBS MD",
+      optional: true },
+    { field: 'location',
+      question: "Which city and area?",
+      placeholder: "e.g. Kondapur, Hyderabad" },
+    { field: 'colors',
+      question: "Color preference?",
+      placeholder: "e.g. blue and white, or skip for auto",
+      optional: true }
+  ],
+  fitness: [
+    { field: 'businessName',
+      question: "Gym or studio name?",
+      placeholder: "e.g. IronEdge, FitZone" },
+    { field: 'services',
+      question: "What do you offer?",
+      placeholder: "e.g. gym, yoga, crossfit, personal training" },
+    { field: 'location',
+      question: "Which city and area?",
+      placeholder: "e.g. Madhapur, Hyderabad" },
+    { field: 'colors',
+      question: "Brand colors?",
+      placeholder: "e.g. black and electric green",
+      optional: true }
+  ],
+  saas: [
+    { field: 'businessName',
+      question: "Product name?",
+      placeholder: "e.g. Nexus AI, FlowDesk" },
+    { field: 'description',
+      question: "One sentence — what it does and who for?",
+      placeholder: "e.g. AI tool that automates invoicing for freelancers" },
+    { field: 'keyFeatures',
+      question: "3 main features or benefits?",
+      placeholder: "e.g. automated invoicing, payment tracking, reports" },
+    { field: 'pricing',
+      question: "Pricing tiers? (skip if none yet)",
+      placeholder: "e.g. Free ₹0, Pro ₹499/mo, Team ₹999/mo",
+      optional: true },
+    { field: 'colors',
+      question: "Color style?",
+      placeholder: "e.g. dark purple, clean minimal, bold colorful",
+      optional: true }
+  ],
+  legal: [
+    { field: 'businessName',
+      question: "Firm name?",
+      placeholder: "e.g. Sharma & Associates" },
+    { field: 'practiceAreas',
+      question: "Practice areas?",
+      placeholder: "e.g. corporate law, family law, criminal defense" },
+    { field: 'lawyerName',
+      question: "Lead attorney name?",
+      placeholder: "e.g. Advocate Priya Sharma LLB LLM",
+      optional: true },
+    { field: 'location',
+      question: "Which city?",
+      placeholder: "e.g. Hyderabad" }
+  ],
+  education: [
+    { field: 'businessName',
+      question: "Institute or coaching name?",
+      placeholder: "e.g. Sunrise Coaching, BrightMinds Academy" },
+    { field: 'courses',
+      question: "What do you teach?",
+      placeholder: "e.g. JEE, NEET, Class 10-12 Maths, English" },
+    { field: 'targetStudents',
+      question: "Target students?",
+      placeholder: "e.g. Class 11-12, JEE aspirants" },
+    { field: 'location',
+      question: "Which city and area?",
+      placeholder: "e.g. Dilsukhnagar, Hyderabad" },
+    { field: 'colors',
+      question: "Color preference?",
+      placeholder: "e.g. blue and yellow, or skip",
+      optional: true }
+  ],
+  portfolio: [
+    { field: 'businessName',
+      question: "Your name or agency name?",
+      placeholder: "e.g. Uttej Jinnaram, Pixel Studio" },
+    { field: 'services',
+      question: "What do you do?",
+      placeholder: "e.g. UI/UX design, web development, branding" },
+    { field: 'description',
+      question: "One line about yourself or agency?",
+      placeholder: "e.g. Building digital products for startups" },
+    { field: 'colors',
+      question: "Personal brand colors?",
+      placeholder: "e.g. black and purple, minimal white",
+      optional: true }
+  ],
+  general: [
+    { field: 'businessName',
+      question: "Business name?",
+      placeholder: "e.g. Acme Solutions" },
+    { field: 'description',
+      question: "What does your business do?",
+      placeholder: "e.g. we sell handmade jewellery online" },
+    { field: 'location',
+      question: "Which city?",
+      placeholder: "e.g. Hyderabad" },
+    { field: 'colors',
+      question: "Brand colors?",
+      placeholder: "e.g. gold and black, or skip for auto",
+      optional: true },
+    { field: 'tone',
+      question: "Website vibe?",
+      placeholder: "e.g. luxury, friendly, minimal, bold",
+      optional: true }
+  ]
+}
+
+function buildEnhancedPrompt(
+  original: string,
+  industry: string,
+  answers: Record<string, string>
+): string {
+  const parts = [original]
+
+  if (answers.businessName) 
+    parts.push(`Business name: ${answers.businessName}`)
+  if (answers.cuisine) 
+    parts.push(`Cuisine and vibe: ${answers.cuisine}`)
+  if (answers.services) 
+    parts.push(`Services: ${answers.services}`)
+  if (answers.description) 
+    parts.push(`About: ${answers.description}`)
+  if (answers.specialization) 
+    parts.push(`Specialization: ${answers.specialization}`)
+  if (answers.doctorName) 
+    parts.push(`Doctor: ${answers.doctorName}`)
+  if (answers.lawyerName) 
+    parts.push(`Attorney: ${answers.lawyerName}`)
+  if (answers.practiceAreas) 
+    parts.push(`Practice areas: ${answers.practiceAreas}`)
+  if (answers.courses) 
+    parts.push(`Courses: ${answers.courses}`)
+  if (answers.keyFeatures) 
+    parts.push(`Key features: ${answers.keyFeatures}`)
+  if (answers.pricing) 
+    parts.push(`Pricing: ${answers.pricing}`)
+  if (answers.specialItems) 
+    parts.push(`Signature items: ${answers.specialItems}`)
+  if (answers.targetClient) 
+    parts.push(`Target clients: ${answers.targetClient}`)
+  if (answers.targetStudents) 
+    parts.push(`Target students: ${answers.targetStudents}`)
+  if (answers.location) 
+    parts.push(`Location: ${answers.location}`)
+  if (answers.colors) 
+    parts.push(`Brand colors: ${answers.colors}`)
+  if (answers.tone) 
+    parts.push(`Tone: ${answers.tone}`)
+
+  parts.push(
+    `Industry: ${industry}`,
+    `Use the actual business name everywhere.`,
+    `Write real specific content for this exact business.`,
+    `Make it look premium and professional.`
+  )
+
+  return parts.filter(Boolean).join('. ')
+}
+
+function EnhanceModal({
+  isOpen,
+  onClose,
+  originalPrompt,
+  onEnhanced
+}: {
+  isOpen: boolean
+  onClose: () => void
+  originalPrompt: string
+  onEnhanced: (enhancedPrompt: string) => void
+}) {
+  const industry = detectIndustry(originalPrompt)
+  const questions = QUESTIONS[industry] || QUESTIONS.general
+  
+  const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState<Record<string,string>>({})
+  const [currentInput, setCurrentInput] = useState('')
+  const [done, setDone] = useState(false)
+  const [enhancedPrompt, setEnhancedPrompt] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(0)
+      setAnswers({})
+      setCurrentInput('')
+      setDone(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [isOpen])
+
+  function handleNext() {
+    const currentQ = questions[step]
+    const updatedAnswers = {
+      ...answers,
+      [currentQ.field]: currentInput
+    }
+    setAnswers(updatedAnswers)
+    setCurrentInput('')
+
+    if (step + 1 >= questions.length) {
+      // Build enhanced prompt
+      const enhanced = buildEnhancedPrompt(
+        originalPrompt,
+        industry,
+        updatedAnswers
+      )
+      setEnhancedPrompt(enhanced)
+      setDone(true)
+    } else {
+      setStep(step + 1)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
+  function handleSkip() {
+    const currentQ = questions[step]
+    const updatedAnswers = { ...answers, [currentQ.field]: '' }
+    setAnswers(updatedAnswers)
+    setCurrentInput('')
+
+    if (step + 1 >= questions.length) {
+      const enhanced = buildEnhancedPrompt(
+        originalPrompt,
+        industry,
+        updatedAnswers
+      )
+      setEnhancedPrompt(enhanced)
+      setDone(true)
+    } else {
+      setStep(step + 1)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (currentInput.trim() || questions[step].optional) {
+        handleNext()
+      }
+    }
+  }
+
+  if (!isOpen) return null
+
+  const progress = done ? 100 : (step / questions.length) * 100
+  const industryLabel = {
+    restaurant: '🍽️ Restaurant',
+    salon: '💇 Salon',
+    medical: '🏥 Medical',
+    fitness: '💪 Fitness',
+    saas: '⚡ SaaS',
+    legal: '⚖️ Legal',
+    education: '📚 Education',
+    portfolio: '🎨 Portfolio',
+    general: '🌐 General'
+  }[industry] || '🌐 Website'
+
+  return (
+    <div className="enhance-overlay" onClick={onClose}>
+      <div
+        className="enhance-modal"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="enhance-header">
+          <div>
+            <span className="enhance-title">Enhance Prompt ✦</span>
+            <span className="enhance-industry">{industryLabel}</span>
+          </div>
+          <button className="enhance-close" onClick={onClose}>×</button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="enhance-progress-track">
+          <div
+            className="enhance-progress-fill"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {!done ? (
+          <>
+            {/* Question */}
+            <div className="enhance-body">
+              <div className="enhance-step-label">
+                Question {step + 1} of {questions.length}
+              </div>
+              <div className="enhance-question">
+                {questions[step].question}
+              </div>
+              {questions[step].optional && (
+                <div className="enhance-optional">optional</div>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                value={currentInput}
+                onChange={e => setCurrentInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={questions[step].placeholder}
+                className="enhance-input"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="enhance-actions">
+              <button
+                className="enhance-skip"
+                onClick={handleSkip}
+              >
+                Skip
+              </button>
+              <button
+                className="enhance-next"
+                onClick={handleNext}
+                disabled={
+                  !currentInput.trim() && 
+                  !questions[step].optional
+                }
+              >
+                {step + 1 >= questions.length
+                  ? 'Build Prompt →'
+                  : 'Next →'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Done state */}
+            <div className="enhance-body">
+              <div className="enhance-done-label">
+                ✓ Enhanced prompt ready
+              </div>
+              <div className="enhance-prompt-preview">
+                {enhancedPrompt}
+              </div>
+            </div>
+            <div className="enhance-actions">
+              <button
+                className="enhance-skip"
+                onClick={() => setDone(false) || setStep(0)}
+              >
+                Start Over
+              </button>
+              <button
+                className="enhance-next"
+                onClick={() => {
+                  onEnhanced(enhancedPrompt)
+                  onClose()
+                }}
+              >
+                Use This Prompt →
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 async function resizeImageToBase64(file: File, maxWidth = 800, maxHeight = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -966,6 +1401,7 @@ export function OniChat({
   forceNewSession?: boolean;
 }) {
   const [input, setInput] = useState("");
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
   // Restore messages and conversationId from sessionStorage or localStorage so refresh/navigation stays in same chat
   const [conversationId, setConversationId] = useState<string>(() => {
     if (chatId) {
@@ -2781,6 +3217,7 @@ ${basePrompt}`;
             creditsRemaining={creditsRemaining}
             brandContext={brandContext}
             onAnswerLogo={onAnswerLogo}
+            onEnhanceClick={() => setEnhanceOpen(true)}
           />
         </section>
 
@@ -2836,6 +3273,17 @@ ${basePrompt}`;
           {toast}
         </div>
       )}
+
+      <EnhanceModal
+        isOpen={enhanceOpen}
+        onClose={() => setEnhanceOpen(false)}
+        originalPrompt={input}
+        onEnhanced={(enhanced) => {
+          setInput(enhanced);
+          setEnhanceOpen(false);
+          window.requestAnimationFrame(() => adjustHeight());
+        }}
+      />
     </div>
   );
 }
@@ -2884,6 +3332,7 @@ interface ChatPanelProps {
   creditsRemaining: number | null;
   brandContext: BrandContext;
   onAnswerLogo: (base64?: string) => Promise<void>;
+  onEnhanceClick?: () => void;
 }
 
 function ChatPanel({
@@ -2928,6 +3377,7 @@ function ChatPanel({
   creditsRemaining,
   brandContext,
   onAnswerLogo,
+  onEnhanceClick,
 }: ChatPanelProps) {
   return (
     <>
@@ -3101,6 +3551,8 @@ function ChatPanel({
             onEnhancePrompt={onEnhancePrompt}
             onRemoveFile={onRemoveFile}
             onRemoveImage={onRemoveImage}
+            hasWebsite={hasWebsite}
+            onEnhanceClick={onEnhanceClick}
           />
         </div>
       </div>
@@ -3637,6 +4089,8 @@ type ChatComposerProps = {
   onEnhancePrompt: () => void;
   onRemoveFile: (fileId: string) => void;
   onRemoveImage: () => void;
+  hasWebsite?: boolean;
+  onEnhanceClick?: () => void;
 };
 
 function ChatComposer({
@@ -3665,6 +4119,8 @@ function ChatComposer({
   onEnhancePrompt,
   onRemoveFile,
   onRemoveImage,
+  hasWebsite,
+  onEnhanceClick,
 }: ChatComposerProps) {
   const canSend = Boolean(value.trim() || attachedImage || attachedFiles.length > 0) && !isGenerating;
 
@@ -3767,7 +4223,26 @@ function ChatComposer({
           style={{ overflow: "hidden" }}
         />
 
-        <div className="flex flex-col items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 pb-1">
+          {(() => {
+            const buildKeywords = ["make", "build", "create", "design", "generate"];
+            const siteKeywords = ["website", "site", "page", "landing"];
+            const lowerValue = value.toLowerCase();
+            const hasBuildKeyword = buildKeywords.some(kw => lowerValue.includes(kw));
+            const hasSiteKeyword = siteKeywords.some(kw => lowerValue.includes(kw));
+            const isBuildRequest = hasBuildKeyword && hasSiteKeyword;
+
+            return isBuildRequest && !hasWebsite ? (
+              <button
+                type="button"
+                onClick={onEnhanceClick}
+                className="enhance-btn"
+              >
+                ✦ Enhance
+              </button>
+            ) : null;
+          })()}
+          <div className="flex flex-col items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={onSend}
@@ -3824,6 +4299,7 @@ function ChatComposer({
             )}
           </button>
         </div>
+      </div>
       </div>
     </motion.div>
   );

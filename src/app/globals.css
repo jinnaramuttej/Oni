@@ -317,3 +317,206 @@
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20 !important;
 }
+
+.enhance-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.enhance-modal {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  width: 480px;
+  max-width: 90vw;
+  overflow: hidden;
+  animation: scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes scaleIn {
+  from { opacity:0; transform:scale(0.92); }
+  to { opacity:1; transform:scale(1); }
+}
+
+.enhance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.enhance-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: white;
+}
+
+.enhance-industry {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+  margin-left: 0.8rem;
+}
+
+.enhance-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.enhance-close:hover { color: white; }
+
+.enhance-progress-track {
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+}
+
+.enhance-progress-fill {
+  height: 100%;
+  background: var(--grad, linear-gradient(90deg,#7C3AED,#06B6D4));
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+.enhance-body {
+  padding: 2rem 1.5rem;
+}
+
+.enhance-step-label {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+
+.enhance-question {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  color: white;
+  line-height: 1.4;
+  margin-bottom: 0.4rem;
+}
+
+.enhance-optional {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 1.2rem;
+}
+
+.enhance-input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-top: 1rem;
+}
+
+.enhance-input:focus {
+  border-color: rgba(124,58,237,0.6);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+}
+
+.enhance-input::placeholder {
+  color: rgba(255,255,255,0.22);
+}
+
+.enhance-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.enhance-skip {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: color 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+.enhance-skip:hover { color: rgba(255,255,255,0.7); }
+
+.enhance-next {
+  background: var(--grad,linear-gradient(135deg,#7C3AED,#06B6D4));
+  border: none;
+  color: white;
+  padding: 0.7rem 1.5rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+}
+.enhance-next:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.enhance-next:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.enhance-done-label {
+  font-size: 0.78rem;
+  color: #10b981;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.enhance-prompt-preview {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.7;
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: 'Inter', sans-serif;
+}
+
+.enhance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-family: 'Inter', sans-serif;
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.enhance-btn:hover {
+  color: white;
+  border-color: rgba(124,58,237,0.5);
+  background: rgba(124,58,237,0.1);
+}
+
