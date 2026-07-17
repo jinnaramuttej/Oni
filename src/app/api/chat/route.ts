@@ -244,7 +244,7 @@ DESIGN QUALITY BAR:
 
 STRICT RULES:
   - Single HTML file — ALL CSS in <style>, ALL JS in <script>
-  - @import Google Fonts at the very top of <style>
+  - @import Google Fonts MUST be placed INSIDE the <style> block, as the very first line. Never place @import outside of <style> or raw in the <head>.
   - NO Tailwind, NO Bootstrap, NO external CSS frameworks
   - NO <link rel="stylesheet">, NO <script src="..."> for external files
   - NO markdown code fences inside <ONI_CODE>
