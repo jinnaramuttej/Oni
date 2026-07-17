@@ -13,10 +13,7 @@
 | Aura Academy | **SUCCESS** | footer | - |
 | AURELIA | **SUCCESS** | navbar, hero, services, testimonials, footer | - |
 | Aurelia-Spa | **SUCCESS** | footer | - |
-| ClarityHealth | **FAIL** | - | page.goto: Timeout 30000ms exceeded.
-Call log:
-[2m  - navigating to "http://localhost:4989/", waiting until "networkidle"[22m
- |
+| ClarityHealth | **SUCCESS** | hero, contact, footer | - |
 | Crumb & Crust | **SUCCESS** | services, footer | - |
 | Elevare | **SUCCESS** | services, footer | - |
 | ELEVATION | **SUCCESS** | contact, footer | - |
@@ -24,10 +21,10 @@ Call log:
 | FlameSlice | **SUCCESS** | hero, services, testimonials, contact, footer | - |
 | FORGE | **SUCCESS** | hero, services, testimonials, contact, footer | - |
 | HALDEN | **SUCCESS** | hero, features, services, testimonials, contact | - |
-| Lumina | **PENDING** | - | - |
-| Lumina2.0 | **PENDING** | - | - |
-| LuminaDental | **PENDING** | - | - |
-| LUMIÈRE | **PENDING** | - | - |
+| Lumina | **SUCCESS** | navbar, testimonials, contact | - |
+| Lumina2.0 | **SUCCESS** | navbar, contact | - |
+| LuminaDental | **SUCCESS** | navbar, cta, contact | - |
+| LUMIÈRE | **SUCCESS** | navbar, services, testimonials, contact, footer | - |
 | LUMIÈRE Studio | **PENDING** | - | - |
 | luxury-salon-website-design | **PENDING** | - | - |
 | luxury-spa-website-design | **PENDING** | - | - |
