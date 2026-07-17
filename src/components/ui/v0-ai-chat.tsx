@@ -2537,7 +2537,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2554,7 +2554,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2570,7 +2570,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -3042,6 +3042,8 @@ ${prompt}`;
                   content: fullText
                     .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                     .replace(/<ONI_CODE>[\s\S]*/g, '')
+                    .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
+                    .replace(/\s*ONI_CODE\s*$/gm, '') // trailing bare ONI_CODE marker
                     .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
                     .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
                     .trim(),
@@ -3083,6 +3085,8 @@ ${prompt}`;
                     content: fullText
                       .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                       .replace(/<ONI_CODE>[\s\S]*/g, '')
+                      .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
+                      .replace(/\s*ONI_CODE\s*$/gm, '') // trailing bare ONI_CODE marker
                       .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
                       .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
                       .trim(),
