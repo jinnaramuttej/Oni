@@ -2461,7 +2461,6 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
       void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
@@ -2479,7 +2478,6 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
       void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
@@ -2496,7 +2494,6 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
       void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
