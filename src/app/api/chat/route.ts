@@ -109,7 +109,7 @@ const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development";
 
