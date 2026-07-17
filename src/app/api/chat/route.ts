@@ -15,6 +15,7 @@ import fs from "fs";
 import path from "path";
 import { buildTemplateInjection, buildFullBrandContext } from "@/lib/templates";
 import { selectComponents, buildComponentContext } from "@/lib/component-selector";
+import { validateGeneratedHtml } from "@/lib/html-validator";
 
 // ── Runtime config ─────────────────────────────────────────────────────────────
 // Force Node.js runtime (required for fs/path, Supabase, and long-running streams)
@@ -109,7 +110,7 @@ const CHAT_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 };
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_MAX_TOKENS = 16000;
 const GROQ_MAX_MESSAGE_CHARS = 4000;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development";
 
@@ -1068,12 +1069,30 @@ export async function POST(req: Request) {
     : "";
 
   // If starting a new website or redesign, and the prompt matches a template, pre-seed effectiveHtml
+  // ── DIAGNOSTIC LOG: pre-seed check ──────────────────────────────────────────
+  console.log(`[DIAG][pre-seed] isNewOrRedesign=${isNewOrRedesign}, effectiveHtmlLen=${effectiveHtml.trim().length}, prompt="${lastUserMsgText?.slice(0, 80)}"`)
+  
+  let templateReferencePromptSection = "";
+  
   if (isNewOrRedesign && (!effectiveHtml || effectiveHtml.trim().length === 0) && lastUserMsgText) {
     const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
     if (matchingTemplate) {
-      effectiveHtml = matchingTemplate.html;
-      console.log(`[Templates] Pre-seeding effectiveHtml with matching template: ${matchingTemplate.name} for modified request.`);
+      // FIX 1: For new builds, do NOT pre-seed effectiveHtml with the full template.
+      // Instead, extract a reference snippet under 3000 chars and append it to templateReferencePromptSection.
+      const snippet = getCompactHtml(matchingTemplate.html).slice(0, 2800);
+      templateReferencePromptSection = `\n\n<TEMPLATE_SAMPLE_CODE>\n${snippet}\n... [Truncated for reference] ...\n</TEMPLATE_SAMPLE_CODE>\n\nINSTRUCTIONS FOR TEMPLATE ADAPTATION & COMPONENT EXTRACTION (style reference only, do not copy verbatim):
+1. You have access to a premium template sample above ("${matchingTemplate.name}") that matches the user's business type.
+2. Analyze the grid structures, CSS classes, interactive JS logic, and section styles in this template.
+3. Use this purely as a structural and style reference; do not copy it verbatim. Customize it uniquely for the user!`;
+      console.log(`[DIAG][pre-seed] ✅ NEW BUILD TEMPLATE Snippet Generated (Name: "${matchingTemplate.name}") - Bypassing full pre-seed`);
+    } else {
+      console.log(`[DIAG][pre-seed] ❌ NOT FIRED — getMatchingTemplateHtml returned null for prompt`);
     }
+  } else if (!isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0) {
+    // Keep existing edit flows untouched: effectiveHtml remains populated from genuine currentHtml
+    console.log(`[DIAG][pre-seed] ⏭ SKIPPED — Genuine edit flow detected. Keeping effectiveHtml intact.`);
+  } else {
+    console.log(`[DIAG][pre-seed] ⏭ SKIPPED — conditions not met (isNewOrRedesign=${isNewOrRedesign}, existingHtmlLen=${effectiveHtml.trim().length})`);
   }
 
   if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0 && !getMatchingTemplateHtml(lastUserMsgText)) {
@@ -1156,6 +1175,8 @@ export async function POST(req: Request) {
   const templateInjection = buildTemplateInjection(industry as any, brandAnswers);
 
   // ── Component-library injection (feature-flagged) ─────────────────────────
+  // ── DIAGNOSTIC LOG: component-library flag ───────────────────────────────
+  console.log(`[DIAG][component-lib] USE_COMPONENT_LIBRARY=${USE_COMPONENT_LIBRARY} (env value: "${process.env.USE_COMPONENT_LIBRARY}")`);
   let componentContext = "";
   if (USE_COMPONENT_LIBRARY) {
     try {
@@ -1165,10 +1186,19 @@ export async function POST(req: Request) {
         brandAnswers,
       });
       componentContext = buildComponentContext(compResult);
+      // ── DIAGNOSTIC: log each selected file + score ──────────────────────
+      console.log(`[DIAG][component-lib] ✅ ON — ${compResult.components.length} sections selected:`);
+      compResult.components.forEach((r: { filename: string; score: number; section: string }) => {
+        console.log(`  • [score=${r.score}] ${r.section} → ${r.filename}`);
+      });
+      console.log(`[DIAG][component-lib] componentContext total length: ${componentContext.length} chars`);
       console.log("[component-library] injected context, length:", componentContext.length);
     } catch (e) {
       console.error("[component-library] failed, falling back to prompt-only:", e);
+      console.log(`[DIAG][component-lib] ❌ THREW ERROR — ${e}`);
     }
+  } else {
+    console.log(`[DIAG][component-lib] ❌ OFF — USE_COMPONENT_LIBRARY is false → component-selector.ts NOT called, componentContext=""`);
   }
 
   let systemPrompt =
@@ -1176,20 +1206,8 @@ export async function POST(req: Request) {
     "\n\n" + templateInjection +
     "\n\n" + componentContext +
     "\n\n" + ONI_QUALITY_RULES +
-    "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
-  const hasExistingHtml = effectiveHtml.trim().length > 0;
-  if (!hasExistingHtml && userPromptText) {
-    const matchingTemplate = getMatchingTemplateHtml(userPromptText);
-    if (matchingTemplate) {
-      console.log(`[Templates] Matching user request to template: ${matchingTemplate.name}. Injecting component code reference.`);
-      systemPrompt += `\n\n<TEMPLATE_SAMPLE_CODE>\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_SAMPLE_CODE>\n\nINSTRUCTIONS FOR TEMPLATE ADAPTATION & COMPONENT EXTRACTION:
-1. You have access to a premium template sample above ("${matchingTemplate.name}") that matches the user's business type.
-2. Analyze the grid structures, CSS classes, interactive JS logic (e.g. modals, scroll reveals, tabs), and section styles in this template.
-3. Extract and borrow components and code snippets from it, adapt them to the user's specific request and brand (brand name, colors, fonts, content), and make them significantly better, more modern, and highly polished.
-4. Ensure the output is a complete website containing at least 6-7 fully fleshed-out sections. Do not just copy-paste the template raw; extend it, refine the layout, add animations, and customize it uniquely for the user!
-5. CROSS-INDUSTRY MIX-AND-MATCH FREEDOM: You are explicitly encouraged to mix, match, borrow, and adapt components, styles, grids, and script features from the component library snippets provided in the prompt reference (or from other templates) regardless of the industry. For example, if building a coffee shop or hotel website, you can use the interactive booking modal overlay, tabbed menus, scrolling marquee ribbons, or lift cards. Do not restrict yourself to industry boundaries—cross-pollinate features to build the most luxurious, interactive site possible!`;
-    }
-  }
+    "\n\n" + PREMIUM_COMPONENTS_REFERENCE +
+    templateReferencePromptSection;
 
   if (body.competitorReference && typeof body.competitorReference === "object") {
     const { title, content } = body.competitorReference;
@@ -1383,25 +1401,38 @@ ${htmlContent}
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
   const isLocal = process.env.NODE_ENV === 'development' || process.env.USE_LOCAL_MODEL === 'true';
 
+  // FIX 2: Estimate token size (4 characters ~ 1 token rule-of-thumb)
+  const totalMessageChars = messagesToSend.reduce((acc, m) => acc + (m.content || "").length, 0);
+  const estimatedTokens = Math.ceil(totalMessageChars / 4.0);
+  console.log(`[DIAG][Token-Estimate] Total message characters: ${totalMessageChars}, Estimated tokens: ${estimatedTokens}`);
+
+  const skipGroqDueToSize = estimatedTokens > 10000;
+  if (skipGroqDueToSize) {
+    console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 10000 limit) to prevent 413 error`);
+  }
+
   const MODEL_CHAIN = [
     ...(isLocal ? [{
       url: OLLAMA_CHAT_URL,  // http://127.0.0.1:11434/v1/chat/completions
       key: null,
       model: OLLAMA_MODEL,   // qwen2.5-coder from env
       max_tokens: 16000,
-      isOllama: true
+      isOllama: true,
+      timeoutMs: 90000       // FIX 3: Increased Ollama-specific timeout to 90 seconds
     }] : []),
-    {
+    ...(!skipGroqDueToSize ? [{
       url: "https://api.groq.com/openai/v1/chat/completions",
       key: process.env.GROQ_API_KEY?.trim(),
       model: "llama-3.3-70b-versatile",
-      max_tokens: 16000
-    },
+      max_tokens: 16000,
+      timeoutMs: 15000
+    }] : []),
     {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: process.env.OPENROUTER_API_KEY?.trim(),
       model: "deepseek/deepseek-chat",
-      max_tokens: 16000
+      max_tokens: 16000,
+      timeoutMs: 30000
     }
   ];
 
@@ -1420,7 +1451,7 @@ ${htmlContent}
       continue;
     }
 
-    console.log(`[Pipeline] Trying model: ${targetName}/${target.model} at ${target.url}...`);
+    console.log(`[Pipeline] Trying model: ${targetName}/${target.model} at ${target.url} (timeout: ${target.timeoutMs}ms)...`);
 
     try {
       const headers: Record<string, string> = {
@@ -1451,9 +1482,8 @@ ${htmlContent}
             stream: true,
           });
 
-      // 15 seconds timeout to connect and start getting a response
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), target.timeoutMs);
 
       const response = await fetch(target.url, {
         method: "POST",
@@ -1560,7 +1590,141 @@ ${htmlContent}
 
   console.log(`Using: ${finalUsedModel}`);
 
-  // Deduct credits only if we successfully billed using Groq
+  // ── Post-generation HTML validator ────────────────────────────────────────────
+  // Only validate build requests (not casual chat). Collects the full stream,
+  // extracts ONI_CODE HTML, runs structural checks, retries once if broken.
+  const shouldValidate = intent !== "casual_chat";
+
+  if (shouldValidate) {
+    // Helper: collect a ReadableStream of SSE data into a single string
+    async function collectSseStream(stream: ReadableStream): Promise<string> {
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          // Parse SSE lines to extract delta.content
+          for (const line of chunk.split("\n")) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ") || trimmed === "data: [DONE]") continue;
+            try {
+              const parsed = JSON.parse(trimmed.slice(6));
+              const content = parsed?.choices?.[0]?.delta?.content;
+              if (content) fullText += content;
+            } catch { /* skip unparseable lines */ }
+          }
+        }
+      } catch (err) {
+        console.warn("[DIAG][validator] stream collection error:", err);
+      } finally {
+        reader.releaseLock();
+      }
+      return fullText;
+    }
+
+    const fullResponse = await collectSseStream(successStream);
+    const oniCodeMatch = fullResponse.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
+    const extractedHtml = oniCodeMatch?.[1]?.trim() ?? "";
+
+    if (extractedHtml) {
+      const validation = validateGeneratedHtml(extractedHtml);
+      if (validation.valid) {
+        console.log(`[DIAG][validator] ✅ PASS — HTML is clean (${extractedHtml.length} chars)`);
+      } else {
+        console.warn(`[DIAG][validator] ❌ FAIL — ${validation.issues.length} issue(s) found:`);
+        validation.issues.forEach(issue => console.warn(`  • ${issue}`));
+
+        // Retry once with a correction instruction
+        console.log("[DIAG][validator] 🔄 Retrying generation with correction prompt...");
+        const correctionInstruction = `Your previous output had these structural issues that MUST be fixed:\n${validation.issues.map(i => `- ${i}`).join("\n")}\n\nFix ALL of the above. Requirements:\n- Single self-contained HTML file — all CSS in <style>, all JS in <script>, NO external file refs\n- All image src must be full https:// URLs (use Unsplash: https://images.unsplash.com/photo-... or similar)\n- No duplicate id attributes — every id must be unique across the document\n- All HTML tags must use standard syntax: no CSS selectors in tag names (e.g. <div> not <div.class>)`;
+        const retryMessages = [
+          ...messagesToSend,
+          { role: "assistant", content: fullResponse },
+          { role: "user", content: correctionInstruction },
+        ];
+
+        let retryStream: ReadableStream | null = null;
+        for (const target of MODEL_CHAIN) {
+          const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
+          if (!target.isOllama && !target.key) continue;
+          try {
+            const retryHeaders: Record<string, string> = { "Content-Type": "application/json" };
+            if (target.key && !target.isOllama) retryHeaders["Authorization"] = `Bearer ${target.key}`;
+            if (target.url.includes("openrouter.ai")) {
+              retryHeaders["HTTP-Referer"] = "https://oni.build";
+              retryHeaders["X-Title"] = "Oni Website Builder";
+            }
+            const retryController = new AbortController();
+            const retryTimeout = setTimeout(() => retryController.abort(), target.timeoutMs);
+            const retryBody = JSON.stringify({
+              model: target.model,
+              messages: retryMessages,
+              temperature: 0.7,
+              max_tokens: target.max_tokens,
+              stream: true,
+            });
+            const retryRes = await fetch(target.url, {
+              method: "POST",
+              headers: retryHeaders,
+              body: retryBody,
+              signal: retryController.signal,
+            });
+            clearTimeout(retryTimeout);
+            if (!retryRes.ok) {
+              const errTxt = await retryRes.text().catch(() => "");
+              console.warn(`[DIAG][validator] Retry failed on ${targetName}: ${retryRes.status} ${errTxt.slice(0, 200)}`);
+              continue;
+            }
+            if (!retryRes.body) continue;
+            retryStream = retryRes.body;
+            console.log(`[DIAG][validator] Retry stream obtained from ${targetName}`);
+            break;
+          } catch (err: any) {
+            console.warn(`[DIAG][validator] Retry exception on ${targetName}:`, err.message);
+          }
+        }
+
+        if (retryStream) {
+          // Collect the retry response and validate it
+          const retryFull = await collectSseStream(retryStream);
+          const retryHtmlMatch = retryFull.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
+          const retryHtml = retryHtmlMatch?.[1]?.trim() ?? "";
+          if (retryHtml) {
+            const retryValidation = validateGeneratedHtml(retryHtml);
+            if (retryValidation.valid) {
+              console.log(`[DIAG][validator] ✅ RETRY PASS — fixed HTML is clean`);
+            } else {
+              console.warn(`[DIAG][validator] ⚠️ RETRY STILL INVALID — returning anyway. Issues:`);
+              retryValidation.issues.forEach(issue => console.warn(`  • ${issue}`));
+            }
+          }
+          // Stream the retry response to the client
+          const billedGroq = finalUsedModel.startsWith("groq");
+          if (visitorId && creditCost > 0 && billedGroq && !body?.customApiKey) {
+            void deductCredits(visitorId, creditCost);
+          }
+          return streamTextAsSse(retryFull);
+        } else {
+          console.warn("[DIAG][validator] ⚠️ No retry stream available — returning original (invalid) response");
+        }
+      }
+    } else {
+      // No ONI_CODE block found — not a build response, skip validation
+      console.log("[DIAG][validator] ⏭ Skipping validation — no <ONI_CODE> block in response (chat/casual)");
+    }
+
+    // Re-stream the (original or unretried) response
+    const billedGroq = finalUsedModel.startsWith("groq");
+    if (visitorId && creditCost > 0 && billedGroq && !body?.customApiKey) {
+      void deductCredits(visitorId, creditCost);
+    }
+    return streamTextAsSse(fullResponse);
+  }
+
+  // Casual chat path: stream raw SSE directly without validation
   const billedGroq = finalUsedModel.startsWith("groq");
   if (visitorId && creditCost > 0 && billedGroq && !body?.customApiKey) {
     void deductCredits(visitorId, creditCost);
