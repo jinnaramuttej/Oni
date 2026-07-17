@@ -3033,7 +3033,101 @@ ${prompt}`;
 
       setIsLoading(false);
 
-      const { thought: finalThought, html: extractedHtml, cleanText: cleanContent } = extractThoughtAndHtml(fullText);
+      // ── Auto-continuation: detect if ONI_CODE was truncated mid-stream ─────────
+      // If we see <ONI_CODE> opened but no </ONI_CODE> closing tag, the model hit
+      // its token limit. Automatically fire continuation requests (up to 3 rounds)
+      // and merge the output into a single complete HTML file.
+      const MAX_CONTINUATIONS = 3;
+      let continuationCount = 0;
+      let accumulatedFull = fullText;
+
+      while (
+        continuationCount < MAX_CONTINUATIONS &&
+        accumulatedFull.includes('<ONI_CODE>') &&
+        !accumulatedFull.includes('</ONI_CODE>')
+      ) {
+        continuationCount++;
+        const partialHtmlSoFar = accumulatedFull.match(/<ONI_CODE>([\s\S]*?)$/)?.[1]?.trim() ?? '';
+
+        // Show a subtle status in the chat bubble
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            content: `Building your website... (completing part ${continuationCount + 1})`,
+          };
+          return updated;
+        });
+
+        let contText = '';
+        let contBuffer = '';
+        try {
+          const contRes = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-visitor-id': getOrCreateVisitorId(),
+            },
+            body: JSON.stringify({
+              prompt: `Continue EXACTLY from where you stopped. Do NOT restart or repeat anything. Output ONLY the remaining HTML continuation starting right after: ...${partialHtmlSoFar.slice(-300)}`,
+              messages: [
+                ...messages.map(m => ({ role: m.role, content: m.content })),
+                { role: 'user', content: promptForApi },
+                { role: 'assistant', content: accumulatedFull },
+              ],
+              currentHtml: '',
+              defaultModel: getActiveModel(),
+              customApiKey: getCustomApiConfig().customApiKey,
+            }),
+          });
+
+          if (contRes.ok && contRes.body) {
+            const contReader = contRes.body.getReader();
+            const contDecoder = new TextDecoder();
+
+            while (true) {
+              const { done, value } = await contReader.read();
+              if (done) break;
+              contBuffer += contDecoder.decode(value, { stream: true });
+              const contLines = contBuffer.split('\n');
+              contBuffer = contLines.pop() || '';
+              for (const cl of contLines) {
+                const trimmed = cl.trim();
+                if (!trimmed) continue;
+                if (trimmed.startsWith('data: ')) {
+                  const json = trimmed.replace('data: ', '').trim();
+                  if (json === '[DONE]') break;
+                  try {
+                    const parsed = JSON.parse(json);
+                    contText += parsed.choices?.[0]?.delta?.content || '';
+                  } catch {}
+                } else if (trimmed.startsWith('{')) {
+                  try {
+                    const parsed = JSON.parse(trimmed);
+                    contText += parsed.message?.content || '';
+                  } catch {}
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Auto-continuation failed:', err);
+          break;
+        }
+
+        // Merge: strip any repeated <ONI_CODE> opener from continuation, append to accumulated
+        const cleanCont = contText.replace(/^[\s\S]*?<ONI_CODE>/, '').replace(/^```[\w]*\n?/, '');
+        accumulatedFull = accumulatedFull + cleanCont;
+
+        // Update preview in real time with merged HTML
+        const mergedMatch = accumulatedFull.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+        if (mergedMatch?.[1]) {
+          setGeneratedHtml(sanitizeGeneratedHtml(mergedMatch[1].trim()));
+        }
+      }
+      // ── End auto-continuation ──────────────────────────────────────────────────
+
+      const { thought: finalThought, html: extractedHtml, cleanText: cleanContent } = extractThoughtAndHtml(accumulatedFull);
       if (extractedHtml) {
         const finalHtml = isContinuation
           ? mergeContinuationHtml(baseHtmlBeforeContinuation, extractedHtml)
@@ -3102,7 +3196,7 @@ ${prompt}`;
           role: 'assistant',
           content: combinedContent,
           thought: finalThought,
-          rawContent: fullText
+          rawContent: accumulatedFull
         };
         return updated;
       });
@@ -3116,6 +3210,7 @@ ${prompt}`;
       setIsWritingCode(false);
     }
   }, [adjustHeight, generatedHtml, generating, hasStarted, isLoading, messages, isWritingCode, getActiveModel, brandContext, conversationId, conversationTitle, getCustomApiConfig]);
+
 
   // Keep the ref in sync so handleSend can always call the latest handleSendToAI
   useEffect(() => {
