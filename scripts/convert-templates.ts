@@ -242,9 +242,9 @@ async function processTemplate(folder: string) {
     if (hasPackageJson) {
       server = await startPreviewServer(folderPath, port);
     } else {
-      // Static server preview fallback (using npx serve)
+      // Static server preview fallback (using npx serve folderPath -p port)
       console.log(`  Serving static site on port ${port}...`);
-      const child = spawn("npx", ["serve", "-p", String(port), "-l", "127.0.0.1", folderPath], { shell: true });
+      const child = spawn("npx", ["serve", folderPath, "-p", String(port)], { shell: true });
       server = {
         kill: () => {
           child.kill();
