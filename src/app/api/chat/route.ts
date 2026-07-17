@@ -778,7 +778,7 @@ ${currentHtml}
 
   return {
     messages: meaningfulMessages,
-    maxTokens: Math.max(4000, 16000 - Math.floor(estimateTokens(JSON.stringify(meaningfulMessages)) * 1.2)),
+    maxTokens: 16000, // Always use full token budget — truncation handled by auto-continuation
     isConversational,
   };
 }
@@ -1358,9 +1358,9 @@ ${htmlContent}
 
   const MODEL_CHAIN = [
     ...(isLocal ? [{
-      url: "http://localhost:11434/api/chat",
+      url: OLLAMA_CHAT_URL,  // http://127.0.0.1:11434/v1/chat/completions
       key: null,
-      model: "llama3.1", // or whatever local model you use
+      model: OLLAMA_MODEL,   // qwen2.5-coder from env
       max_tokens: 16000,
       isOllama: true
     }] : []),
@@ -1414,6 +1414,7 @@ ${htmlContent}
             model: target.model,
             messages: messagesToSend.map(m => ({ role: m.role, content: m.content })),
             stream: true,
+            options: { num_predict: 16000 },  // Ollama's max token control
           })
         : JSON.stringify({
             model: target.model,
