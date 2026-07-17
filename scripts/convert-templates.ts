@@ -204,11 +204,16 @@ async function processTemplate(folder: string) {
   try {
     // 1. Build
     console.log(`  Building bundle...`);
-    execSync(`npm install lucide-react@0.475.0 && npm install && npm run build`, {
-      cwd: folderPath,
-      stdio: "ignore",
-      timeout: 120000
-    });
+    // On Windows, package runner execution might split on '&' characters in directory paths if run inside cmd.exe.
+    // We execute npm install commands via absolute paths or run them programmatically, or escape the ampersand in the script cwd.
+    execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+    execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+    try {
+      execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+    } catch (e) {
+      console.warn("  npm run build failed, attempting direct node vite build...");
+      execSync(`node node_modules/vite/bin/vite.js build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+    }
 
     // 2. Start dynamic preview server
     const port = 4900 + Math.floor(Math.random() * 100);

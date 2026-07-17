@@ -6,12 +6,12 @@
 | AETHER | **SUCCESS** | footer | - |
 | Alex Morgan | **SUCCESS** | hero, services, contact, footer | - |
 | Amritham | **SUCCESS** | services, contact, footer | - |
-| Apex.Academy | **FAIL** | - | Command failed: npm install && npm run build |
-| Ascend&Associates | **FAIL** | - | Command failed: npm install && npm run build |
-| Ashcroft & Vale | **FAIL** | - | Command failed: npm install && npm run build |
+| Apex.Academy | **SUCCESS** | hero, testimonials, contact, footer | - |
+| Ascend&Associates | **FAIL** | - | Command failed: npm install lucide-react@0.475.0 && npm install && npm run build |
+| Ashcroft & Vale | **FAIL** | - | Command failed: npm install lucide-react@0.475.0 && npm install && npm run build |
 | Atelier Lumière | **SUCCESS** | navbar, hero, features, services, testimonials, contact, footer | - |
 | Aura Academy | **SUCCESS** | footer | - |
-| AURELIA | **PENDING** | - | - |
+| AURELIA | **FAIL** | - | Command failed: npm install lucide-react@0.475.0 && npm install && npm run build |
 | Aurelia-Spa | **PENDING** | - | - |
 | ClarityHealth | **PENDING** | - | - |
 | Crumb & Crust | **PENDING** | - | - |
