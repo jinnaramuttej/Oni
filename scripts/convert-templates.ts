@@ -257,10 +257,11 @@ async function processTemplate(folder: string) {
     // 3. Launch headless Playwright Chromium and extract rendered DOM
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto(`http://localhost:${port}`, { waitUntil: "networkidle", timeout: 30000 });
+    // Use domcontentloaded to prevent stalling on missing external assets (e.g. mock images)
+    await page.goto(`http://localhost:${port}`, { waitUntil: "domcontentloaded", timeout: 15000 });
     
-    // Quick wait for animations/mounting to settle down
-    await page.waitForTimeout(2000);
+    // Quick wait for animations/mounting to settle down (3-5 seconds is plenty for Framer Motion)
+    await page.waitForTimeout(4000);
     
     const renderedHtml = await page.evaluate(() => document.documentElement.outerHTML);
 

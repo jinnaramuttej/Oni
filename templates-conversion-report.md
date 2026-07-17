@@ -11,22 +11,19 @@
 | Ashcroft & Vale | **SUCCESS** | navbar, contact, footer | - |
 | Atelier Lumière | **SUCCESS** | navbar, hero, features, services, testimonials, contact, footer | - |
 | Aura Academy | **SUCCESS** | footer | - |
-| AURELIA | **FAIL** | - | page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4901/
-Call log:
-[2m  - navigating to "http://127.0.0.1:4901/", waiting until "networkidle"[22m
- |
+| AURELIA | **SUCCESS** | navbar, hero, services, testimonials, footer | - |
 | Aurelia-Spa | **SUCCESS** | footer | - |
 | ClarityHealth | **FAIL** | - | page.goto: Timeout 30000ms exceeded.
 Call log:
-[2m  - navigating to "http://127.0.0.1:4901/", waiting until "networkidle"[22m
+[2m  - navigating to "http://localhost:4989/", waiting until "networkidle"[22m
  |
 | Crumb & Crust | **SUCCESS** | services, footer | - |
 | Elevare | **SUCCESS** | services, footer | - |
 | ELEVATION | **SUCCESS** | contact, footer | - |
-| Elliot Blake | **PENDING** | - | - |
-| FlameSlice | **PENDING** | - | - |
-| FORGE | **PENDING** | - | - |
-| HALDEN | **PENDING** | - | - |
+| Elliot Blake | **SUCCESS** | hero, services, testimonials, contact, footer | - |
+| FlameSlice | **SUCCESS** | hero, services, testimonials, contact, footer | - |
+| FORGE | **SUCCESS** | hero, services, testimonials, contact, footer | - |
+| HALDEN | **SUCCESS** | hero, features, services, testimonials, contact | - |
 | Lumina | **PENDING** | - | - |
 | Lumina2.0 | **PENDING** | - | - |
 | LuminaDental | **PENDING** | - | - |
