@@ -1414,7 +1414,8 @@ ${htmlContent}
             model: target.model,
             messages: messagesToSend.map(m => ({ role: m.role, content: m.content })),
             stream: true,
-            options: { num_predict: 16000 },  // Ollama's max token control
+            max_tokens: 16000,             // OpenAI-compat endpoint param
+            options: { num_predict: 16000 }, // Ollama native param (belt-and-suspenders)
           })
         : JSON.stringify({
             model: target.model,

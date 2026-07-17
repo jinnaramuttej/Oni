@@ -903,9 +903,16 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
     }
   }
 
-  // NOTE: No raw-HTML fallback — the system prompt instructs the model to always
-  // wrap output in <ONI_CODE> tags. A raw fallback causes false positives when
-  // the model echoes back the reference HTML from the system prompt.
+  // 4. Raw <!DOCTYPE html> fallback — model output bare HTML without ONI_CODE wrapper.
+  // Guard: only trigger if the raw HTML is <120k chars (avoids false-positives from
+  // echoed reference templates injected into the system prompt which are much larger).
+  const rawHtmlMatch = content.match(/<!DOCTYPE\s+html[\s\S]*/i);
+  if (rawHtmlMatch && rawHtmlMatch[0].length < 120000) {
+    const html = rawHtmlMatch[0].trim();
+    const cleanText = content.slice(0, rawHtmlMatch.index ?? 0).trim();
+    return { html, cleanText };
+  }
+
   return { html: "", cleanText: content };
 }
 
@@ -3359,10 +3366,17 @@ ${basePrompt}`;
               });
 
               // Stream partial code block into files in real-time
-              const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+              const partialCodeMatch = fullText.match(/<oni_code>([\s\S]*?)(?:<\/oni_code>|$)/i);
               if (partialCodeMatch && partialCodeMatch[1]) {
                 setGeneratedHtml(sanitizeGeneratedHtml(partialCodeMatch[1].trim()));
                 setIsWritingCode(true);
+              } else {
+                // Fallback: model output bare HTML without ONI_CODE wrapper
+                const rawHtmlIdx = fullText.search(/<!DOCTYPE\s+html/i);
+                if (rawHtmlIdx !== -1) {
+                  setGeneratedHtml(sanitizeGeneratedHtml(fullText.slice(rawHtmlIdx).trim()));
+                  setIsWritingCode(true);
+                }
               }
             } catch (e) {}
           } else {
@@ -3397,10 +3411,17 @@ ${basePrompt}`;
                 });
 
                 // Stream partial code block into files in real-time
-                const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+                const partialCodeMatch = fullText.match(/<oni_code>([\s\S]*?)(?:<\/oni_code>|$)/i);
                 if (partialCodeMatch && partialCodeMatch[1]) {
                   setGeneratedHtml(sanitizeGeneratedHtml(partialCodeMatch[1].trim()));
                   setIsWritingCode(true);
+                } else {
+                  // Fallback: model output bare HTML without ONI_CODE wrapper
+                  const rawHtmlIdx = fullText.search(/<!DOCTYPE\s+html/i);
+                  if (rawHtmlIdx !== -1) {
+                    setGeneratedHtml(sanitizeGeneratedHtml(fullText.slice(rawHtmlIdx).trim()));
+                    setIsWritingCode(true);
+                  }
                 }
               } catch (e) {}
             }
