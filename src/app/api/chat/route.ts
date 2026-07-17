@@ -1313,216 +1313,168 @@ ${htmlContent}
 
 
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
+  const isLocal = process.env.NODE_ENV === "development" || process.env.USE_LOCAL_MODEL === "true";
 
-  const latestKeys = await getLatestFreeKeys();
-  let selectedModel = body?.defaultModel || "oni-pro";
-
-  interface RequestTarget {
-    name: string;
-    apiUrl: string;
-    apiKey: string;
-    model: string;
-    maxTokens: number;
-    timeoutMs?: number;
-  }
-
-  const targets: RequestTarget[] = [];
-
-  if (body?.customApiKey) {
-    let customUrl = body.customBaseUrl ? body.customBaseUrl.trim() : "https://api.openai.com/v1/chat/completions";
-    if (!customUrl.endsWith("/chat/completions") && !customUrl.endsWith("/chat/completions/")) {
-      customUrl = customUrl.replace(/\/$/, "") + "/chat/completions";
+  const MODEL_CHAIN = [
+    ...(isLocal ? [{
+      name: "ollama",
+      url: process.env.OLLAMA_CHAT_URL || "http://localhost:11434/api/chat",
+      key: null,
+      model: process.env.OLLAMA_MODEL || "llama3.1",
+      max_tokens: 16000,
+      isOllama: true
+    }] : []),
+    {
+      name: "groq",
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: process.env.GROQ_API_KEY?.trim() || null,
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 16000
+    },
+    {
+      name: "openrouter",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: process.env.OPENROUTER_API_KEY?.trim() || null,
+      model: "deepseek/deepseek-chat",
+      max_tokens: 16000
     }
-    targets.push({
-      name: "Custom API Provider",
-      apiUrl: customUrl,
-      apiKey: body.customApiKey.trim(),
-      model: selectedModel === "oni-pro" ? GROQ_MODEL : selectedModel,
-      maxTokens: GROQ_MAX_TOKENS,
-    });
-  } else if (IS_LOCAL_DEV && selectedModel === "local-ollama") {
-    // In local development: use Ollama if selected
-    console.log("[Pipeline] Local dev: routing request to Ollama because it was selected.");
-    targets.push({
-      name: "Local Ollama (dev)",
-      apiUrl: OLLAMA_CHAT_URL,
-      apiKey: "",
-      model: OLLAMA_MODEL,
-      maxTokens: GROQ_MAX_TOKENS,
-      timeoutMs: 120000,
-    });
-  } else {
-    // 1. Groq primary
-    let primaryModel = selectedModel;
-    if (selectedModel === "oni-pro" || selectedModel === "oni-creative" || selectedModel === "local-ollama") {
-      primaryModel = GROQ_MODEL;
-    } else if (selectedModel === "oni-flash") {
-      primaryModel = "llama-3.1-8b-instant";
+  ];
+
+  let successStream: ReadableStream | null = null;
+  let finalUsedModel = "";
+
+  for (const target of MODEL_CHAIN) {
+    // If key is needed but missing, skip
+    if (target.key === null && !target.isOllama) {
+      console.warn(`[Pipeline] Skipping ${target.name} because API key is missing.`);
+      continue;
     }
 
-    if (useFallbackPool) {
-      // Bypasses primary because user ran out of credits
-      const chosenModel = "gemini-2.5-flash";
-      const keys = latestKeys[chosenModel];
-      targets.push({
-        name: "Credits Depleted Fallback Gemini",
-        apiUrl: FREE_BASE_URL,
-        apiKey: keys[Math.floor(Math.random() * keys.length)],
-        model: chosenModel,
-        maxTokens: 6000,
-      });
-    } else if (primaryModel === "claude-opus-4-7") {
-      const keys = latestKeys["claude-opus-4-7"];
-      targets.push({
-        name: "Primary Claude Opus 4.7 Gateway",
-        apiUrl: FREE_BASE_URL,
-        apiKey: keys[Math.floor(Math.random() * keys.length)],
-        model: "claude-opus-4-7",
-        maxTokens: 6000,
-      });
-    } else if (primaryModel === "gemini-2.5-flash") {
-      const keys = latestKeys["gemini-2.5-flash"];
-      targets.push({
-        name: "Primary Gemini 2.5 Flash Gateway",
-        apiUrl: FREE_BASE_URL,
-        apiKey: keys[Math.floor(Math.random() * keys.length)],
-        model: "gemini-2.5-flash",
-        maxTokens: 6000,
-      });
-    } else {
-      // Groq primary
-      targets.push({
-        name: `Primary Groq (${primaryModel})`,
-        apiUrl: "https://api.groq.com/openai/v1/chat/completions",
-        apiKey: process.env.GROQ_API_KEY?.trim() || "",
-        model: primaryModel,
-        maxTokens: GROQ_MAX_TOKENS,
-      });
-
-      // OpenRouter as first fallback if key is available
-      const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
-      if (openRouterKey) {
-        targets.push({
-          name: "Fallback OpenRouter (Groq failed)",
-          apiUrl: "https://openrouter.ai/api/v1/chat/completions",
-          apiKey: openRouterKey,
-          model: "nvidia/nemotron-3-ultra-550b-a55b",
-          maxTokens: GROQ_MAX_TOKENS,
-        });
-        console.log("[Pipeline] OpenRouter fallback registered.");
-      }
-    }
-
-    // Fallback Gemini Flash
-    if (selectedModel !== "gemini-2.5-flash" && !useFallbackPool) {
-      const keys = latestKeys["gemini-2.5-flash"];
-      if (keys && keys.length > 0) {
-        targets.push({
-          name: "Fallback Gemini 2.5 Flash",
-          apiUrl: FREE_BASE_URL,
-          apiKey: keys[Math.floor(Math.random() * keys.length)],
-          model: "gemini-2.5-flash",
-          maxTokens: 6000,
-        });
-      }
-    }
-
-    // 4. Fallback Smart Chat
-    const smartKeys = latestKeys["smart-chat"];
-    if (smartKeys && smartKeys.length > 0) {
-      targets.push({
-        name: "Fallback Smart Chat Gateway",
-        apiUrl: FREE_BASE_URL,
-        apiKey: smartKeys[Math.floor(Math.random() * smartKeys.length)],
-        model: "smart-chat",
-        maxTokens: 6000,
-      });
-    }
-
-    // 5. Fallback Claude Opus
-    if (selectedModel !== "claude-opus-4-7") {
-      const keys = latestKeys["claude-opus-4-7"];
-      if (keys && keys.length > 0) {
-        targets.push({
-          name: "Fallback Claude Opus 4.7",
-          apiUrl: FREE_BASE_URL,
-          apiKey: keys[Math.floor(Math.random() * keys.length)],
-          model: "claude-opus-4-7",
-          maxTokens: 6000,
-        });
-      }
-    }
-  }
-
-  // ── Execute Targets cascading sequentially ────────────────────────────────────
-  let successResponse: Response | null = null;
-  let finalUsedTargetName = "";
-
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    console.log(`[Pipeline Attempt ${i + 1}/${targets.length}] Trying ${target.name} (model: ${target.model})...`);
+    console.log(`[Pipeline] Trying model: ${target.name}/${target.model} at ${target.url}...`);
 
     try {
-      const requestBody = JSON.stringify({
-        model: target.model,
-        messages: messagesToSend,
-        temperature: 0.7,
-        max_tokens: target.maxTokens,
-        stream: true,
-      });
-
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      if (target.apiKey) {
-        headers["Authorization"] = `Bearer ${target.apiKey}`;
+
+      if (target.key) {
+        headers["Authorization"] = `Bearer ${target.key}`;
       }
 
+      if (target.url.includes("openrouter.ai")) {
+        headers["HTTP-Referer"] = "https://oni.build";
+        headers["X-Title"] = "Oni Website Builder";
+      }
+
+      const requestBody = target.isOllama
+        ? JSON.stringify({
+            model: target.model,
+            messages: messagesToSend.map(m => ({ role: m.role, content: m.content })),
+            stream: true,
+          })
+        : JSON.stringify({
+            model: target.model,
+            messages: messagesToSend,
+            temperature: 0.7,
+            max_tokens: target.max_tokens,
+            stream: true,
+          });
+
+      // 15 seconds timeout to connect and start getting a response
       const controller = new AbortController();
-      let timeoutId: any = null;
-      if (target.timeoutMs) {
-        timeoutId = setTimeout(() => controller.abort(), target.timeoutMs);
-      }
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(target.apiUrl, {
+      const response = await fetch(target.url, {
         method: "POST",
         headers,
         body: requestBody,
-        signal: target.timeoutMs ? controller.signal : undefined,
+        signal: controller.signal,
       });
 
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-      if (response.ok) {
-        successResponse = response;
-        finalUsedTargetName = target.name;
-        console.log(`[Pipeline Success] ${target.name} streamed successfully.`);
-        break;
-      } else {
-        const errorText = await response.clone().text().catch(() => "");
-        console.warn(`[Pipeline Failure] ${target.name} failed with status ${response.status}: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        throw new Error(`Status ${response.status}: ${errorText}`);
       }
+
+      if (!response.body) {
+        throw new Error("Response body is null");
+      }
+
+      if (target.isOllama) {
+        // Handle Ollama native stream format and transform to OpenAI compatible format
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+
+        successStream = new ReadableStream({
+          async start(controller) {
+            let buffer = "";
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+
+                for (const line of lines) {
+                  const trimmed = line.trim();
+                  if (!trimmed) continue;
+                  try {
+                    const parsed = JSON.parse(trimmed);
+                    const content = parsed.message?.content || "";
+                    if (content) {
+                      const sseLine = `data: ${JSON.stringify({
+                        choices: [{ delta: { content } }],
+                      })}\n\n`;
+                      controller.enqueue(encoder.encode(sseLine));
+                    }
+                    if (parsed.done) {
+                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                    }
+                  } catch (e) {
+                    console.error("Error parsing Ollama line:", e);
+                  }
+                }
+              }
+            } catch (err) {
+              controller.error(err);
+            } finally {
+              controller.close();
+            }
+          }
+        });
+      } else {
+        successStream = response.body;
+      }
+
+      finalUsedModel = `${target.name}/${target.model}`;
+      break;
     } catch (err: any) {
-      console.warn(`[Pipeline Exception] ${target.name} exception: ${err.message || err}`);
+      console.warn(`[Pipeline] Failed ${target.name}/${target.model}:`, err.message || err);
     }
   }
 
-  if (!successResponse) {
+  if (!successStream) {
     return new NextResponse("All available API pipeline fallback targets failed. Please verify your internet or local connection and settings.", { status: 500 });
   }
 
-  // Deduct credits only if we successfully billed using the primary Groq target
-  const billedGroq = finalUsedTargetName.startsWith("Primary Groq");
+  console.log(`Using: ${finalUsedModel}`);
+
+  // Deduct credits only if we successfully billed using Groq
+  const billedGroq = finalUsedModel.startsWith("groq");
   if (visitorId && creditCost > 0 && billedGroq && !body?.customApiKey) {
     void deductCredits(visitorId, creditCost);
   }
 
-  return new Response(successResponse.body, {
+  return new Response(successStream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       "Connection": "keep-alive",
-      // Disable Vercel/nginx proxy buffering so chunks reach the client immediately
       "X-Accel-Buffering": "no",
     },
   });
