@@ -686,7 +686,7 @@ export function EnhanceModal({
             <div className="enhance-actions">
               <button
                 className="enhance-skip"
-                onClick={() => setDone(false) || setStep(0)}
+                onClick={() => { setDone(false); setStep(0); }}
               >
                 Start Over
               </button>
