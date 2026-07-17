@@ -2468,10 +2468,11 @@ export function OniChat({
     }
   }, [inlineEnhanceStep, inlineEnhanceIndustry, inlineEnhanceAnswers, inlineEnhancePrompt, setInput]);
 
-  const handleInlineNext = useCallback(() => {
+  const handleInlineNext = useCallback((customVal?: string) => {
     const questions = QUESTIONS[inlineEnhanceIndustry] || QUESTIONS.general;
     const currentQ = questions[inlineEnhanceStep];
-    const newAnswers = { ...inlineEnhanceAnswers, [currentQ.field]: input };
+    const finalAnswer = customVal !== undefined ? customVal : input;
+    const newAnswers = { ...inlineEnhanceAnswers, [currentQ.field]: finalAnswer };
     setInlineEnhanceAnswers(newAnswers);
     setInput('');
 
@@ -3780,7 +3781,7 @@ interface ChatPanelProps {
   inlineEnhanceIndustry: string;
   onInlineOptionSelect: (optVal: string) => void;
   onInlineSkip: () => void;
-  onInlineNext: () => void;
+  onInlineNext: (customVal?: string) => void;
 }
 
 function ChatPanel({
@@ -3835,6 +3836,47 @@ function ChatPanel({
   onInlineSkip,
   onInlineNext,
 }: ChatPanelProps) {
+  const [cardInputValue, setCardInputValue] = useState("");
+
+  // Clear card input when current question step changes
+  useEffect(() => {
+    setCardInputValue("");
+  }, [inlineEnhanceStep, inlineEnhanceActive]);
+
+  const getSuggestionsForField = (field: string, industry: string): string[] => {
+    if (field === 'businessName') {
+      if (industry === 'restaurant' || industry === 'south_indian' || industry === 'pizza_fast_food' || industry === 'cafe_coffee' || industry === 'bakery_desserts') {
+        return ["The Daily Grind", "Olive & Thyme", "Mirchi Dhaba", "Bella Italia", "Sweet Retreat"];
+      }
+      if (industry === 'salon' || industry === 'hair_salon' || industry === 'barbershop' || industry === 'spa_wellness') {
+        return ["Glamour Studio", "Lumière Salon", "The Barber Co.", "Vogue Hair"];
+      }
+      if (industry === 'medical' || industry === 'medical_clinic' || industry === 'dental_practice') {
+        return ["Smile Dental Care", "HealthFirst Clinic", "CareOne Wellness"];
+      }
+      return ["Aura Designs", "Apex Solutions", "Nova Tech", "Vanguard Group"];
+    }
+    if (field === 'specialItems' || field === 'services') {
+      if (industry === 'restaurant' || industry === 'south_indian' || industry === 'pizza_fast_food' || industry === 'cafe_coffee' || industry === 'bakery_desserts') {
+        return ["Signature Truffle Pasta, Garlic Bread, Lava Cake", "Andhra Style Chicken Biryani, Butter Naan", "Artisanal Espresso, Avocado Toast, Croissant"];
+      }
+      if (industry === 'salon' || industry === 'hair_salon' || industry === 'barbershop' || industry === 'spa_wellness') {
+        return ["Haircuts & Blowout, Creative Hair Coloring, Hydrating Facial", "Classic Men's Beard Trim & Premium Styling", "Full Body Aromatherapy Massage & Organic Facial"];
+      }
+      return ["Web Design, SEO Optimization, Cloud Hosting", "Professional Consulting, Tax Planning, Audit Support"];
+    }
+    if (field === 'doctorName') {
+      return ["Dr. Ramesh Kumar, MBBS MD", "Dr. Sarah Jenkins, DDS", "Dr. Aditya Sen, Pediatrician"];
+    }
+    if (field === 'cuisine' || field === 'specialization') {
+      return ["Modern Fusion & Craft Cocktails", "Traditional South Indian Cuisine", "Cosmetic Dentistry & Orthodontics"];
+    }
+    if (field === 'location') {
+      return ["Jubilee Hills, Hyderabad", "Indiranagar, Bangalore", "Bandra West, Mumbai", "Manhattan, New York"];
+    }
+    return [];
+  };
+
   return (
     <>
       {!hideSidebar && (
@@ -4005,21 +4047,107 @@ function ChatPanel({
             </h3>
 
             {/* Options list */}
-            {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options && (
-              <div className="flex flex-col gap-2">
-                {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => onInlineOptionSelect(opt)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-850 px-4 py-3 text-left transition-all hover:border-zinc-700 active:scale-[0.98] cursor-pointer"
-                  >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-[10px] font-bold text-zinc-400">
-                      {idx + 1}
-                    </span>
-                    <span className="text-zinc-200 text-xs font-medium">{opt}</span>
-                  </button>
-                ))}
+            {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options ? (
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2">
+                  {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => onInlineOptionSelect(opt)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-850 px-4 py-3 text-left transition-all hover:border-zinc-700 active:scale-[0.98] cursor-pointer"
+                    >
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-[10px] font-bold text-zinc-400">
+                        {idx + 1}
+                      </span>
+                      <span className="text-zinc-200 text-xs font-medium">{opt}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom/Something Else Input Row inside options */}
+                <div className="space-y-2 pt-1 border-t border-zinc-900">
+                  <div className="flex items-center gap-3 rounded-xl border border-zinc-850 bg-zinc-900/40 hover:bg-zinc-900/60 px-4 py-2 border-dashed focus-within:border-zinc-750 focus-within:bg-zinc-900/60 transition-all">
+                    <span className="text-zinc-500 text-xs select-none">✎</span>
+                    <input
+                      type="text"
+                      value={cardInputValue}
+                      onChange={(e) => setCardInputValue(e.target.value)}
+                      placeholder="Something else / Describe what you want..."
+                      className="bg-transparent border-none outline-none focus:ring-0 text-xs text-zinc-200 placeholder-zinc-500 w-full"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (cardInputValue.trim()) {
+                            onInlineOptionSelect(cardInputValue.trim());
+                          }
+                        }
+                      }}
+                    />
+                    {cardInputValue.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => onInlineOptionSelect(cardInputValue.trim())}
+                        className="bg-white text-black hover:bg-zinc-200 px-3 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 ml-2"
+                      >
+                        Select
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Suggestions for custom field */}
+                  {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pl-1 pt-1">
+                      {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).map((sug) => (
+                        <button
+                          key={sug}
+                          type="button"
+                          onClick={() => setCardInputValue(sug)}
+                          className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 px-2 py-0.5 rounded-md transition-all cursor-pointer truncate max-w-xs"
+                          title={sug}
+                        >
+                          {sug}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Text question input
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={cardInputValue}
+                  onChange={(e) => setCardInputValue(e.target.value)}
+                  placeholder={QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.placeholder || "Type your answer here..."}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-750 transition-colors text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional) {
+                        onInlineNext(cardInputValue);
+                      }
+                    }
+                  }}
+                />
+
+                {/* Suggestions for text question */}
+                {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pl-1">
+                    {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => setCardInputValue(sug)}
+                        className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 px-2.5 py-1 rounded-md transition-all cursor-pointer truncate max-w-xs"
+                        title={sug}
+                      >
+                        {sug}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -4033,14 +4161,14 @@ function ChatPanel({
                 Skip
               </button>
               
-              {!QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options && (
+              {(!QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options) && (
                 <button
                   type="button"
-                  onClick={onInlineNext}
-                  disabled={!value.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
+                  onClick={() => onInlineNext(cardInputValue)}
+                  disabled={!cardInputValue.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
                   className={cn(
                     "rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer",
-                    (value.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional)
+                    (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional)
                       ? "bg-white text-black hover:bg-zinc-200"
                       : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
                   )}

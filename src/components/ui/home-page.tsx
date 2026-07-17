@@ -328,16 +328,33 @@ export function HomePage() {
 
   return (
     <AppShell activePage="chats">
-      {chatStarted ? (
-        <OniChat
-          initialPrompt={chatPrompt}
-          initialImage={initialImage}
-          initialFiles={initialFiles}
-          hideSidebar
-          forceNewSession
-        />
-      ) : (
-        <div className="flex-1 flex flex-col justify-center items-center relative overflow-y-auto bg-surface w-full h-full py-16 px-4 md:px-8">
+      <AnimatePresence mode="wait">
+        {chatStarted ? (
+          <motion.div
+            key="chat-screen"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full h-full flex flex-col flex-1"
+          >
+            <OniChat
+              initialPrompt={chatPrompt}
+              initialImage={initialImage}
+              initialFiles={initialFiles}
+              hideSidebar
+              forceNewSession
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="home-screen"
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="flex-1 flex flex-col justify-center items-center relative overflow-y-auto bg-surface w-full h-full py-16 px-4 md:px-8"
+          >
           {/* Ambient monochrome background glow */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
             <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-white/5 to-transparent blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: "10s" }} />
@@ -645,11 +662,12 @@ export function HomePage() {
                     ))}
                   </div>
                 )}
-              </div>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {toast && (
         <div className="fixed right-4 bottom-4 z-50 rounded-xl border border-white/10 bg-zinc-950 bg-opacity-70 backdrop-blur-md px-4 py-3 text-sm text-white shadow-2xl shadow-black/40 toast-glass">
