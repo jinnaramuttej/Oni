@@ -1149,10 +1149,10 @@ Improve the design, make it more premium and modern.`;
     console.log("[Three-Stage] Build request detected. Running 3-stage pipeline...");
 
     // Helper: call API non-streaming with custom fallback targets list
-    async function executeStage(
+    const executeStage = async (
       messages: any[],
       maxTokens: number
-    ): Promise<string> {
+    ): Promise<string> => {
       const isLocalDev = IS_LOCAL_DEV;
       const groqKey = process.env.GROQ_API_KEY?.trim() || "";
       const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
@@ -1241,9 +1241,10 @@ Improve the design, make it more premium and modern.`;
 
       // Get matching template reference for CSS/HTML guidance
       const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
-      const templateRef = matchingTemplate
-        ? `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`
-        : "";
+      let templateRef = "";
+      if (matchingTemplate) {
+        templateRef = `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`;
+      }
 
       // ── STAGE 1: Planning Call ───────────────────────────────────────────────
       console.log("[Three-Stage] Starting Stage 1: Planning...");
@@ -1254,8 +1255,8 @@ Improve the design, make it more premium and modern.`;
       ], 500);
       console.log(`[Three-Stage] Stage 1 completed in ${Date.now() - planStartTime}ms`);
 
-      const thoughtMatch = planText.match(/<ONI_THOUGHT>([\s\S]*?)<\/ONI_THOUGHT>/i);
-      const parsedThought = thoughtMatch ? thoughtMatch[0] : `<ONI_THOUGHT>\n${planText}\n</ONI_THOUGHT>`;
+      const thoughtMatch = planText ? planText.match(/<ONI_THOUGHT>([\s\S]*?)<\/ONI_THOUGHT>/i) : null;
+      const parsedThought = thoughtMatch ? thoughtMatch[0] : `<ONI_THOUGHT>\n${planText || ""}\n</ONI_THOUGHT>`;
 
       // ── STAGE 2: CSS Generation Call ─────────────────────────────────────────
       console.log("[Three-Stage] Starting Stage 2: CSS generation...");
@@ -1313,26 +1314,23 @@ ${htmlContent}
 
 
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
-  const isLocal = process.env.NODE_ENV === "development" || process.env.USE_LOCAL_MODEL === "true";
+  const isLocal = process.env.NODE_ENV === 'development' || process.env.USE_LOCAL_MODEL === 'true';
 
   const MODEL_CHAIN = [
     ...(isLocal ? [{
-      name: "ollama",
       url: "http://localhost:11434/api/chat",
       key: null,
-      model: "llama3.1",
+      model: "llama3.1", // or whatever local model you use
       max_tokens: 16000,
       isOllama: true
     }] : []),
     {
-      name: "groq",
       url: "https://api.groq.com/openai/v1/chat/completions",
       key: process.env.GROQ_API_KEY,
       model: "llama-3.3-70b-versatile",
       max_tokens: 16000
     },
     {
-      name: "openrouter",
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: process.env.OPENROUTER_API_KEY,
       model: "deepseek/deepseek-chat",
@@ -1344,13 +1342,15 @@ ${htmlContent}
   let finalUsedModel = "";
 
   for (const target of MODEL_CHAIN) {
+    const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
+
     // If key is needed but missing/empty, skip
     if (!target.isOllama && !target.key) {
-      console.warn(`[Pipeline] Skipping ${target.name} because API key is missing.`);
+      console.warn(`[Pipeline] Skipping ${targetName} because API key is missing.`);
       continue;
     }
 
-    console.log(`[Pipeline] Trying model: ${target.name}/${target.model} at ${target.url}...`);
+    console.log(`[Pipeline] Trying model: ${targetName}/${target.model} at ${target.url}...`);
 
     try {
       const headers: Record<string, string> = {
@@ -1451,10 +1451,10 @@ ${htmlContent}
         successStream = response.body;
       }
 
-      finalUsedModel = `${target.name}/${target.model}`;
+      finalUsedModel = `${targetName}/${target.model}`;
       break;
     } catch (err: any) {
-      console.warn(`[Pipeline] Failed ${target.name}/${target.model}:`, err.message || err);
+      console.warn(`[Pipeline] Failed ${targetName}/${target.model}:`, err.message || err);
     }
   }
 
