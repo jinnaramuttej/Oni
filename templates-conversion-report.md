@@ -35,11 +35,11 @@
 | Meridian | **SUCCESS** | navbar, services | - |
 | Meridian & Co | **SUCCESS** | navbar, services, contact | - |
 | Meridian Health | **SUCCESS** | navbar, testimonials, contact | - |
-| Meridian Real Estate | **PENDING** | - | - |
-| Monolith-A | **PENDING** | - | - |
-| Monolith-B | **PENDING** | - | - |
-| Nexus | **PENDING** | - | - |
-| Nexus 2.0 | **PENDING** | - | - |
+| Meridian Real Estate | **SUCCESS** | navbar, services, testimonials, contact, footer | - |
+| Monolith-A | **SUCCESS** | hero, services, testimonials, contact, footer | - |
+| Monolith-B | **SUCCESS** | services, contact, footer | - |
+| Nexus | **SUCCESS** | features, services, footer | - |
+| Nexus 2.0 | **SUCCESS** | hero, contact, footer | - |
 | Northstar | **PENDING** | - | - |
 | NOVUM | **PENDING** | - | - |
 | Orbital | **PENDING** | - | - |
