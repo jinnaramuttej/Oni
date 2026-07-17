@@ -2462,7 +2462,7 @@ export function OniChat({
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
       setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2480,7 +2480,7 @@ export function OniChat({
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
       setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2497,7 +2497,7 @@ export function OniChat({
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
       setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
-      void handleSendToAIRef.current(enhanced, null, []);
+      void handleSendToAIRef.current(enhanced, null, [], true);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2805,7 +2805,8 @@ export function OniChat({
   const handleSendToAI = useCallback(async (
     prompt: string,
     imageForMessage: ImageAttachment | undefined | null,
-    filesForMessage: FileAttachment[]
+    filesForMessage: FileAttachment[],
+    silent = false   // when true: don't add message to chat (intake flow)
   ) => {
     const cleanPromptLower = prompt.toLowerCase().trim();
     const isContinuation =
@@ -2843,12 +2844,14 @@ ${prompt}`;
       files: filesForMessage,
     };
 
-    setMessages((current) => [...current, userMessage]);
-    setInput("");
-    setAttachedImage(null);
-    setAttachedFiles([]);
-    setEditorTab("preview");
-    adjustHeight(true);
+    if (!silent) {
+      setMessages((current) => [...current, userMessage]);
+      setInput("");
+      setAttachedImage(null);
+      setAttachedFiles([]);
+      adjustHeight(true);
+    }
+    setEditorTab("preview"); // always switch to preview when generation starts
 
     setIsLoading(true);
     setGenerating(true);
