@@ -77,6 +77,123 @@ type Question = {
   options?: string[]
 }
 
+// ─── Dynamic Prompt Parsing ─────────────────────────────────────────────────
+
+/** Extract details that the user has already stated in their original prompt */
+function parseAlreadyStated(prompt: string): Record<string, boolean> {
+  const p = prompt.toLowerCase()
+  return {
+    businessName: /\b(named|called|name is|brand is|my business|our (restaurant|cafe|salon|gym|clinic|studio|shop|store|firm|agency)|it's a|the )/i.test(prompt) && prompt.split(' ').length > 4,
+    colors: /\b(color|colour|palette|theme|dark|light|black|white|gold|silver|blue|red|green|purple|pink|teal|navy|cream|beige|brown|orange|grey|gray|neon|pastel|vibrant|minimal|monochrome)/i.test(p),
+    tone: /\b(luxury|premium|elegant|minimal|bold|modern|clean|professional|friendly|warm|playful|fun|serious|corporate|casual|edgy|chic|artisan|rustic|urban|sleek)/i.test(p),
+    location: /\b(in |at |located|city|area|district|street|road|nagar|hills|gachi|kondapur|madhapur|jubiilee|banjara|hyderabad|bengaluru|mumbai|delhi|chennai|kolkata|pune)/i.test(p),
+    logo: /\b(logo|brand mark|icon|symbol|emblem|monogram|text.?logo|wordmark)/i.test(p),
+    cuisine: /\b(south indian|north indian|chinese|italian|continental|fusion|vegan|biryani|pizza|pasta|sushi|thai|mexican|kerala|punjabi|mughlai)/i.test(p),
+    services: /\b(offer|provide|specialize|service|haircut|color|makeup|dental|yoga|training|coaching|develop|design|build)/i.test(p),
+    description: prompt.split(' ').length > 8,
+  }
+}
+
+/** Dynamic color palette options based on industry — rotates to prevent identical suggestions on repeat visits */
+function getDynamicPaletteOptions(industry: string): string[] {
+  const palettes: Record<string, string[][]> = {
+    restaurant: [
+      ["Warm saffron and deep forest green", "Rich burgundy and burnished gold", "Charcoal slate and bright turmeric", "Terracotta, cream, and aged bronze"],
+      ["Dark mahogany and candlelight gold", "Spiced paprika, ivory, and forest green", "Midnight blue and warm copper", "Sangria red, beige, and matte olive"],
+      ["Bold fire orange and carbon black", "Clay terracotta, jade, and off-white", "Deep curry yellow and chocolate brown", "Rosewood, sage, and warm white"],
+    ],
+    salon: [
+      ["Rose gold, blush pink, and warm white", "Matte mauve, champagne, and soft ivory", "Dusty coral, gold leaf, and sand", "Warm lilac, peach, and brushed gold"],
+      ["Sleek minimal black, white, and chrome", "Gunmetal, nude beige, and electric white", "Ink black, silver foil, and rose quartz", "Graphite, pearl, and neon accent"],
+      ["Warm oak wood, sage green, and linen", "Terracotta, dried grass, and warm cream", "Sage, mushroom beige, and warm taupe", "Earthy mocha, ecru, and soft gold"],
+    ],
+    medical: [
+      ["Clinical clean teal and white", "Ocean blue, mint, and cool gray", "Aquamarine, silver, and crisp white", "Peacock blue, pearl, and light beige"],
+      ["Soothing royal blue, beige, and gray", "Slate blue, warm sand, and soft charcoal", "Steel, mist, and clean white", "Indigo, ivory, and pale gold"],
+      ["Luxury rose gold, peach, and white", "Blush, champagne, and warm ivory", "Soft coral, nude pink, and cloud white", "Pastel lavender, gold, and linen"],
+    ],
+    fitness: [
+      ["Gritty matte black and electric yellow", "Carbon, hazard orange, and smoke gray", "Deep navy, neon lime, and gunmetal", "Raw concrete, fire red, and chalk white"],
+      ["High-energy neon orange and dark navy", "Electric blue, jet black, and sharp white", "Ultraviolet, magenta, and obsidian", "Bright teal, near-black, and silver"],
+      ["Zen sage, warm sand, and bone white", "Soft olive, linen, and natural wood", "Muted coral, fog gray, and pale gold", "Clean white, sea glass, and birch"],
+    ],
+    saas: [
+      ["Cyberpunk violet, neon pink, and pitch black", "Deep purple, electric cyan, and dark charcoal", "Indigo, aurora green, and near-black", "Midnight, plasma blue, and silver"],
+      ["Clean corporate blue, white, and light gray", "Sky blue, slate, and crisp white", "Royal cobalt, silver, and soft white", "Teal, smoke white, and charcoal"],
+      ["High-contrast canary yellow and carbon", "Neon green, near-black, and white", "Electric lime, dark olive, and off-white", "Amber, black, and stark white"],
+    ],
+    legal: [
+      ["Deep navy, burnished gold, and ivory", "Midnight blue, champagne, and white", "Oxford blue, antique gold, and cream", "Prussian blue, warm brass, and linen"],
+      ["Charcoal, silver, and parchment", "Slate black, pewter, and warm beige", "Dark gray, brushed chrome, and ecru", "Graphite, warm white, and subtle gold"],
+      ["Forest green, aged gold, and dark walnut", "British racing green, bronze, and cream", "Deep hunter, burnished copper, and ivory", "Moss green, dark leather, and parchment"],
+    ],
+    education: [
+      ["Royal blue and bright white", "Classic cobalt, gold, and white", "Deep navy, sunshine yellow, and white", "Sapphire, silver, and clean white"],
+      ["Energetic orange, navy, and cream", "Fire orange, steel blue, and warm white", "Vibrant coral, teal, and soft ivory", "Bold crimson, slate, and sand"],
+      ["Creative teal and warm orange", "Emerald, tangerine, and off-white", "Cyan, amber, and light gray", "Peacock, marigold, and bone white"],
+    ],
+    portfolio: [
+      ["Dark mode: Pitch black and electric purple", "Near-black, plasma violet, and white", "Obsidian, neon indigo, and ivory", "Charcoal, lilac, and silver"],
+      ["Light mode: Paper white and deep ink", "Cloud white, navy, and warm gray", "Bone white, midnight, and gold accent", "Pure white, slate blue, and charcoal"],
+      ["Warm mode: Terracotta, sage, and oatmeal", "Clay, moss green, and warm linen", "Rust, eucalyptus, and cream", "Sienna, soft olive, and wheat"],
+    ],
+    general: [
+      ["Luxury black and bright gold", "Obsidian, polished gold, and ivory", "Rich black, champagne, and white", "Carbon, warm brass, and cream"],
+      ["Clean minimal white, gray, and blue", "Snow white, slate, and sky blue", "Crisp white, cool gray, and cobalt", "Stark white, charcoal, and cerulean"],
+      ["Energetic orange, deep purple, and beige", "Tangerine, violet, and warm sand", "Vibrant coral, plum, and ivory", "Amber, indigo, and cream"],
+    ],
+  }
+  const sets = palettes[industry] || palettes.general
+  const dayOfMonth = new Date().getDate()
+  return sets[dayOfMonth % sets.length]
+}
+
+/** Dynamic tone/style options based on industry — rotates weekly */
+function getDynamicToneOptions(industry: string): string[] {
+  const tonesByIndustry: Record<string, string[][]> = {
+    restaurant: [
+      ["Warm & Inviting Family Dining", "Upscale Fine Dining Elegance", "Street-Food Energy & Bold Attitude", "Modern Casual with a Premium Edge"],
+      ["Rustic & Artisanal Comfort", "Sleek Contemporary Minimalism", "Lively & Vibrant Cultural Pride", "Sophisticated Gastronomy & Craft"],
+    ],
+    salon: [
+      ["Luxurious & Aspirational", "Trendy & Instagram-Worthy", "Serene Spa-Like Calm", "Bold & Edgy Urban Chic"],
+      ["Chic Minimalist Elegance", "Warm & Welcoming Boutique", "High-Fashion Atelier Vibe", "Empowering & Modern Confidence"],
+    ],
+    medical: [
+      ["Clinical Trust & Precision", "Warm & Caring Compassion", "Premium Wellness Boutique", "Modern Scientific Expertise"],
+      ["Calm & Reassuring Professionalism", "Cutting-Edge Medical Innovation", "Gentle & Patient-Centered", "Authoritative & Established"],
+    ],
+    fitness: [
+      ["Intense & Motivating Energy", "Zen & Mindful Wellness", "Hardcore & No-Nonsense Grit", "Inclusive & Uplifting Community"],
+      ["Athletic Performance & Science", "Holistic Health & Balance", "Raw & Authentic Hard Work", "Premium Boutique Experience"],
+    ],
+    saas: [
+      ["Slick & Innovative Tech-Forward", "Clean & Trustworthy Enterprise", "Playful & Approachable Startup", "Bold Disruptor & Rule-Breaker"],
+      ["Minimalist & Clarity-First", "Data-Driven & Authoritative", "Friendly Productivity Tool", "Premium & Exclusive Platform"],
+    ],
+    legal: [
+      ["Authoritative & Commanding", "Approachable & Client-First", "Traditional Prestige & Heritage", "Modern Progressive Practice"],
+      ["Sophisticated & Intellectual", "Strong & Uncompromising", "Warm & Empathetic Counsel", "Sharp & Results-Driven"],
+    ],
+    education: [
+      ["Inspiring & Motivational", "Trustworthy & Academic", "Fun & Engaging for Students", "Prestigious & Results-Proven"],
+      ["Warm & Nurturing Learning", "Dynamic & High-Achieving", "Innovation & Future-Focused", "Community & Supportive Growth"],
+    ],
+    portfolio: [
+      ["Bold & Visually Striking", "Minimal & Let Work Speak", "Warm & Personable Creative", "Edgy & Avant-Garde"],
+      ["Clean & Professional Trust", "Playful & High-Energy", "Sophisticated & Premium", "Experimental & Cutting-Edge"],
+    ],
+    general: [
+      ["Ultra Luxury & Premium", "Minimal & Ultra Clean", "High-Energy, Bold & Modern", "Warm, Friendly & Organic"],
+      ["Professional & Trustworthy", "Fun & Approachable", "Sophisticated & Elegant", "Dynamic & Contemporary"],
+    ],
+  }
+  const sets = tonesByIndustry[industry] || tonesByIndustry.general
+  const weekNum = Math.floor(new Date().getDate() / 7)
+  return sets[weekNum % sets.length]
+}
+
+// Static QUESTIONS pool — used as a lookup for field definitions only
 const QUESTIONS: Record<string, Question[]> = {
   restaurant: [
     { field: 'businessName',
@@ -84,33 +201,15 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Dakshin, Spice Garden" },
     { field: 'cuisine',
       question: "What cuisine and vibe?",
-      placeholder: "e.g. South Indian, casual family style",
-      options: [
-        "South Indian, casual style",
-        "North Indian Dhaba & Grill",
-        "Fine Dining / Michelin Vibe",
-        "Italian Café & Pizza Bistro",
-        "Continental / Modern Fusion"
-      ] },
+      placeholder: "e.g. South Indian, casual family style" },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Banjara Hills, Hyderabad",
-      options: [
-        "Banjara Hills, Hyderabad",
-        "Jubilee Hills, Hyderabad",
-        "Gachibowli, Hyderabad",
-        "Kondapur, Hyderabad"
-      ] },
+      placeholder: "e.g. Banjara Hills, Hyderabad" },
     { field: 'colors',
       question: "Brand colors? (skip to auto-pick)",
       placeholder: "e.g. saffron and deep green",
       optional: true,
-      options: [
-        "Warm saffron and deep forest green",
-        "Elegant black and premium gold",
-        "Minimalist cream, bronze, and charcoal",
-        "Bright terracotta, teal, and beige"
-      ] },
+      options: [] },
     { field: 'specialItems',
       question: "3-4 signature dishes to feature?",
       placeholder: "e.g. Biryani, Pesarattu, Gongura Mutton",
@@ -122,41 +221,18 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Lumière, Glam Studio" },
     { field: 'services',
       question: "Main services offered?",
-      placeholder: "e.g. haircuts, color, keratin, bridal",
-      options: [
-        "Haircuts, styling, and creative color",
-        "Bridal makeup, skin treatments, and nails",
-        "Premium male grooming and beard styling",
-        "All-in-one luxury salon & day spa experience"
-      ] },
+      placeholder: "e.g. haircuts, color, keratin, bridal" },
     { field: 'targetClient',
       question: "Target clients and price range?",
-      placeholder: "e.g. women, luxury pricing",
-      options: [
-        "Premium / Luxury high-end clientele",
-        "Trendy / Gen-Z affordable luxury",
-        "Family-friendly casual pricing",
-        "Strictly male grooming / premium barbershop"
-      ] },
+      placeholder: "e.g. women, luxury pricing" },
     { field: 'colors',
       question: "Brand colors or aesthetic?",
       placeholder: "e.g. rose gold, black minimal",
       optional: true,
-      options: [
-        "Rose gold, blush pink, and warm white",
-        "Sleek minimal black, white, and chrome",
-        "Warm oak wood, gold, and hunter green",
-        "Clean lavender, beige, and matte silver"
-      ] },
+      options: [] },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Jubilee Hills, Hyderabad",
-      options: [
-        "Jubilee Hills, Hyderabad",
-        "Banjara Hills, Hyderabad",
-        "Gachibowli, Hyderabad",
-        "Kondapur, Hyderabad"
-      ] }
+      placeholder: "e.g. Jubilee Hills, Hyderabad" }
   ],
   medical: [
     { field: 'businessName',
@@ -164,36 +240,19 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Smile Dental, HealthFirst Clinic" },
     { field: 'specialization',
       question: "Specialization?",
-      placeholder: "e.g. dental, derma, general medicine",
-      options: [
-        "Premium Dental & Orthodontic Care",
-        "Dermatology, Aesthetics & Laser Clinic",
-        "Pediatrics & Family Medicine Clinic",
-        "General Health & Wellness Practice"
-      ] },
+      placeholder: "e.g. dental, derma, general medicine" },
     { field: 'doctorName',
       question: "Lead doctor's name and qualifications?",
       placeholder: "e.g. Dr. Ramesh Kumar MBBS MD",
       optional: true },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Kondapur, Hyderabad",
-      options: [
-        "Kondapur, Hyderabad",
-        "Gachibowli, Hyderabad",
-        "Jubilee Hills, Hyderabad",
-        "Madhapur, Hyderabad"
-      ] },
+      placeholder: "e.g. Kondapur, Hyderabad" },
     { field: 'colors',
       question: "Color preference?",
       placeholder: "e.g. blue and white, or skip for auto",
       optional: true,
-      options: [
-        "Clinical clean teal and white",
-        "Soothing royal blue, beige, and gray",
-        "Luxury rose gold, peach, and white",
-        "Minimal slate gray and light olive"
-      ] }
+      options: [] }
   ],
   fitness: [
     { field: 'businessName',
@@ -201,32 +260,15 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. IronEdge, FitZone" },
     { field: 'services',
       question: "What do you offer?",
-      placeholder: "e.g. gym, yoga, crossfit, personal training",
-      options: [
-        "Full cardio & strength gym with steam",
-        "Yoga, pilates, and mindfulness classes",
-        "CrossFit, boxing, and high-intensity HIIT",
-        "Bespoke personal training & nutrition coaching"
-      ] },
+      placeholder: "e.g. gym, yoga, crossfit, personal training" },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Madhapur, Hyderabad",
-      options: [
-        "Madhapur, Hyderabad",
-        "Gachibowli, Hyderabad",
-        "Kondapur, Hyderabad",
-        "Jubilee Hills, Hyderabad"
-      ] },
+      placeholder: "e.g. Madhapur, Hyderabad" },
     { field: 'colors',
       question: "Brand colors?",
       placeholder: "e.g. black and electric green",
       optional: true,
-      options: [
-        "Gritty matte black and electric yellow",
-        "Clean minimal white, concrete gray, and teal",
-        "Zen light wood, sand beige, and sage green",
-        "High-energy neon orange and dark navy"
-      ] }
+      options: [] }
   ],
   saas: [
     { field: 'businessName',
@@ -246,12 +288,7 @@ const QUESTIONS: Record<string, Question[]> = {
       question: "Color style?",
       placeholder: "e.g. dark purple, clean minimal, bold colorful",
       optional: true,
-      options: [
-        "Cyberpunk dark violet, neon pink, and black",
-        "Clean modern corporate blue, white, and gray",
-        "Eco-friendly warm forest green, beige, and cream",
-        "High-contrast canary yellow and dark carbon"
-      ] }
+      options: [] }
   ],
   legal: [
     { field: 'businessName',
@@ -259,13 +296,7 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Sharma & Associates" },
     { field: 'practiceAreas',
       question: "Practice areas?",
-      placeholder: "e.g. corporate law, family law, criminal defense",
-      options: [
-        "Corporate, Startup & intellectual property law",
-        "Criminal defense, civil litigation & appeals",
-        "Family law, estate planning & real estate",
-        "All-practice comprehensive legal advice"
-      ] },
+      placeholder: "e.g. corporate law, family law, criminal defense" },
     { field: 'lawyerName',
       question: "Lead attorney name?",
       placeholder: "e.g. Advocate Priya Sharma LLB LLM",
@@ -273,12 +304,7 @@ const QUESTIONS: Record<string, Question[]> = {
     { field: 'location',
       question: "Which city?",
       placeholder: "e.g. Hyderabad",
-      options: [
-        "Hyderabad",
-        "Delhi NCR",
-        "Mumbai",
-        "Bengaluru"
-      ] }
+      options: ["Hyderabad", "Delhi NCR", "Mumbai", "Bengaluru"] }
   ],
   education: [
     { field: 'businessName',
@@ -286,41 +312,18 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Sunrise Coaching, BrightMinds Academy" },
     { field: 'courses',
       question: "What do you teach?",
-      placeholder: "e.g. JEE, NEET, Class 10-12 Maths, English",
-      options: [
-        "IIT-JEE & NEET entrance preparation",
-        "CBSE/ICSE school coaching (Class 6-10)",
-        "Spoken English, soft skills & IELTS prep",
-        "Coding, STEM & robotics classes for kids"
-      ] },
+      placeholder: "e.g. JEE, NEET, Class 10-12 Maths, English" },
     { field: 'targetStudents',
       question: "Target students?",
-      placeholder: "e.g. Class 11-12, JEE aspirants",
-      options: [
-        "Class 11-12 board and competitive aspirants",
-        "High school students (Class 6-10)",
-        "Working professionals and adults",
-        "Young kids aged 6-14"
-      ] },
+      placeholder: "e.g. Class 11-12, JEE aspirants" },
     { field: 'location',
       question: "Which city and area?",
-      placeholder: "e.g. Dilsukhnagar, Hyderabad",
-      options: [
-        "Dilsukhnagar, Hyderabad",
-        "Kukatpally, Hyderabad",
-        "SR Nagar, Hyderabad",
-        "Madhapur, Hyderabad"
-      ] },
+      placeholder: "e.g. Dilsukhnagar, Hyderabad" },
     { field: 'colors',
       question: "Color preference?",
       placeholder: "e.g. blue and yellow, or skip",
       optional: true,
-      options: [
-        "Classic trust royal blue and white",
-        "Energetic yellow, navy, and slate",
-        "Creative teal, orange, and cream",
-        "Minimalist beige and charcoal forest"
-      ] }
+      options: [] }
   ],
   portfolio: [
     { field: 'businessName',
@@ -328,13 +331,7 @@ const QUESTIONS: Record<string, Question[]> = {
       placeholder: "e.g. Uttej Jinnaram, Pixel Studio" },
     { field: 'services',
       question: "What do you do?",
-      placeholder: "e.g. UI/UX design, web development, branding",
-      options: [
-        "Full-stack Web and App Development",
-        "Creative UI/UX & Product Design",
-        "Graphic design, brand identity & packaging",
-        "Freelance photography & videography"
-      ] },
+      placeholder: "e.g. UI/UX design, web development, branding" },
     { field: 'description',
       question: "One line about yourself or agency?",
       placeholder: "e.g. Building digital products for startups" },
@@ -342,12 +339,7 @@ const QUESTIONS: Record<string, Question[]> = {
       question: "Personal brand colors?",
       placeholder: "e.g. black and purple, minimal white",
       optional: true,
-      options: [
-        "Dark mode: Charcoal black and neon purple",
-        "Light mode: Paper white and ink blue",
-        "Warm mode: Terracotta, sage, and oatmeal",
-        "High contrast: Bright yellow, carbon, and white"
-      ] }
+      options: [] }
   ],
   general: [
     { field: 'businessName',
@@ -359,33 +351,116 @@ const QUESTIONS: Record<string, Question[]> = {
     { field: 'location',
       question: "Which city?",
       placeholder: "e.g. Hyderabad",
-      options: [
-        "Hyderabad",
-        "Bengaluru",
-        "Mumbai",
-        "Delhi NCR"
-      ] },
+      options: ["Hyderabad", "Bengaluru", "Mumbai", "Delhi NCR"] },
     { field: 'colors',
       question: "Brand colors?",
       placeholder: "e.g. gold and black, or skip for auto",
       optional: true,
-      options: [
-        "Luxury black and bright gold",
-        "Clean minimal white, gray, and blue",
-        "Energetic orange, purple, and beige",
-        "Natural forest green, wood, and white"
-      ] },
+      options: [] },
     { field: 'tone',
       question: "Website vibe?",
       placeholder: "e.g. luxury, friendly, minimal, bold",
       optional: true,
-      options: [
-        "Ultra Luxury & Premium",
-        "Minimal & Ultra Clean",
-        "High-Energy, Bold & Modern",
-        "Warm, Friendly & Organic"
-      ] }
+      options: [] }
   ]
+}
+
+// Logo question — injected when logo not already mentioned in prompt
+const LOGO_QUESTION: Question = {
+  field: 'logo',
+  question: "Do you have a logo, or should I design a text-based logo treatment?",
+  placeholder: "Describe your logo preference",
+  optional: true,
+  options: [
+    "Design a premium text logo for me",
+    "I'll provide my logo details in the prompt",
+    "Use initials / monogram style",
+    "Skip — no logo needed",
+  ]
+}
+
+/**
+ * Generates an adaptive, minimal list of questions based on what's already
+ * stated in the original prompt. Only asks about genuinely missing info.
+ * Caps at maxQuestions (default 4).
+ */
+function generateAdaptiveQuestions(
+  prompt: string,
+  industry: string,
+  maxQuestions = 4
+): Question[] {
+  const stated = parseAlreadyStated(prompt)
+  const allQuestions = QUESTIONS[industry] || QUESTIONS.general
+  const result: Question[] = []
+
+  // 1. Business name — highest priority if not stated
+  if (!stated.businessName) {
+    const nameQ = allQuestions.find(q => q.field === 'businessName')
+    if (nameQ) result.push(nameQ)
+  }
+
+  // 2. Industry-specific primary detail
+  const primaryFields: Record<string, string[]> = {
+    restaurant: ['cuisine', 'specialItems'],
+    salon: ['services', 'targetClient'],
+    medical: ['specialization', 'doctorName'],
+    fitness: ['services'],
+    saas: ['description', 'keyFeatures'],
+    legal: ['practiceAreas'],
+    education: ['courses', 'targetStudents'],
+    portfolio: ['services', 'description'],
+    general: ['description'],
+  }
+  const industryPrimary = primaryFields[industry] || primaryFields.general
+  if (!stated.cuisine && !stated.services && !stated.description) {
+    for (const field of industryPrimary) {
+      if (result.length >= maxQuestions - 1) break
+      const q = allQuestions.find(qx => qx.field === field)
+      if (q && !result.find(r => r.field === field)) {
+        result.push(q)
+        break
+      }
+    }
+  }
+
+  // 3. Logo — inject if not mentioned and we have room
+  if (!stated.logo && result.length < maxQuestions - 1) {
+    result.push(LOGO_QUESTION)
+  }
+
+  // 4. Colors — with dynamic options, only if not stated
+  if (!stated.colors && result.length < maxQuestions) {
+    const colQ = allQuestions.find(q => q.field === 'colors')
+    if (colQ) {
+      result.push({
+        ...colQ,
+        options: getDynamicPaletteOptions(industry),
+        optional: true,
+      })
+    }
+  }
+
+  // 5. Tone — only if genuinely ambiguous and not stated
+  if (!stated.tone && result.length < maxQuestions) {
+    const toneQ = allQuestions.find(q => q.field === 'tone')
+    if (toneQ) {
+      result.push({
+        ...toneQ,
+        options: getDynamicToneOptions(industry),
+        optional: true,
+      })
+    } else if (industry === 'general' || industry === 'portfolio') {
+      result.push({
+        field: 'tone',
+        question: "What's the overall website vibe?",
+        placeholder: "e.g. luxury, minimal, bold, warm",
+        optional: true,
+        options: getDynamicToneOptions(industry),
+      })
+    }
+  }
+
+  return result.slice(0, maxQuestions)
 }
 
 function buildEnhancedPrompt(
@@ -395,40 +470,42 @@ function buildEnhancedPrompt(
 ): string {
   const parts = [original]
 
-  if (answers.businessName) 
+  if (answers.businessName)
     parts.push(`Business name: ${answers.businessName}`)
-  if (answers.cuisine) 
+  if (answers.cuisine)
     parts.push(`Cuisine and vibe: ${answers.cuisine}`)
-  if (answers.services) 
+  if (answers.services)
     parts.push(`Services: ${answers.services}`)
-  if (answers.description) 
+  if (answers.description)
     parts.push(`About: ${answers.description}`)
-  if (answers.specialization) 
+  if (answers.specialization)
     parts.push(`Specialization: ${answers.specialization}`)
-  if (answers.doctorName) 
+  if (answers.doctorName)
     parts.push(`Doctor: ${answers.doctorName}`)
-  if (answers.lawyerName) 
+  if (answers.lawyerName)
     parts.push(`Attorney: ${answers.lawyerName}`)
-  if (answers.practiceAreas) 
+  if (answers.practiceAreas)
     parts.push(`Practice areas: ${answers.practiceAreas}`)
-  if (answers.courses) 
+  if (answers.courses)
     parts.push(`Courses: ${answers.courses}`)
-  if (answers.keyFeatures) 
+  if (answers.keyFeatures)
     parts.push(`Key features: ${answers.keyFeatures}`)
-  if (answers.pricing) 
+  if (answers.pricing)
     parts.push(`Pricing: ${answers.pricing}`)
-  if (answers.specialItems) 
+  if (answers.specialItems)
     parts.push(`Signature items: ${answers.specialItems}`)
-  if (answers.targetClient) 
+  if (answers.targetClient)
     parts.push(`Target clients: ${answers.targetClient}`)
-  if (answers.targetStudents) 
+  if (answers.targetStudents)
     parts.push(`Target students: ${answers.targetStudents}`)
-  if (answers.location) 
+  if (answers.location)
     parts.push(`Location: ${answers.location}`)
-  if (answers.colors) 
+  if (answers.colors)
     parts.push(`Brand colors: ${answers.colors}`)
-  if (answers.tone) 
+  if (answers.tone)
     parts.push(`Tone: ${answers.tone}`)
+  if (answers.logo && !answers.logo.toLowerCase().includes('skip'))
+    parts.push(`Logo treatment: ${answers.logo}`)
 
   parts.push(
     `Industry: ${industry}`,
@@ -452,8 +529,13 @@ export function EnhanceModal({
   onEnhanced: (enhancedPrompt: string) => void
 }) {
   const industry = detectIndustryForEnhance(originalPrompt)
-  const questions = QUESTIONS[industry] || QUESTIONS.general
-  
+
+  // Generate adaptive questions — memoized per prompt change
+  const questions = useMemo(
+    () => generateAdaptiveQuestions(originalPrompt, industry),
+    [originalPrompt, industry]
+  )
+
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string,string>>({})
   const [currentInput, setCurrentInput] = useState('')
@@ -471,22 +553,23 @@ export function EnhanceModal({
     }
   }, [isOpen])
 
+  // If user gave everything already, skip straight to done
+  useEffect(() => {
+    if (isOpen && questions.length === 0) {
+      const enhanced = buildEnhancedPrompt(originalPrompt, industry, {})
+      setEnhancedPrompt(enhanced)
+      setDone(true)
+    }
+  }, [isOpen, questions.length, originalPrompt, industry])
+
   function handleNext() {
     const currentQ = questions[step]
-    const updatedAnswers = {
-      ...answers,
-      [currentQ.field]: currentInput
-    }
+    const updatedAnswers = { ...answers, [currentQ.field]: currentInput }
     setAnswers(updatedAnswers)
     setCurrentInput('')
 
     if (step + 1 >= questions.length) {
-      // Build enhanced prompt
-      const enhanced = buildEnhancedPrompt(
-        originalPrompt,
-        industry,
-        updatedAnswers
-      )
+      const enhanced = buildEnhancedPrompt(originalPrompt, industry, updatedAnswers)
       setEnhancedPrompt(enhanced)
       setDone(true)
     } else {
@@ -497,19 +580,12 @@ export function EnhanceModal({
 
   function handleOptionSelect(optionVal: string) {
     const currentQ = questions[step]
-    const updatedAnswers = {
-      ...answers,
-      [currentQ.field]: optionVal
-    }
+    const updatedAnswers = { ...answers, [currentQ.field]: optionVal }
     setAnswers(updatedAnswers)
     setCurrentInput('')
 
     if (step + 1 >= questions.length) {
-      const enhanced = buildEnhancedPrompt(
-        originalPrompt,
-        industry,
-        updatedAnswers
-      )
+      const enhanced = buildEnhancedPrompt(originalPrompt, industry, updatedAnswers)
       setEnhancedPrompt(enhanced)
       setDone(true)
     } else {
@@ -525,11 +601,7 @@ export function EnhanceModal({
     setCurrentInput('')
 
     if (step + 1 >= questions.length) {
-      const enhanced = buildEnhancedPrompt(
-        originalPrompt,
-        industry,
-        updatedAnswers
-      )
+      const enhanced = buildEnhancedPrompt(originalPrompt, industry, updatedAnswers)
       setEnhancedPrompt(enhanced)
       setDone(true)
     } else {
@@ -540,7 +612,7 @@ export function EnhanceModal({
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (currentInput.trim() || questions[step].optional) {
+      if (currentInput.trim() || questions[step]?.optional) {
         handleNext()
       }
     }
@@ -548,7 +620,12 @@ export function EnhanceModal({
 
   if (!isOpen) return null
 
-  const progress = done ? 100 : (step / questions.length) * 100
+  const progress = done
+    ? 100
+    : questions.length === 0
+      ? 100
+      : (step / questions.length) * 100
+
   const industryLabel = {
     restaurant: '🍽️ Restaurant',
     salon: '💇 Salon',
@@ -561,6 +638,8 @@ export function EnhanceModal({
     general: '🌐 General'
   }[industry] || '🌐 Website'
 
+  const statedCount = Object.values(parseAlreadyStated(originalPrompt)).filter(Boolean).length
+
   return (
     <div className="enhance-overlay" onClick={onClose}>
       <div
@@ -572,6 +651,11 @@ export function EnhanceModal({
           <div>
             <span className="enhance-title">Enhance Prompt ✦</span>
             <span className="enhance-industry">{industryLabel}</span>
+            {statedCount > 0 && (
+              <span style={{ fontSize: '10px', color: '#8b5cf6', marginLeft: '8px', opacity: 0.75 }}>
+                {statedCount} detail{statedCount !== 1 ? 's' : ''} detected from your prompt
+              </span>
+            )}
           </div>
           <button className="enhance-close" onClick={onClose}>×</button>
         </div>
@@ -586,21 +670,20 @@ export function EnhanceModal({
 
         {!done ? (
           <>
-            {/* Question */}
             <div className="enhance-body">
               <div className="enhance-step-label">
                 Question {step + 1} of {questions.length}
               </div>
               <div className="enhance-question">
-                {questions[step].question}
+                {questions[step]?.question}
               </div>
-              {questions[step].optional && (
+              {questions[step]?.optional && (
                 <div className="enhance-optional">optional</div>
               )}
-              
-              {questions[step].options ? (
+
+              {questions[step]?.options && questions[step].options!.length > 0 ? (
                 <div className="enhance-options-list">
-                  {questions[step].options.map((opt, idx) => (
+                  {questions[step].options!.map((opt, idx) => (
                     <button
                       key={opt}
                       type="button"
@@ -640,33 +723,24 @@ export function EnhanceModal({
                   value={currentInput}
                   onChange={e => setCurrentInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={questions[step].placeholder}
+                  placeholder={questions[step]?.placeholder}
                   className="enhance-input"
                 />
               )}
             </div>
 
-            {/* Actions (only visible when not presenting multiple choice, or if the question is optional so skip makes sense) */}
-            {(!questions[step].options || questions[step].optional) && (
+            {(!questions[step]?.options || questions[step]?.optional) && (
               <div className="enhance-actions">
-                <button
-                  className="enhance-skip"
-                  onClick={handleSkip}
-                >
+                <button className="enhance-skip" onClick={handleSkip}>
                   Skip
                 </button>
-                {!questions[step].options && (
+                {(!questions[step]?.options || questions[step].options!.length === 0) && (
                   <button
                     className="enhance-next"
                     onClick={handleNext}
-                    disabled={
-                      !currentInput.trim() && 
-                      !questions[step].optional
-                    }
+                    disabled={!currentInput.trim() && !questions[step]?.optional}
                   >
-                    {step + 1 >= questions.length
-                      ? 'Build Prompt →'
-                      : 'Next →'}
+                    {step + 1 >= questions.length ? 'Build Prompt →' : 'Next →'}
                   </button>
                 )}
               </div>
@@ -674,14 +748,9 @@ export function EnhanceModal({
           </>
         ) : (
           <>
-            {/* Done state */}
             <div className="enhance-body">
-              <div className="enhance-done-label">
-                ✓ Enhanced prompt ready
-              </div>
-              <div className="enhance-prompt-preview">
-                {enhancedPrompt}
-              </div>
+              <div className="enhance-done-label">✓ Enhanced prompt ready</div>
+              <div className="enhance-prompt-preview">{enhancedPrompt}</div>
             </div>
             <div className="enhance-actions">
               <button
@@ -2468,7 +2537,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, [], true);
+      void handleSendToAIRef.current(enhanced, null, []);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2485,7 +2554,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, [], true);
+      void handleSendToAIRef.current(enhanced, null, []);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
@@ -2501,7 +2570,7 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
-      void handleSendToAIRef.current(enhanced, null, [], true);
+      void handleSendToAIRef.current(enhanced, null, []);
     } else {
       setInlineEnhanceStep(prev => prev + 1);
     }
