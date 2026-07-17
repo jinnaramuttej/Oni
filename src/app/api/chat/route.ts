@@ -14,12 +14,18 @@ import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
 import { buildTemplateInjection, buildFullBrandContext } from "@/lib/templates";
+import { selectComponents, buildComponentContext } from "@/lib/component-selector";
 
 // ── Runtime config ─────────────────────────────────────────────────────────────
 // Force Node.js runtime (required for fs/path, Supabase, and long-running streams)
 export const runtime = "nodejs";
 // Allow up to 5 minutes for long AI generation streams on Vercel Pro
 export const maxDuration = 300;
+
+// ── Feature flags ──────────────────────────────────────────────────────────────
+// Set USE_COMPONENT_LIBRARY=true in .env.local to inject oni-components/ snippets
+// into the system prompt. Default false → pipeline unchanged.
+const USE_COMPONENT_LIBRARY = process.env.USE_COMPONENT_LIBRARY === "true";
 
 // ── Credit helpers ────────────────────────────────────────────────────────────
 
@@ -1149,7 +1155,28 @@ export async function POST(req: Request) {
   const brandAnswers = body.brandAnswers || null;
   const templateInjection = buildTemplateInjection(industry as any, brandAnswers);
 
-  let systemPrompt = ONI_SYSTEM_PROMPT + "\n\n" + templateInjection + "\n\n" + ONI_QUALITY_RULES + "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
+  // ── Component-library injection (feature-flagged) ─────────────────────────
+  let componentContext = "";
+  if (USE_COMPONENT_LIBRARY) {
+    try {
+      const compResult = selectComponents({
+        industry,
+        originalPrompt: lastUserMsgText,
+        brandAnswers,
+      });
+      componentContext = buildComponentContext(compResult);
+      console.log("[component-library] injected context, length:", componentContext.length);
+    } catch (e) {
+      console.error("[component-library] failed, falling back to prompt-only:", e);
+    }
+  }
+
+  let systemPrompt =
+    ONI_SYSTEM_PROMPT +
+    "\n\n" + templateInjection +
+    "\n\n" + componentContext +
+    "\n\n" + ONI_QUALITY_RULES +
+    "\n\n" + PREMIUM_COMPONENTS_REFERENCE;
   const hasExistingHtml = effectiveHtml.trim().length > 0;
   if (!hasExistingHtml && userPromptText) {
     const matchingTemplate = getMatchingTemplateHtml(userPromptText);
