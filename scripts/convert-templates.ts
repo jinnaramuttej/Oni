@@ -59,14 +59,18 @@ if (fs.existsSync(REPORT_PATH)) {
         if (parts.length >= 5) {
           const name = parts[1];
           if (name && name !== "---") {
-            const status = parts[2].replace(/\*/g, "") as any;
+            const statusRaw = parts[2].replace(/\*/g, "");
             const extracted = parts[3] === "-" ? [] : parts[3].split(", ").filter(Boolean);
             const warningOrError = parts[4];
+            let normalizedStatus: any = "PENDING";
+            if (statusRaw.includes("SUCCESS")) normalizedStatus = "SUCCESS";
+            else if (statusRaw.includes("FAIL")) normalizedStatus = "FAIL";
+            
             reportData[name] = {
-              status,
+              status: normalizedStatus,
               extracted,
-              error: status === "FAIL" ? warningOrError : undefined,
-              warnings: status === "SUCCESS" ? warningOrError : undefined
+              error: normalizedStatus === "FAIL" ? warningOrError : undefined,
+              warnings: normalizedStatus === "SUCCESS" ? warningOrError : undefined
             };
           }
         }

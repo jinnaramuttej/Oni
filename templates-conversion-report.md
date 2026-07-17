@@ -42,9 +42,9 @@
 | Nexus 2.0 | **SUCCESS** | hero, contact, footer | - |
 | Northstar | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
 | NOVUM | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
-| Orbital | **PENDING** | - | - |
-| premium-gym-website-design | **PENDING** | - | - |
-| Pulse | **PENDING** | - | - |
+| Orbital | **SUCCESS** | contact, footer | - |
+| premium-gym-website-design | **SUCCESS** | navbar, hero, services, testimonials, contact, footer | - |
+| Pulse | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
 | Sterling | **PENDING** | - | - |
 | stillness | **PENDING** | - | - |
 | Stillwater | **PENDING** | - | - |
