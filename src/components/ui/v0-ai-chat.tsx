@@ -2828,23 +2828,31 @@ ${prompt}`;
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed) continue;
-          if (trimmed === 'data: [DONE]') break;
-          if (trimmed.startsWith('data: ')) {
+
+          // Detect Ollama vs OpenAI-compatible SSE
+          const isOllamaChunk = trimmed.startsWith('{') && !trimmed.startsWith('data: ');
+
+          if (isOllamaChunk) {
             try {
-              const json = trimmed.slice(6).trim();
-              const parsed = JSON.parse(json);
-              const token = parsed.choices?.[0]?.delta?.content || '';
+              const parsed = JSON.parse(trimmed);
+              const token = parsed.message?.content || '';
               fullText += token;
 
-              const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
-              const combinedDisplay = thought ? `${thought}\n\n${cleanDisplay}`.trim() : cleanDisplay;
+              const thoughtMatch = fullText.match(/<ONI_THOUGHT>([\s\S]*?)(?:<\/ONI_THOUGHT>|$)/);
+              const thought = thoughtMatch ? thoughtMatch[1].trim() : undefined;
 
+              // Update last message in real time
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
                   id: assistantId,
                   role: 'assistant',
-                  content: combinedDisplay,
+                  content: fullText
+                    .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+                    .replace(/<ONI_CODE>[\s\S]*/g, '')
+                    .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+                    .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
+                    .trim(),
                   thought: thought,
                   rawContent: fullText
                 };
@@ -2852,16 +2860,57 @@ ${prompt}`;
               });
 
               // Stream partial code block into files in real-time
-              if (partialHtml) {
+              const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+              if (partialCodeMatch && partialCodeMatch[1]) {
                 const finalHtml = isContinuation
-                  ? mergeContinuationHtml(baseHtmlBeforeContinuation, partialHtml)
-                  : partialHtml;
+                  ? mergeContinuationHtml(baseHtmlBeforeContinuation, partialCodeMatch[1].trim())
+                  : partialCodeMatch[1].trim();
                 setGeneratedHtml(sanitizeGeneratedHtml(finalHtml));
-              }
-              if (fullText.includes("<ONI_CODE>") || fullText.includes("```html") || fullText.toLowerCase().includes("<!doctype html") || fullText.toLowerCase().includes("<html")) {
                 setIsWritingCode(true);
               }
-            } catch { }
+            } catch (e) {}
+          } else {
+            // OpenAI-compatible SSE parsing
+            if (trimmed.startsWith('data: ')) {
+              const json = trimmed.replace('data: ', '').trim();
+              if (json === '[DONE]') break;
+              try {
+                const parsed = JSON.parse(json);
+                const token = parsed.choices?.[0]?.delta?.content || '';
+                fullText += token;
+
+                const thoughtMatch = fullText.match(/<ONI_THOUGHT>([\s\S]*?)(?:<\/ONI_THOUGHT>|$)/);
+                const thought = thoughtMatch ? thoughtMatch[1].trim() : undefined;
+
+                // Update last message in real time
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    id: assistantId,
+                    role: 'assistant',
+                    content: fullText
+                      .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+                      .replace(/<ONI_CODE>[\s\S]*/g, '')
+                      .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+                      .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
+                      .trim(),
+                    thought: thought,
+                    rawContent: fullText
+                  };
+                  return updated;
+                });
+
+                // Stream partial code block into files in real-time
+                const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+                if (partialCodeMatch && partialCodeMatch[1]) {
+                  const finalHtml = isContinuation
+                    ? mergeContinuationHtml(baseHtmlBeforeContinuation, partialCodeMatch[1].trim())
+                    : partialCodeMatch[1].trim();
+                  setGeneratedHtml(sanitizeGeneratedHtml(finalHtml));
+                  setIsWritingCode(true);
+                }
+              } catch (e) {}
+            }
           }
         }
       }
@@ -3067,23 +3116,31 @@ ${basePrompt}`;
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed) continue;
-          if (trimmed === 'data: [DONE]') break;
-          if (trimmed.startsWith('data: ')) {
+
+          // Detect Ollama vs OpenAI-compatible SSE
+          const isOllamaChunk = trimmed.startsWith('{') && !trimmed.startsWith('data: ');
+
+          if (isOllamaChunk) {
             try {
-              const json = trimmed.slice(6).trim();
-              const parsed = JSON.parse(json);
-              const token = parsed.choices?.[0]?.delta?.content || '';
+              const parsed = JSON.parse(trimmed);
+              const token = parsed.message?.content || '';
               fullText += token;
 
-              const { thought, html: partialHtml, cleanText: cleanDisplay } = extractThoughtAndHtml(fullText);
-              const combinedDisplay = thought ? `${thought}\n\n${cleanDisplay}`.trim() : cleanDisplay;
+              const thoughtMatch = fullText.match(/<ONI_THOUGHT>([\s\S]*?)(?:<\/ONI_THOUGHT>|$)/);
+              const thought = thoughtMatch ? thoughtMatch[1].trim() : undefined;
 
+              // Update last message in real time
               setMessages(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1] = {
                   id: assistantId,
                   role: 'assistant',
-                  content: combinedDisplay,
+                  content: fullText
+                    .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+                    .replace(/<ONI_CODE>[\s\S]*/g, '')
+                    .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+                    .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
+                    .trim(),
                   thought: thought,
                   rawContent: fullText
                 };
@@ -3091,13 +3148,51 @@ ${basePrompt}`;
               });
 
               // Stream partial code block into files in real-time
-              if (partialHtml) {
-                setGeneratedHtml(sanitizeGeneratedHtml(partialHtml));
-              }
-              if (fullText.includes("<ONI_CODE>") || fullText.includes("```html") || fullText.toLowerCase().includes("<!doctype html") || fullText.toLowerCase().includes("<html")) {
+              const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+              if (partialCodeMatch && partialCodeMatch[1]) {
+                setGeneratedHtml(sanitizeGeneratedHtml(partialCodeMatch[1].trim()));
                 setIsWritingCode(true);
               }
-            } catch { }
+            } catch (e) {}
+          } else {
+            // OpenAI-compatible SSE parsing
+            if (trimmed.startsWith('data: ')) {
+              const json = trimmed.replace('data: ', '').trim();
+              if (json === '[DONE]') break;
+              try {
+                const parsed = JSON.parse(json);
+                const token = parsed.choices?.[0]?.delta?.content || '';
+                fullText += token;
+
+                const thoughtMatch = fullText.match(/<ONI_THOUGHT>([\s\S]*?)(?:<\/ONI_THOUGHT>|$)/);
+                const thought = thoughtMatch ? thoughtMatch[1].trim() : undefined;
+
+                // Update last message in real time
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    id: assistantId,
+                    role: 'assistant',
+                    content: fullText
+                      .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
+                      .replace(/<ONI_CODE>[\s\S]*/g, '')
+                      .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
+                      .replace(/<ONI_THOUGHT>[\s\S]*/g, '')
+                      .trim(),
+                    thought: thought,
+                    rawContent: fullText
+                  };
+                  return updated;
+                });
+
+                // Stream partial code block into files in real-time
+                const partialCodeMatch = fullText.match(/<ONI_CODE>([\s\S]*?)(?:<\/ONI_CODE>|$)/);
+                if (partialCodeMatch && partialCodeMatch[1]) {
+                  setGeneratedHtml(sanitizeGeneratedHtml(partialCodeMatch[1].trim()));
+                  setIsWritingCode(true);
+                }
+              } catch (e) {}
+            }
           }
         }
       }
