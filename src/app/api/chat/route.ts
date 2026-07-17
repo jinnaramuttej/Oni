@@ -1439,10 +1439,9 @@ ${htmlContent}
       const requestBody = target.isOllama
         ? JSON.stringify({
             model: target.model,
-            messages: messagesToSend.map(m => ({ role: m.role, content: m.content })),
+            messages: messagesToSend, // Use normal messages with role/content objects
             stream: true,
-            max_tokens: 16000,             // OpenAI-compat endpoint param
-            options: { num_predict: 16000 }, // Ollama native param (belt-and-suspenders)
+            max_tokens: 16000,
           })
         : JSON.stringify({
             model: target.model,
