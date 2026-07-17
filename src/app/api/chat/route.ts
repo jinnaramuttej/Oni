@@ -1317,13 +1317,13 @@ ${htmlContent}
     }] : []),
     {
       url: "https://api.groq.com/openai/v1/chat/completions",
-      key: process.env.GROQ_API_KEY,
+      key: process.env.GROQ_API_KEY?.trim(),
       model: "llama-3.3-70b-versatile",
       max_tokens: 16000
     },
     {
       url: "https://openrouter.ai/api/v1/chat/completions",
-      key: process.env.OPENROUTER_API_KEY,
+      key: process.env.OPENROUTER_API_KEY?.trim(),
       model: "deepseek/deepseek-chat",
       max_tokens: 16000
     }
@@ -1331,13 +1331,16 @@ ${htmlContent}
 
   let successStream: ReadableStream | null = null;
   let finalUsedModel = "";
+  const errorsList: string[] = [];
 
   for (const target of MODEL_CHAIN) {
     const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
 
     // If key is needed but missing/empty, skip
     if (!target.isOllama && !target.key) {
-      console.warn(`[Pipeline] Skipping ${targetName} because API key is missing.`);
+      const skipMsg = `[Pipeline] Skipping ${targetName} because API key is missing.`;
+      console.warn(skipMsg);
+      errorsList.push(`${targetName}: Skipped (API key is missing)`);
       continue;
     }
 
@@ -1445,12 +1448,14 @@ ${htmlContent}
       finalUsedModel = `${targetName}/${target.model}`;
       break;
     } catch (err: any) {
-      console.warn(`[Pipeline] Failed ${targetName}/${target.model}:`, err.message || err);
+      const errMsg = err.message || err;
+      console.warn(`[Pipeline] Failed ${targetName}/${target.model}:`, errMsg);
+      errorsList.push(`${targetName}/${target.model}: ${errMsg}`);
     }
   }
 
   if (!successStream) {
-    return new NextResponse("All available API pipeline fallback targets failed. Please verify your internet or local connection and settings.", { status: 500 });
+    return new NextResponse(`All available API pipeline fallback targets failed. Please verify your internet or local connection and settings.\n\nDiagnostics:\n${errorsList.join("\n")}`, { status: 500 });
   }
 
   console.log(`Using: ${finalUsedModel}`);
