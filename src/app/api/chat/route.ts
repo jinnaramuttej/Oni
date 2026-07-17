@@ -1318,23 +1318,23 @@ ${htmlContent}
   const MODEL_CHAIN = [
     ...(isLocal ? [{
       name: "ollama",
-      url: process.env.OLLAMA_CHAT_URL || "http://localhost:11434/api/chat",
+      url: "http://localhost:11434/api/chat",
       key: null,
-      model: process.env.OLLAMA_MODEL || "llama3.1",
+      model: "llama3.1",
       max_tokens: 16000,
       isOllama: true
     }] : []),
     {
       name: "groq",
       url: "https://api.groq.com/openai/v1/chat/completions",
-      key: process.env.GROQ_API_KEY?.trim() || null,
+      key: process.env.GROQ_API_KEY,
       model: "llama-3.3-70b-versatile",
       max_tokens: 16000
     },
     {
       name: "openrouter",
       url: "https://openrouter.ai/api/v1/chat/completions",
-      key: process.env.OPENROUTER_API_KEY?.trim() || null,
+      key: process.env.OPENROUTER_API_KEY,
       model: "deepseek/deepseek-chat",
       max_tokens: 16000
     }
@@ -1344,8 +1344,8 @@ ${htmlContent}
   let finalUsedModel = "";
 
   for (const target of MODEL_CHAIN) {
-    // If key is needed but missing, skip
-    if (target.key === null && !target.isOllama) {
+    // If key is needed but missing/empty, skip
+    if (!target.isOllama && !target.key) {
       console.warn(`[Pipeline] Skipping ${target.name} because API key is missing.`);
       continue;
     }
@@ -1357,7 +1357,7 @@ ${htmlContent}
         "Content-Type": "application/json",
       };
 
-      if (target.key) {
+      if (target.key && !target.isOllama) {
         headers["Authorization"] = `Bearer ${target.key}`;
       }
 
