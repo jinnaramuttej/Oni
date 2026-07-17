@@ -4237,9 +4237,14 @@ function ChatPanel({
               <motion.div
                 key={inlineEnhanceStep}
                 custom={questionDir}
-                initial={(dir: number) => ({ opacity: 0, x: dir * 28 })}
-                animate={{ opacity: 1, x: 0 }}
-                exit={(dir: number) => ({ opacity: 0, x: dir * -28 })}
+                variants={{
+                  initial: (dir: number) => ({ opacity: 0, x: dir * 28 }),
+                  animate: { opacity: 1, x: 0 },
+                  exit: (dir: number) => ({ opacity: 0, x: dir * -28 }),
+                }}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 {/* Question header */}
