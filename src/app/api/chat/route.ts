@@ -252,8 +252,10 @@ DESIGN QUALITY BAR:
 STRICT RULES:
   - Single HTML file — ALL CSS in <style>, ALL JS in <script>
   - @import Google Fonts MUST be placed INSIDE the <style> block, as the very first line. Never place @import outside of <style> or raw in the <head>.
-  - NO Tailwind, NO Bootstrap, NO external CSS frameworks
+  - NO Tailwind, NO Bootstrap, NO external CSS frameworks. NEVER use Bootstrap-style utility classes (container, row, column, one_half, one_fourth, btn, btn-primary, etc.) unless you define them yourself in the <style> block. There is no external CSS framework loaded.
   - NO <link rel="stylesheet">, NO <script src="..."> for external files
+  - NEVER use Font Awesome icon classes (fa, fas, far, fab) unless you include the Font Awesome CDN link in <head>. Prefer inline SVG icons or Unicode/emoji symbols instead — simpler and guaranteed to render.
+  - NEVER use source.unsplash.com — this service is discontinued and all URLs return broken images. ONLY use images.unsplash.com with a real photo ID (e.g. https://images.unsplash.com/photo-XXXXXXXXXXXXX?w=800&q=80) or a similar working image CDN.
   - NO markdown code fences inside <ONI_CODE>
   - NO mention of Oni or AI in the output HTML
   - ALWAYS wrap the complete HTML in <ONI_CODE>...</ONI_CODE>
