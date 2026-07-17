@@ -1493,8 +1493,31 @@ ${htmlContent}
                 buffer = lines.pop() || "";
 
                 for (const line of lines) {
-                  const trimmed = line.trim();
+                  let trimmed = line.trim();
                   if (!trimmed) continue;
+                  
+                  // If the stream is already in OpenAI/SSE format (e.g. starting with "data: "), strip the prefix.
+                  if (trimmed.startsWith("data: ")) {
+                    const dataPayload = trimmed.slice(6).trim();
+                    if (dataPayload === "[DONE]") {
+                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                      continue;
+                    }
+                    try {
+                      const parsed = JSON.parse(dataPayload);
+                      const content = parsed.choices?.[0]?.delta?.content || "";
+                      if (content) {
+                        const sseLine = `data: ${JSON.stringify({
+                          choices: [{ delta: { content } }],
+                        })}\n\n`;
+                        controller.enqueue(encoder.encode(sseLine));
+                      }
+                    } catch (e) {
+                      console.error("Error parsing OpenAI-style Ollama line:", e);
+                    }
+                    continue;
+                  }
+
                   try {
                     const parsed = JSON.parse(trimmed);
                     const content = parsed.message?.content || "";
