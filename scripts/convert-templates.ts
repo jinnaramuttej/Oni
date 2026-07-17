@@ -92,8 +92,8 @@ function saveReport() {
 
 function startPreviewServer(cwd: string, port: number): Promise<{ kill: () => void }> {
   return new Promise((resolve, reject) => {
-    // Run npx vite preview --port <port> --host 127.0.0.1
-    const child = spawn("npx", ["vite", "preview", "--port", String(port), "--host", "127.0.0.1"], {
+    // Invoke node directly on the local project vite runner path to bypass ampersand splitting on Windows cmd/npx shell layers.
+    const child = spawn("node", ["node_modules/vite/bin/vite.js", "preview", "--port", String(port), "--host", "127.0.0.1"], {
       cwd,
       shell: true
     });
