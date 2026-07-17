@@ -30,11 +30,11 @@
 | luxury-spa-website-design | **SUCCESS** | footer | - |
 | luxury-spa-website-design (1) | **SUCCESS** | services, contact, footer | - |
 | luxury-spa-website-design (2) | **SUCCESS** | contact, footer | - |
-| Maison Lumière | **PENDING** | - | - |
-| MedCare | **PENDING** | - | - |
-| Meridian | **PENDING** | - | - |
-| Meridian & Co | **PENDING** | - | - |
-| Meridian Health | **PENDING** | - | - |
+| Maison Lumière | **SUCCESS** | services, footer | - |
+| MedCare | **SUCCESS** | navbar, hero, services, cta, contact | - |
+| Meridian | **SUCCESS** | navbar, services | - |
+| Meridian & Co | **SUCCESS** | navbar, services, contact | - |
+| Meridian Health | **SUCCESS** | navbar, testimonials, contact | - |
 | Meridian Real Estate | **PENDING** | - | - |
 | Monolith-A | **PENDING** | - | - |
 | Monolith-B | **PENDING** | - | - |
