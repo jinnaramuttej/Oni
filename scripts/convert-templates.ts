@@ -227,8 +227,8 @@ async function processTemplate(folder: string) {
     if (hasPackageJson) {
       // 1. Build React/Vite project
       console.log(`  Building bundle...`);
-      execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
-      execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
+      execSync(`npm install lucide-react@0.475.0 --force`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
+      execSync(`npm install --force`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
       try {
         execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
       } catch (e) {

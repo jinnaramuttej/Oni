@@ -40,13 +40,13 @@
 | Monolith-B | **SUCCESS** | services, contact, footer | - |
 | Nexus | **SUCCESS** | features, services, footer | - |
 | Nexus 2.0 | **SUCCESS** | hero, contact, footer | - |
-| Northstar | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
-| NOVUM | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
+| Northstar | **SUCCESS** | contact, footer | - |
+| NOVUM | **SUCCESS** | services, contact, footer | - |
 | Orbital | **SUCCESS** | contact, footer | - |
 | premium-gym-website-design | **SUCCESS** | navbar, hero, services, testimonials, contact, footer | - |
-| Pulse | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
-| Sterling | **PENDING** | - | - |
-| stillness | **PENDING** | - | - |
+| Pulse | **FAIL** | - | Command failed: node node_modules/vite/bin/vite.js build |
+| Sterling | **SUCCESS** | navbar, hero, testimonials, cta, contact | - |
+| stillness | **SUCCESS** | testimonials, contact, footer | - |
 | Stillwater | **PENDING** | - | - |
 | Sōl Studio | **PENDING** | - | - |
 | Vanguard-Barbar Shop | **PENDING** | - | - |
