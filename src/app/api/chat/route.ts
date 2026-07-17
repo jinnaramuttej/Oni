@@ -1248,7 +1248,7 @@ Improve the design, make it more premium and modern.`;
       console.log(`[Three-Stage] Stage 1 completed in ${Date.now() - planStartTime}ms`);
 
       const thoughtMatch = planText ? planText.match(/<ONI_THOUGHT>([\s\S]*?)<\/ONI_THOUGHT>/i) : null;
-      const parsedThought = thoughtMatch ? thoughtMatch[0] : `<ONI_THOUGHT>\n${planText || ""}\n</ONI_THOUGHT>`;
+      const parsedThought = thoughtMatch ? (thoughtMatch as RegExpMatchArray)[0] : `<ONI_THOUGHT>\n${planText || ""}\n</ONI_THOUGHT>`;
 
       // ── STAGE 2: CSS Generation Call ─────────────────────────────────────────
       console.log("[Three-Stage] Starting Stage 2: CSS generation...");
