@@ -51,4 +51,4 @@
 | Sōl Studio | **SUCCESS** | contact, footer | - |
 | Vanguard-Barbar Shop | **SUCCESS** | services, testimonials, footer | - |
 | VĀNA | **SUCCESS** | navbar, hero, testimonials, cta, contact | - |
-| ÉLAN | **PENDING** | - | - |
+| ÉLAN | **SUCCESS** | services, contact, footer | - |
