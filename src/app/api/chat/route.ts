@@ -1233,8 +1233,9 @@ Improve the design, make it more premium and modern.`;
       // Get matching template reference for CSS/HTML guidance
       const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
       let templateRef = "";
-      if (matchingTemplate) {
-        templateRef = `\n\n<TEMPLATE_REFERENCE name="${matchingTemplate.name}">\n${getCompactHtml(matchingTemplate.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`;
+      if (matchingTemplate !== null) {
+        const templateVal: { name: string; html: string } = matchingTemplate;
+        templateRef = `\n\n<TEMPLATE_REFERENCE name="${templateVal.name}">\n${getCompactHtml(templateVal.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`;
       }
 
       // ── STAGE 1: Planning Call ───────────────────────────────────────────────
