@@ -113,6 +113,7 @@ const GROQ_MAX_MESSAGE_CHARS = 4000;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5-coder:latest";
 const OLLAMA_CHAT_URL = process.env.OLLAMA_CHAT_URL || "http://127.0.0.1:11434/v1/chat/completions";
 const IS_LOCAL_DEV = process.env.NODE_ENV === "development";
+const USE_THREE_STAGE_PIPELINE = process.env.USE_THREE_STAGE_PIPELINE === "true";
 
 // ── Two-stage pipeline prompts ─────────────────────────────────────────────────
 // Stage 1: Groq writes ONLY the design intent (fast, ~400 tokens, no code)
@@ -1229,64 +1230,42 @@ Improve the design, make it more premium and modern.`;
 
   let threeStageSuccess = false;
   let finalResponse = "";
+  let successStream: ReadableStream | null = null;
+  let finalUsedModel = "";
 
-  // Disabled to comply with Rule 3: Always use real Groq streaming
-  if (false && isBuildIntent && !useFallbackPool && groqKey) {
-    console.log("[Three-Stage] Build request detected. Running 3-stage pipeline...");
+  if (USE_THREE_STAGE_PIPELINE && isBuildIntent && !useFallbackPool) {
+    console.log("[DIAG][3-stage] Build request detected. Running 3-stage pipeline...");
+    const threeStageStart = Date.now();
 
-    // Helper: call API non-streaming with custom fallback targets list
+    // Helper: execute stage using the same MODEL_CHAIN targets
     const executeStage = async (
       messages: any[],
-      maxTokens: number
-    ): Promise<string> => {
-      const isLocalDev = IS_LOCAL_DEV;
-      const groqKey = process.env.GROQ_API_KEY?.trim() || "";
-      const openRouterKey = process.env.OPENROUTER_API_KEY?.trim() || "";
-
-      // List of API targets to try in order
-      const targets = [];
-      if (isLocalDev) {
-        targets.push({
-          name: "Local Ollama",
-          url: OLLAMA_CHAT_URL,
-          key: "",
-          model: OLLAMA_MODEL
-        });
-      } else {
-        if (groqKey) {
-          targets.push({
-            name: "Groq Primary",
-            url: "https://api.groq.com/openai/v1/chat/completions",
-            key: groqKey,
-            model: GROQ_MODEL
-          });
-        }
-        if (openRouterKey) {
-          targets.push({
-            name: "OpenRouter Fallback",
-            url: "https://openrouter.ai/api/v1/chat/completions",
-            key: openRouterKey,
-            model: "nvidia/nemotron-3-ultra-550b-a55b"
-          });
-        }
-      }
-
-      if (targets.length === 0) {
-        throw new Error("No API keys/targets available for 3-stage generation");
-      }
-
-      for (const target of targets) {
-        console.log(`[Three-Stage] Attempting with ${target.name} (${target.model})...`);
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (target.key) headers["Authorization"] = `Bearer ${target.key}`;
-        if (target.url.includes("openrouter.ai")) {
-          headers["HTTP-Referer"] = "https://oni.build";
-          headers["X-Title"] = "Oni Website Builder";
+      maxTokens: number,
+      stageName: string
+    ): Promise<{ text: string; modelUsed: string }> => {
+      const errorsList: string[] = [];
+      
+      // Filter out skipped targets (like Groq when prompt is too large)
+      for (const target of MODEL_CHAIN) {
+        const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
+        if (!target.isOllama && !target.key) {
+          continue;
         }
 
+        console.log(`[DIAG][3-stage] Stage: "${stageName}" — Trying target: ${targetName}/${target.model} (timeout: ${target.timeoutMs}ms)`);
+        
         try {
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (target.key && !target.isOllama) {
+            headers["Authorization"] = `Bearer ${target.key}`;
+          }
+          if (target.url.includes("openrouter.ai")) {
+            headers["HTTP-Referer"] = "https://oni.build";
+            headers["X-Title"] = "Oni Website Builder";
+          }
+
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout per attempt
+          const timeoutId = setTimeout(() => controller.abort(), target.timeoutMs);
 
           const res = await fetch(target.url, {
             method: "POST",
@@ -1294,7 +1273,7 @@ Improve the design, make it more premium and modern.`;
             body: JSON.stringify({
               model: target.model,
               messages,
-              stream: false,
+              stream: true, // Use streaming internally to parse tokens in real time or read complete content
               max_tokens: maxTokens,
               temperature: 0.7
             }),
@@ -1303,23 +1282,64 @@ Improve the design, make it more premium and modern.`;
           clearTimeout(timeoutId);
 
           if (!res.ok) {
-            console.warn(`[Three-Stage] ${target.name} failed with status: ${res.status}`);
-            continue;
+            const errTxt = await res.text().catch(() => "");
+            throw new Error(`Status ${res.status}: ${errTxt}`);
           }
 
-          const data = await res.json();
-          const text = data?.choices?.[0]?.message?.content?.trim();
-          if (text) {
-            console.log(`[Three-Stage] ${target.name} succeeded.`);
-            return text;
+          if (!res.body) {
+            throw new Error("Response body is null");
+          }
+
+          // Consume stream and collect full text
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let accumulatedText = "";
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+
+              if (target.isOllama && !trimmed.startsWith("data: ")) {
+                try {
+                  const parsed = JSON.parse(trimmed);
+                  const content = parsed.message?.content || "";
+                  if (content) accumulatedText += content;
+                } catch { /* skip */ }
+              } else if (trimmed.startsWith("data: ")) {
+                const dataPayload = trimmed.slice(6).trim();
+                if (dataPayload === "[DONE]") continue;
+                try {
+                  const parsed = JSON.parse(dataPayload);
+                  const content = parsed.choices?.[0]?.delta?.content || "";
+                  if (content) accumulatedText += content;
+                } catch { /* skip */ }
+              }
+            }
+          }
+
+          const cleanedText = accumulatedText.trim();
+          if (cleanedText) {
+            console.log(`[DIAG][3-stage] Stage: "${stageName}" ✅ SUCCESS using ${targetName}/${target.model} (${cleanedText.length} chars)`);
+            return { text: cleanedText, modelUsed: `${targetName}/${target.model}` };
+          } else {
+            throw new Error("Empty text returned from stream collection");
           }
         } catch (err: any) {
-          console.warn(`[Three-Stage] ${target.name} exception:`, err.message);
+          console.warn(`[DIAG][3-stage] Stage: "${stageName}" ❌ FAILED target ${targetName}/${target.model}:`, err.message);
+          errorsList.push(`${targetName}/${target.model}: ${err.message}`);
         }
       }
 
-      throw new Error("All targets failed for this stage");
-    }
+      throw new Error(`All fallback targets failed for stage "${stageName}". Errors: ${errorsList.join("; ")}`);
+    };
 
     try {
       const brandContextStr = buildFullBrandContext(brandAnswers);
@@ -1334,43 +1354,38 @@ Improve the design, make it more premium and modern.`;
       }
 
       // ── STAGE 1: Planning Call ───────────────────────────────────────────────
-      console.log("[Three-Stage] Starting Stage 1: Planning...");
-      const planStartTime = Date.now();
-      const planText = await executeStage([
+      const stage1Result = await executeStage([
         { role: "system", content: ONI_PLANNING_PROMPT },
         { role: "user", content: userMessageContent }
-      ], 500);
-      console.log(`[Three-Stage] Stage 1 completed in ${Date.now() - planStartTime}ms`);
+      ], 500, "Stage 1 — Planning");
 
+      const planText = stage1Result.text;
       const thoughtMatch = planText ? planText.match(/<ONI_THOUGHT>([\s\S]*?)<\/ONI_THOUGHT>/i) : null;
-      const parsedThought = thoughtMatch ? (thoughtMatch as RegExpMatchArray)[0] : `<ONI_THOUGHT>\n${planText || ""}\n</ONI_THOUGHT>`;
+      const parsedThought = thoughtMatch ? thoughtMatch[0] : `<ONI_THOUGHT>\n${planText || ""}\n</ONI_THOUGHT>`;
 
       // ── STAGE 2: CSS Generation Call ─────────────────────────────────────────
-      console.log("[Three-Stage] Starting Stage 2: CSS generation...");
-      const cssStartTime = Date.now();
-      const rawCss = await executeStage([
+      const stage2Result = await executeStage([
         { role: "system", content: ONI_CSS_PROMPT + templateRef },
         { role: "user", content: `DESIGN PLAN:\n${parsedThought}\n\nUSER REQUEST: ${lastUserMsgText}\n\nWrite the complete CSS stylesheet now. Start with @import. Output raw CSS only. Do NOT write any conversational text, explanations, or thought process. Start immediately with the first CSS selector or @import.` }
-      ], 8000);
-      console.log(`[Three-Stage] Stage 2 completed in ${Date.now() - cssStartTime}ms`);
+      ], 8000, "Stage 2 — CSS Style Sheet");
+
+      const rawCss = stage2Result.text;
 
       // ── STAGE 3: HTML+JS Generation Call ─────────────────────────────────────
-      console.log("[Three-Stage] Starting Stage 3: HTML+JS generation...");
-      const htmlStartTime = Date.now();
-      const rawHtmlJs = await executeStage([
+      const stage3Result = await executeStage([
         { role: "system", content: ONI_HTML_BODY_PROMPT + templateRef },
         {
           role: "user",
           content: `DESIGN PLAN:\n${parsedThought}\n\nUSER REQUEST: ${lastUserMsgText}\n\nCSS CLASSES ALREADY DEFINED (use EXACTLY these class names):\n${rawCss.slice(0, 4000)}\n\nNow write the complete <body>...</body> with all 7 sections and the inline <script>. Start with <body>. Do NOT write any conversational text, explanations, or thought process. Start immediately with the <body> tag.`,
         }
-      ], 8000);
-      console.log(`[Three-Stage] Stage 3 completed in ${Date.now() - htmlStartTime}ms`);
+      ], 8000, "Stage 3 — HTML Body + Script");
+
+      const rawHtmlJs = stage3Result.text;
 
       // ── FINAL ASSEMBLY ───────────────────────────────────────────────────────
       const { fontLinks, cleanedCss } = extractFontLinks(rawCss);
       let htmlContent = rawHtmlJs.replace(/^```[\w]*\n?/gm, "").replace(/^```$/gm, "").trim();
 
-      // Ensure htmlContent starts with <body> tag, link styles and scripts inline
       const assembledHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -1386,17 +1401,28 @@ ${htmlContent}
 
       finalResponse = `${planText}\n\n<ONI_CODE>\n${assembledHtml}\n</ONI_CODE>`;
       threeStageSuccess = true;
-      console.log("[Three-Stage] Assembly successfully completed.");
-    } catch (err: any) {
-      console.warn("[Three-Stage] 3-stage pipeline failed or timed out. Falling back to single-shot flow:", err.message);
-    }
-  }
+      
+      const totalDuration = Date.now() - threeStageStart;
+      console.log(`[DIAG][3-stage] ✅ Pipeline successfully finished. Total Merge Time: ${totalDuration}ms`);
+      console.log(`[DIAG][3-stage] Output Lengths: Plan=${planText.length} chars, CSS=${rawCss.length} chars, HTML/JS=${rawHtmlJs.length} chars. Total Assembled HTML=${assembledHtml.length} chars.`);
 
-  if (threeStageSuccess) {
-    if (visitorId && creditCost > 0 && !body?.customApiKey) {
-      void deductCredits(visitorId, creditCost);
+      // Setup successStream as a stream of the fully assembled response to pass it to the validator block
+      const encoder = new TextEncoder();
+      successStream = new ReadableStream({
+        start(controller) {
+          // Stream the assembled response chunk-by-chunk to emulate LLM stream
+          const sseLine = `data: ${JSON.stringify({
+            choices: [{ delta: { content: finalResponse } }],
+          })}\n\n`;
+          controller.enqueue(encoder.encode(sseLine));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        }
+      });
+      finalUsedModel = `3-stage-pipeline (${stage1Result.modelUsed} -> ${stage2Result.modelUsed} -> ${stage3Result.modelUsed})`;
+    } catch (err: any) {
+      console.warn("[DIAG][3-stage] ❌ 3-stage pipeline failed or timed out. Falling back to single-shot flow:", err.message);
     }
-    return streamTextAsSse(finalResponse);
   }
 
 
@@ -1438,8 +1464,6 @@ ${htmlContent}
     }
   ];
 
-  let successStream: ReadableStream | null = null;
-  let finalUsedModel = "";
   const errorsList: string[] = [];
 
   for (const target of MODEL_CHAIN) {
