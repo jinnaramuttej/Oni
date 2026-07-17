@@ -51,7 +51,7 @@ import {
 
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
 import { TEMPLATE_KEYWORDS, TEMPLATE_PROMPTS } from "@/lib/template-prompts";
 
@@ -3837,11 +3837,28 @@ function ChatPanel({
   onInlineNext,
 }: ChatPanelProps) {
   const [cardInputValue, setCardInputValue] = useState("");
+  const [questionDir, setQuestionDir] = useState<1 | -1>(1); // 1 = forward, -1 = backward
 
   // Clear card input when current question step changes
   useEffect(() => {
     setCardInputValue("");
   }, [inlineEnhanceStep, inlineEnhanceActive]);
+
+  // Direction-aware wrappers so animation plays before step changes
+  const handleOptionSelectWithAnim = useCallback((opt: string) => {
+    setQuestionDir(1);
+    onInlineOptionSelect(opt);
+  }, [onInlineOptionSelect]);
+
+  const handleNextWithAnim = useCallback((val?: string) => {
+    setQuestionDir(1);
+    onInlineNext(val);
+  }, [onInlineNext]);
+
+  const handleSkipWithAnim = useCallback(() => {
+    setQuestionDir(1);
+    onInlineSkip();
+  }, [onInlineSkip]);
 
   const getSuggestionsForField = (field: string, industry: string): string[] => {
     if (field === 'businessName') {
@@ -4026,29 +4043,39 @@ function ChatPanel({
         {/* Intake questions popup card — floats above the composer */}
         {inlineEnhanceActive && (
           <div className={cn("mb-3 overflow-hidden rounded-2xl bg-[#1c1c1f] text-white shadow-2xl shadow-black/80 border border-zinc-800/60", !hasWebsite && "max-w-3xl mx-auto")}>
-            {/* Question header */}
-            <div className="flex items-start justify-between px-5 pt-5 pb-3">
-              <h3 className="text-[15px] font-semibold text-white leading-snug flex-1 pr-4">
-                {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.question || QUESTIONS.general[inlineEnhanceStep]?.question}
-              </h3>
-              <button
-                type="button"
-                onClick={onInlineSkip}
-                className="flex shrink-0 h-6 w-6 items-center justify-center rounded-full text-zinc-500 hover:text-white transition-colors mt-0.5"
-                aria-label="Dismiss"
+            {/* Animated question content */}
+            <AnimatePresence mode="wait" custom={questionDir}>
+              <motion.div
+                key={inlineEnhanceStep}
+                custom={questionDir}
+                initial={(dir: number) => ({ opacity: 0, x: dir * 28 })}
+                animate={{ opacity: 1, x: 0 }}
+                exit={(dir: number) => ({ opacity: 0, x: dir * -28 })}
+                transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
+                {/* Question header */}
+                <div className="flex items-start justify-between px-5 pt-5 pb-3">
+                  <h3 className="text-[15px] font-semibold text-white leading-snug flex-1 pr-4">
+                    {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.question || QUESTIONS.general[inlineEnhanceStep]?.question}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleSkipWithAnim}
+                    className="flex shrink-0 h-6 w-6 items-center justify-center rounded-full text-zinc-500 hover:text-white transition-colors mt-0.5"
+                    aria-label="Dismiss"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
-            {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options ? (
-              /* ─── OPTIONS MODE ─── */
-              <div>
+                {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options ? (
+                  /* ─── OPTIONS MODE ─── */
+                  <div>
                 {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
                   <button
                     key={opt}
                     type="button"
-                    onClick={() => onInlineOptionSelect(opt)}
+                    onClick={() => handleOptionSelectWithAnim(opt)}
                     className="group flex w-full items-center gap-4 border-t border-zinc-800/50 bg-transparent hover:bg-white/[0.04] px-5 py-3.5 text-left transition-colors cursor-pointer"
                   >
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-zinc-800 text-[11px] font-semibold text-zinc-400 group-hover:text-zinc-200 transition-colors select-none">
@@ -4073,15 +4100,15 @@ function ChatPanel({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (cardInputValue.trim()) onInlineOptionSelect(cardInputValue.trim());
-                        else onInlineSkip();
+                        if (cardInputValue.trim()) handleOptionSelectWithAnim(cardInputValue.trim());
+                        else handleSkipWithAnim();
                       }
                     }}
                   />
                   {cardInputValue.trim() ? (
                     <button
                       type="button"
-                      onClick={() => onInlineOptionSelect(cardInputValue.trim())}
+                      onClick={() => handleOptionSelectWithAnim(cardInputValue.trim())}
                       className="shrink-0 rounded-lg bg-zinc-700 hover:bg-zinc-600 px-3.5 py-1.5 text-[12px] font-semibold text-white transition-all"
                     >
                       Select
@@ -4089,7 +4116,7 @@ function ChatPanel({
                   ) : (
                     <button
                       type="button"
-                      onClick={onInlineSkip}
+                      onClick={handleSkipWithAnim}
                       className="shrink-0 rounded-lg bg-zinc-800 hover:bg-zinc-700 px-3.5 py-1.5 text-[12px] font-semibold text-zinc-300 hover:text-white transition-all"
                     >
                       Skip
@@ -4127,7 +4154,7 @@ function ChatPanel({
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       if (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional) {
-                        onInlineNext(cardInputValue);
+                        handleNextWithAnim(cardInputValue);
                       }
                     }
                   }}
@@ -4155,14 +4182,14 @@ function ChatPanel({
                 <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
-                    onClick={onInlineSkip}
+                    onClick={handleSkipWithAnim}
                     className="rounded-xl border border-zinc-800 px-4 py-2 text-[12px] font-medium text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer"
                   >
                     Skip
                   </button>
                   <button
                     type="button"
-                    onClick={() => onInlineNext(cardInputValue)}
+                    onClick={() => handleNextWithAnim(cardInputValue)}
                     disabled={!cardInputValue.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
                     className={cn(
                       "rounded-xl px-4 py-2 text-[12px] font-medium transition-all cursor-pointer",
@@ -4178,8 +4205,11 @@ function ChatPanel({
                 </div>
               </div>
             )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         )}
+
 
         <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           <ChatComposer
