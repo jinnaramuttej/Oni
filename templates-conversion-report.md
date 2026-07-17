@@ -11,18 +11,18 @@
 | Ashcroft & Vale | **SUCCESS** | navbar, contact, footer | - |
 | Atelier Lumière | **SUCCESS** | navbar, hero, features, services, testimonials, contact, footer | - |
 | Aura Academy | **SUCCESS** | footer | - |
-| AURELIA | **FAIL** | - | page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4927/
+| AURELIA | **FAIL** | - | page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4901/
 Call log:
-[2m  - navigating to "http://127.0.0.1:4927/", waiting until "networkidle"[22m
+[2m  - navigating to "http://127.0.0.1:4901/", waiting until "networkidle"[22m
  |
 | Aurelia-Spa | **SUCCESS** | footer | - |
 | ClarityHealth | **FAIL** | - | page.goto: Timeout 30000ms exceeded.
 Call log:
-[2m  - navigating to "http://127.0.0.1:4987/", waiting until "networkidle"[22m
+[2m  - navigating to "http://127.0.0.1:4901/", waiting until "networkidle"[22m
  |
 | Crumb & Crust | **SUCCESS** | services, footer | - |
-| Elevare | **PENDING** | - | - |
-| ELEVATION | **PENDING** | - | - |
+| Elevare | **SUCCESS** | services, footer | - |
+| ELEVATION | **SUCCESS** | contact, footer | - |
 | Elliot Blake | **PENDING** | - | - |
 | FlameSlice | **PENDING** | - | - |
 | FORGE | **PENDING** | - | - |

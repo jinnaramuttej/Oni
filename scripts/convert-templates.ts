@@ -93,7 +93,7 @@ function saveReport() {
 function startPreviewServer(cwd: string, port: number): Promise<{ kill: () => void }> {
   return new Promise((resolve, reject) => {
     // Invoke node directly on the local project vite runner path to bypass ampersand splitting on Windows cmd/npx shell layers.
-    const child = spawn("node", ["node_modules/vite/bin/vite.js", "preview", "--port", String(port), "--host", "127.0.0.1"], {
+    const child = spawn("node", ["node_modules/vite/bin/vite.js", "preview", "--port", String(port), "--host", "localhost"], {
       cwd,
       shell: true
     });
@@ -242,9 +242,9 @@ async function processTemplate(folder: string) {
     if (hasPackageJson) {
       server = await startPreviewServer(folderPath, port);
     } else {
-      // Static server preview fallback (using npx serve folderPath -p port)
+      // Static server preview fallback (using npx serve folderPath --listen port)
       console.log(`  Serving static site on port ${port}...`);
-      const child = spawn("npx", ["serve", folderPath, "-p", String(port)], { shell: true });
+      const child = spawn("npx", ["serve", folderPath, "--listen", String(port)], { shell: true });
       server = {
         kill: () => {
           child.kill();
@@ -257,7 +257,7 @@ async function processTemplate(folder: string) {
     // 3. Launch headless Playwright Chromium and extract rendered DOM
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(`http://localhost:${port}`, { waitUntil: "networkidle", timeout: 30000 });
     
     // Quick wait for animations/mounting to settle down
     await page.waitForTimeout(2000);
