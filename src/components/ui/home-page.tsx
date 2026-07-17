@@ -439,24 +439,7 @@ export function HomePage() {
                       <path d="M2 12h4l2-9 4 18 2-9h6"></path>
                     </svg>
                   </button>
-                  {(() => {
-                    const buildKeywords = ["make", "build", "create", "design", "generate"];
-                    const siteKeywords = ["website", "site", "page", "landing"];
-                    const lowerValue = promptText.toLowerCase();
-                    const hasBuildKeyword = buildKeywords.some(kw => lowerValue.includes(kw));
-                    const hasSiteKeyword = siteKeywords.some(kw => lowerValue.includes(kw));
-                    const isBuildRequest = hasBuildKeyword && hasSiteKeyword;
 
-                    return isBuildRequest ? (
-                      <button
-                        type="button"
-                        onClick={handleEnhancePrompt}
-                        className="enhance-btn mr-1.5"
-                      >
-                        ✦ Enhance
-                      </button>
-                    ) : null;
-                  })()}
                   <button
                     onClick={handleSend}
                     disabled={!promptText.trim() && !attachedImage && attachedFiles.length === 0}

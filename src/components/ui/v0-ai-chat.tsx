@@ -1632,6 +1632,11 @@ export function OniChat({
 }) {
   const [input, setInput] = useState("");
   const [enhanceOpen, setEnhanceOpen] = useState(false);
+  const [inlineEnhanceActive, setInlineEnhanceActive] = useState(false);
+  const [inlineEnhanceStep, setInlineEnhanceStep] = useState(0);
+  const [inlineEnhanceAnswers, setInlineEnhanceAnswers] = useState<Record<string, string>>({});
+  const [inlineEnhancePrompt, setInlineEnhancePrompt] = useState("");
+  const [inlineEnhanceIndustry, setInlineEnhanceIndustry] = useState("general");
   // Restore messages and conversationId from sessionStorage or localStorage so refresh/navigation stays in same chat
   const [conversationId, setConversationId] = useState<string>(() => {
     if (chatId) {
@@ -2449,9 +2454,82 @@ export function OniChat({
     );
   }, [brandContext, setMessages, setInput, handleSendToAIRef]);
 
+  const handleInlineOptionSelect = useCallback((optVal: string) => {
+    const questions = QUESTIONS[inlineEnhanceIndustry] || QUESTIONS.general;
+    const currentQ = questions[inlineEnhanceStep];
+    const newAnswers = { ...inlineEnhanceAnswers, [currentQ.field]: optVal };
+    setInlineEnhanceAnswers(newAnswers);
+    setInput('');
+
+    if (inlineEnhanceStep + 1 >= questions.length) {
+      const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
+      setInlineEnhanceActive(false);
+      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
+      void handleSendToAIRef.current(enhanced, null, []);
+    } else {
+      setInlineEnhanceStep(prev => prev + 1);
+    }
+  }, [inlineEnhanceStep, inlineEnhanceIndustry, inlineEnhanceAnswers, inlineEnhancePrompt, setInput]);
+
+  const handleInlineNext = useCallback(() => {
+    const questions = QUESTIONS[inlineEnhanceIndustry] || QUESTIONS.general;
+    const currentQ = questions[inlineEnhanceStep];
+    const newAnswers = { ...inlineEnhanceAnswers, [currentQ.field]: input };
+    setInlineEnhanceAnswers(newAnswers);
+    setInput('');
+
+    if (inlineEnhanceStep + 1 >= questions.length) {
+      const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
+      setInlineEnhanceActive(false);
+      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
+      void handleSendToAIRef.current(enhanced, null, []);
+    } else {
+      setInlineEnhanceStep(prev => prev + 1);
+    }
+  }, [inlineEnhanceStep, inlineEnhanceIndustry, inlineEnhanceAnswers, inlineEnhancePrompt, input, setInput]);
+
+  const handleInlineSkip = useCallback(() => {
+    const questions = QUESTIONS[inlineEnhanceIndustry] || QUESTIONS.general;
+    const currentQ = questions[inlineEnhanceStep];
+    const newAnswers = { ...inlineEnhanceAnswers, [currentQ.field]: '' };
+    setInlineEnhanceAnswers(newAnswers);
+    setInput('');
+
+    if (inlineEnhanceStep + 1 >= questions.length) {
+      const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
+      setInlineEnhanceActive(false);
+      setMessages(prev => [...prev, { id: createId(), role: 'assistant', content: `Building your website now...` }]);
+      void handleSendToAIRef.current(enhanced, null, []);
+    } else {
+      setInlineEnhanceStep(prev => prev + 1);
+    }
+  }, [inlineEnhanceStep, inlineEnhanceIndustry, inlineEnhanceAnswers, inlineEnhancePrompt, setInput]);
+
   const handleSend = useCallback(async (overrideText?: string) => {
     const prompt = (overrideText ?? input).trim();
     if ((!prompt && !attachedImage && attachedFiles.length === 0) || generating || isLoading) return;
+
+    if (inlineEnhanceActive) {
+      handleInlineNext();
+      return;
+    }
+
+    // Intercept fresh build requests to trigger inline intake questions flow
+    if (!generatedHtml && isFreshBuildRequest(prompt)) {
+      const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
+      setMessages(prev => [...prev, userMsg]);
+      setInput('');
+      adjustHeight(true);
+      if (!hasStarted) setHasStarted(true);
+      
+      const industry = detectIndustryForEnhance(prompt);
+      setInlineEnhancePrompt(prompt);
+      setInlineEnhanceIndustry(industry);
+      setInlineEnhanceAnswers({});
+      setInlineEnhanceStep(0);
+      setInlineEnhanceActive(true);
+      return;
+    }
 
     // ── Brand Intake: handle answer to current question ────────────────────────
     if (brandContext.isCollecting) {
@@ -3575,6 +3653,14 @@ ${basePrompt}`;
             brandContext={brandContext}
             onAnswerLogo={onAnswerLogo}
             onEnhanceClick={() => setEnhanceOpen(true)}
+            inlineEnhanceActive={inlineEnhanceActive}
+            inlineEnhanceStep={inlineEnhanceStep}
+            inlineEnhanceAnswers={inlineEnhanceAnswers}
+            inlineEnhancePrompt={inlineEnhancePrompt}
+            inlineEnhanceIndustry={inlineEnhanceIndustry}
+            onInlineOptionSelect={handleInlineOptionSelect}
+            onInlineSkip={handleInlineSkip}
+            onInlineNext={handleInlineNext}
           />
         </section>
 
@@ -3690,6 +3776,14 @@ interface ChatPanelProps {
   brandContext: BrandContext;
   onAnswerLogo: (base64?: string) => Promise<void>;
   onEnhanceClick?: () => void;
+  inlineEnhanceActive: boolean;
+  inlineEnhanceStep: number;
+  inlineEnhanceAnswers: Record<string, string>;
+  inlineEnhancePrompt: string;
+  inlineEnhanceIndustry: string;
+  onInlineOptionSelect: (optVal: string) => void;
+  onInlineSkip: () => void;
+  onInlineNext: () => void;
 }
 
 function ChatPanel({
@@ -3735,6 +3829,14 @@ function ChatPanel({
   brandContext,
   onAnswerLogo,
   onEnhanceClick,
+  inlineEnhanceActive,
+  inlineEnhanceStep,
+  inlineEnhanceAnswers,
+  inlineEnhancePrompt,
+  inlineEnhanceIndustry,
+  onInlineOptionSelect,
+  onInlineSkip,
+  onInlineNext,
 }: ChatPanelProps) {
   return (
     <>
@@ -3880,9 +3982,86 @@ function ChatPanel({
         </div>
       </div>
 
+      {inlineEnhanceActive && (
+        <div className="mx-5 mb-3 rounded-2xl border border-zinc-800 bg-[#121214] p-5 text-sm text-white shadow-2xl shadow-black/40">
+          <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-zinc-400">
+                Question {inlineEnhanceStep + 1} of {QUESTIONS[inlineEnhanceIndustry]?.length || QUESTIONS.general.length}
+              </span>
+              <span className="text-[10px] rounded-full bg-zinc-850 border border-zinc-800 px-2.5 py-0.5 text-zinc-400 uppercase font-medium tracking-wider">
+                {inlineEnhanceIndustry}
+              </span>
+            </div>
+            <button 
+              type="button" 
+              onClick={onInlineSkip} 
+              className="text-zinc-500 hover:text-white transition-colors text-lg font-medium p-1 leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-zinc-100 leading-relaxed">
+              {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.question || QUESTIONS.general[inlineEnhanceStep]?.question}
+            </h3>
+
+            {/* Options list */}
+            {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options && (
+              <div className="flex flex-col gap-2">
+                {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => onInlineOptionSelect(opt)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-850 px-4 py-3 text-left transition-all hover:border-zinc-700 active:scale-[0.98] cursor-pointer"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-[10px] font-bold text-zinc-400">
+                      {idx + 1}
+                    </span>
+                    <span className="text-zinc-200 text-xs font-medium">{opt}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={onInlineSkip}
+                className="rounded-xl border border-zinc-850 bg-zinc-900/40 hover:bg-zinc-850 px-4 py-2 text-xs font-bold text-zinc-400 hover:text-white transition-all cursor-pointer"
+              >
+                Skip
+              </button>
+              
+              {!QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options && (
+                <button
+                  type="button"
+                  onClick={onInlineNext}
+                  disabled={!value.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer",
+                    (value.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional)
+                      ? "bg-white text-black hover:bg-zinc-200"
+                      : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  )}
+                >
+                  {inlineEnhanceStep + 1 >= (QUESTIONS[inlineEnhanceIndustry]?.length || QUESTIONS.general.length)
+                    ? "Build Website →"
+                    : "Next →"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="shrink-0 bg-surface px-5 pb-5 pt-2">
         <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           <ChatComposer
+            inlineEnhanceActive={inlineEnhanceActive}
             value={value}
             attachedImage={attachedImage}
             attachedFiles={attachedFiles}
@@ -4448,6 +4627,7 @@ type ChatComposerProps = {
   onRemoveImage: () => void;
   hasWebsite?: boolean;
   onEnhanceClick?: () => void;
+  inlineEnhanceActive?: boolean;
 };
 
 function ChatComposer({
@@ -4478,6 +4658,7 @@ function ChatComposer({
   onRemoveImage,
   hasWebsite,
   onEnhanceClick,
+  inlineEnhanceActive,
 }: ChatComposerProps) {
   const canSend = Boolean(value.trim() || attachedImage || attachedFiles.length > 0) && !isGenerating;
 
@@ -4575,30 +4756,13 @@ function ChatComposer({
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
-          placeholder="Write a message..."
+          placeholder={inlineEnhanceActive ? "Or reply directly..." : "Write a message..."}
           className="min-h-[36px] flex-1 resize-none border-none bg-transparent px-0 py-1.5 text-sm leading-6 text-primary placeholder:text-text-tertiary focus:ring-0 focus:outline-none"
           style={{ overflow: "hidden" }}
         />
 
         <div className="flex items-center gap-2 shrink-0 pb-1">
-          {(() => {
-            const buildKeywords = ["make", "build", "create", "design", "generate"];
-            const siteKeywords = ["website", "site", "page", "landing"];
-            const lowerValue = value.toLowerCase();
-            const hasBuildKeyword = buildKeywords.some(kw => lowerValue.includes(kw));
-            const hasSiteKeyword = siteKeywords.some(kw => lowerValue.includes(kw));
-            const isBuildRequest = hasBuildKeyword && hasSiteKeyword;
 
-            return isBuildRequest && !hasWebsite ? (
-              <button
-                type="button"
-                onClick={onEnhanceClick}
-                className="enhance-btn"
-              >
-                ✦ Enhance
-              </button>
-            ) : null;
-          })()}
           <div className="flex flex-col items-center gap-1.5 shrink-0">
           <button
             type="button"
