@@ -7,10 +7,10 @@
 | Alex Morgan | **SUCCESS** | hero, services, contact, footer | - |
 | Amritham | **SUCCESS** | services, contact, footer | - |
 | Apex.Academy | **FAIL** | - | Command failed: npm install && npm run build |
-| Ascend&Associates | **PENDING** | - | - |
-| Ashcroft & Vale | **PENDING** | - | - |
-| Atelier Lumière | **PENDING** | - | - |
-| Aura Academy | **PENDING** | - | - |
+| Ascend&Associates | **FAIL** | - | Command failed: npm install && npm run build |
+| Ashcroft & Vale | **FAIL** | - | Command failed: npm install && npm run build |
+| Atelier Lumière | **SUCCESS** | navbar, hero, features, services, testimonials, contact, footer | - |
+| Aura Academy | **SUCCESS** | footer | - |
 | AURELIA | **PENDING** | - | - |
 | Aurelia-Spa | **PENDING** | - | - |
 | ClarityHealth | **PENDING** | - | - |

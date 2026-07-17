@@ -204,7 +204,7 @@ async function processTemplate(folder: string) {
   try {
     // 1. Build
     console.log(`  Building bundle...`);
-    execSync(`npm install && npm run build`, {
+    execSync(`npm install lucide-react@0.475.0 && npm install && npm run build`, {
       cwd: folderPath,
       stdio: "ignore",
       timeout: 120000
