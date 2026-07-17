@@ -25,11 +25,11 @@
 | Lumina2.0 | **SUCCESS** | navbar, contact | - |
 | LuminaDental | **SUCCESS** | navbar, cta, contact | - |
 | LUMIÈRE | **SUCCESS** | navbar, services, testimonials, contact, footer | - |
-| LUMIÈRE Studio | **PENDING** | - | - |
-| luxury-salon-website-design | **PENDING** | - | - |
-| luxury-spa-website-design | **PENDING** | - | - |
-| luxury-spa-website-design (1) | **PENDING** | - | - |
-| luxury-spa-website-design (2) | **PENDING** | - | - |
+| LUMIÈRE Studio | **SUCCESS** | services, contact, footer | - |
+| luxury-salon-website-design | **SUCCESS** | navbar, services, testimonials, contact, footer | - |
+| luxury-spa-website-design | **SUCCESS** | footer | - |
+| luxury-spa-website-design (1) | **SUCCESS** | services, contact, footer | - |
+| luxury-spa-website-design (2) | **SUCCESS** | contact, footer | - |
 | Maison Lumière | **PENDING** | - | - |
 | MedCare | **PENDING** | - | - |
 | Meridian | **PENDING** | - | - |
