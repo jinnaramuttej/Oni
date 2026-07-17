@@ -2452,7 +2452,7 @@ export function OniChat({
   }, [adjustHeight, input, isListening, showToast]);
 
   // Ref so handleSend can always call the latest handleSendToAI without a TDZ issue
-  const handleSendToAIRef = useRef<(prompt: string, image: ImageAttachment | null | undefined, files: FileAttachment[]) => Promise<void>>(async () => {});
+  const handleSendToAIRef = useRef<(prompt: string, image: ImageAttachment | null | undefined, files: FileAttachment[], silent?: boolean) => Promise<void>>(async () => {});
 
   const onAnswerLogo = useCallback(async (base64?: string) => {
     if (!brandContext.isCollecting) return;
