@@ -1495,18 +1495,31 @@ const TONE_MAP: Record<string, string> = {
 
 function detectIndustry(prompt: string): BrandIndustry {
   const p = prompt.toLowerCase();
-  if (/fine dining|luxury restaurant|michelin/.test(p)) return 'fine_dining';
-  if (/south indian|andhra|telangana|tamil|kerala|karnataka|dosa|idli/.test(p)) return 'south_indian';
-  if (/pizza|burger|fast food|wrap|pasta|delivery/.test(p)) return 'pizza_fast_food';
-  if (/coffee|cafe|bakery café|brunch|barista|espresso/.test(p)) return 'cafe_coffee';
-  if (/bakery|dessert|cake|pastry|cookie|sweet/.test(p)) return 'bakery_desserts';
-  if (/hair salon|salon|haircut|stylist|colorist/.test(p)) return 'hair_salon';
-  if (/barber|barbershop|grooming|beard/.test(p)) return 'barbershop';
-  if (/yoga|meditation|studio|pilates/.test(p)) return 'yoga_meditation';
-  if (/gym|fitness|crossfit|workout|weight/.test(p)) return 'gym_fitness';
+  
+  if (/fine dining|luxury restaurant|michelin|restaurant|bistro|dining|food|dhaba|eats/.test(p)) {
+    if (/south indian|andhra|telangana|tamil|kerala|karnataka|dosa|idli/.test(p)) return 'south_indian';
+    if (/pizza|burger|fast food|wrap|pasta|delivery/.test(p)) return 'pizza_fast_food';
+    if (/coffee|cafe|bakery café|brunch|barista|espresso/.test(p)) return 'cafe_coffee';
+    if (/bakery|dessert|cake|pastry|cookie|sweet/.test(p)) return 'bakery_desserts';
+    return 'fine_dining';
+  }
+  
+  if (/salon|hair|stylist|colorist|grooming|barber|beard/.test(p)) {
+    if (/barber|barbershop/.test(p)) return 'barbershop';
+    return 'hair_salon';
+  }
+
+  if (/medical|clinic|doctor|physician|pediatric|derma|dental|dentist|teeth|ortho/.test(p)) {
+    if (/dental|dentist|teeth|ortho/.test(p)) return 'dental_practice';
+    return 'medical_clinic';
+  }
+
+  if (/gym|fitness|crossfit|workout|weight|yoga|meditation|studio|pilates/.test(p)) {
+    if (/yoga|meditation/.test(p)) return 'yoga_meditation';
+    return 'gym_fitness';
+  }
+
   if (/spa|wellness|massage|treatment/.test(p)) return 'spa_wellness';
-  if (/medical|clinic|doctor|physician|pediatric|derma/.test(p)) return 'medical_clinic';
-  if (/dental|dentist|teeth|ortho/.test(p)) return 'dental_practice';
   if (/law|legal|attorney|firm|lawyer/.test(p)) return 'law_firm';
   if (/ca |accounting|audit|financial|tax/.test(p)) return 'accounting_firm';
   if (/real estate|realtor|agency|apartment|house|listing/.test(p)) return 'real_estate';
@@ -2626,7 +2639,34 @@ export function OniChat({
           console.log("[Client Classifier] Result:", classification);
 
           if (classification.intent === "build_request") {
-            const industry = classification.industry || "general";
+            let industry = classification.industry || "general";
+            if (industry === "restaurant") {
+              const p = prompt.toLowerCase();
+              if (/south indian|andhra|telangana|dosa|idli/.test(p)) {
+                industry = "south_indian";
+              } else if (/pizza|burger|fast food|wrap/.test(p)) {
+                industry = "pizza_fast_food";
+              } else if (/coffee|cafe|espresso|barista/.test(p)) {
+                industry = "cafe_coffee";
+              } else if (/bakery|cake|dessert/.test(p)) {
+                industry = "bakery_desserts";
+              } else {
+                industry = "fine_dining";
+              }
+            } else if (industry === "salon") {
+              industry = prompt.toLowerCase().includes("barber") ? "barbershop" : "hair_salon";
+            } else if (industry === "medical") {
+              industry = prompt.toLowerCase().includes("dent") ? "dental_practice" : "medical_clinic";
+            } else if (industry === "fitness") {
+              industry = /yoga|meditation/.test(prompt.toLowerCase()) ? "yoga_meditation" : "gym_fitness";
+            } else if (industry === "saas") {
+              industry = "saas_landing";
+            } else if (industry === "legal") {
+              industry = "law_firm";
+            } else if (industry === "education") {
+              industry = "coaching_tutoring";
+            }
+
             const rawQuestions = BRAND_QUESTIONS[industry as BrandIndustry] || BRAND_QUESTIONS.general;
             
             // Filter out questions based on extractedInfo
