@@ -266,9 +266,36 @@ export function HomePage() {
     setAttachedFiles([]);
   };
 
-  const handleEnhancePrompt = () => {
+  const handleEnhancePrompt = async () => {
     if (isEnhancing || !promptText.trim() || promptText.trim().length < 3) return;
-    setEnhanceOpen(true);
+    setIsEnhancing(true);
+    try {
+      const response = await fetch("/api/enhance-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: promptText,
+          defaultModel: "oni-pro",
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.enhancedPrompt) {
+          setPromptText(data.enhancedPrompt);
+          showToast("Prompt enhanced!");
+          window.requestAnimationFrame(() => adjustTextareaHeight());
+        }
+      } else {
+        const errText = await response.text();
+        console.error("Enhancement failed:", errText);
+        showToast("Failed to enhance prompt");
+      }
+    } catch (err) {
+      console.error("Enhancement error:", err);
+      showToast("Error enhancing prompt");
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

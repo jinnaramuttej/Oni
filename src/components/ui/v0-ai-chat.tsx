@@ -2169,10 +2169,7 @@ export function OniChat({
   const handleEnhancePrompt = useCallback(async () => {
     if (isEnhancing || generating || isLoading || input.trim().length < 3) return;
 
-    if (!generatedHtml) {
-      setEnhanceOpen(true);
-      return;
-    }
+
 
     setIsEnhancing(true);
 
