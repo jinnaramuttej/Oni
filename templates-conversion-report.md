@@ -44,11 +44,11 @@
 | NOVUM | **SUCCESS** | services, contact, footer | - |
 | Orbital | **SUCCESS** | contact, footer | - |
 | premium-gym-website-design | **SUCCESS** | navbar, hero, services, testimonials, contact, footer | - |
-| Pulse | **FAIL** | - | Command failed: node node_modules/vite/bin/vite.js build |
+| Pulse | **SUCCESS** | hero, features, services, testimonials, contact, footer | - |
 | Sterling | **SUCCESS** | navbar, hero, testimonials, cta, contact | - |
 | stillness | **SUCCESS** | testimonials, contact, footer | - |
-| Stillwater | **PENDING** | - | - |
-| Sōl Studio | **PENDING** | - | - |
-| Vanguard-Barbar Shop | **PENDING** | - | - |
-| VĀNA | **PENDING** | - | - |
+| Stillwater | **SUCCESS** | hero, footer | - |
+| Sōl Studio | **SUCCESS** | contact, footer | - |
+| Vanguard-Barbar Shop | **SUCCESS** | services, testimonials, footer | - |
+| VĀNA | **SUCCESS** | navbar, hero, testimonials, cta, contact | - |
 | ÉLAN | **PENDING** | - | - |
