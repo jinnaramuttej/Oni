@@ -4021,163 +4021,166 @@ function ChatPanel({
         </div>
       </div>
 
-      {inlineEnhanceActive && (
-        <div className="mx-5 mb-3 overflow-hidden rounded-2xl border border-zinc-800/80 bg-[#111113] text-sm text-white shadow-2xl shadow-black/60">
-          {/* Question title + close */}
-          <div className="flex items-start justify-between px-5 pt-5 pb-4">
-            <h3 className="text-[15px] font-semibold text-white leading-snug pr-4">
-              {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.question || QUESTIONS.general[inlineEnhanceStep]?.question}
-            </h3>
-            <button
-              type="button"
-              onClick={onInlineSkip}
-              className="flex shrink-0 h-6 w-6 items-center justify-center rounded-full text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors mt-0.5"
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+      <div className="shrink-0 bg-surface px-5 pb-5 pt-2 relative">
 
-          {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options ? (
-            /* Options mode */
-            <div>
-              {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => onInlineOptionSelect(opt)}
-                  className="group flex w-full items-center gap-4 border-t border-zinc-800/70 bg-transparent hover:bg-zinc-800/50 px-5 py-3.5 text-left transition-all cursor-pointer"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-800 text-[11px] font-semibold text-zinc-400 group-hover:bg-zinc-700 group-hover:text-zinc-200 transition-colors">
-                    {idx + 1}
+        {/* Intake questions popup card — floats above the composer */}
+        {inlineEnhanceActive && (
+          <div className={cn("mb-3 overflow-hidden rounded-2xl bg-[#1c1c1f] text-white shadow-2xl shadow-black/80 border border-zinc-800/60", !hasWebsite && "max-w-3xl mx-auto")}>
+            {/* Question header */}
+            <div className="flex items-start justify-between px-5 pt-5 pb-3">
+              <h3 className="text-[15px] font-semibold text-white leading-snug flex-1 pr-4">
+                {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.question || QUESTIONS.general[inlineEnhanceStep]?.question}
+              </h3>
+              <button
+                type="button"
+                onClick={onInlineSkip}
+                className="flex shrink-0 h-6 w-6 items-center justify-center rounded-full text-zinc-500 hover:text-white transition-colors mt-0.5"
+                aria-label="Dismiss"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.options ? (
+              /* ─── OPTIONS MODE ─── */
+              <div>
+                {QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].options.map((opt, idx) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => onInlineOptionSelect(opt)}
+                    className="group flex w-full items-center gap-4 border-t border-zinc-800/50 bg-transparent hover:bg-white/[0.04] px-5 py-3.5 text-left transition-colors cursor-pointer"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-zinc-800 text-[11px] font-semibold text-zinc-400 group-hover:text-zinc-200 transition-colors select-none">
+                      {idx + 1}
+                    </span>
+                    <span className="flex-1 text-[13.5px] text-zinc-200 group-hover:text-white transition-colors">{opt}</span>
+                    <span className="text-zinc-600 opacity-0 group-hover:opacity-100 text-[11px] transition-opacity select-none">↵</span>
+                  </button>
+                ))}
+
+                {/* Something else + Skip row */}
+                <div className="border-t border-zinc-800/50 flex items-center gap-3 px-5 py-3.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-zinc-800/80 text-zinc-500 select-none">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   </span>
-                  <span className="flex-1 text-[13px] text-zinc-200 group-hover:text-white transition-colors">{opt}</span>
-                  <span className="text-zinc-700 opacity-0 group-hover:opacity-100 text-[10px] font-medium transition-opacity">↵</span>
-                </button>
-              ))}
+                  <input
+                    type="text"
+                    value={cardInputValue}
+                    onChange={(e) => setCardInputValue(e.target.value)}
+                    placeholder="Something else"
+                    className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-[13.5px] text-zinc-200 placeholder-zinc-600 min-w-0"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (cardInputValue.trim()) onInlineOptionSelect(cardInputValue.trim());
+                        else onInlineSkip();
+                      }
+                    }}
+                  />
+                  {cardInputValue.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => onInlineOptionSelect(cardInputValue.trim())}
+                      className="shrink-0 rounded-lg bg-zinc-700 hover:bg-zinc-600 px-3.5 py-1.5 text-[12px] font-semibold text-white transition-all"
+                    >
+                      Select
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onInlineSkip}
+                      className="shrink-0 rounded-lg bg-zinc-800 hover:bg-zinc-700 px-3.5 py-1.5 text-[12px] font-semibold text-zinc-300 hover:text-white transition-all"
+                    >
+                      Skip
+                    </button>
+                  )}
+                </div>
 
-              {/* Something else row */}
-              <div className="border-t border-zinc-800/70 flex items-center gap-3 px-5 py-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-800/60 text-zinc-500">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                </span>
+                {/* Suggestion chips (shown when typing in "something else") */}
+                {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).length > 0 && cardInputValue === "" && (
+                  <div className="flex flex-wrap gap-1.5 px-5 pb-4 border-t border-zinc-800/30 pt-3">
+                    {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => setCardInputValue(sug)}
+                        className="text-[11px] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 px-2.5 py-1 rounded-full transition-all cursor-pointer truncate max-w-[200px]"
+                        title={sug}
+                      >
+                        {sug}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ─── TEXT QUESTION MODE ─── */
+              <div className="px-5 pb-5 space-y-3">
                 <input
                   type="text"
                   value={cardInputValue}
                   onChange={(e) => setCardInputValue(e.target.value)}
-                  placeholder="Something else..."
-                  className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-[13px] text-zinc-200 placeholder-zinc-600 min-w-0"
+                  placeholder={QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.placeholder || "Type your answer..."}
+                  className="w-full bg-transparent border border-zinc-800 hover:border-zinc-700 focus:border-zinc-600 rounded-xl px-4 py-2.5 text-zinc-100 placeholder-zinc-600 outline-none transition-colors text-[13px]"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      if (cardInputValue.trim()) onInlineOptionSelect(cardInputValue.trim());
+                      if (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional) {
+                        onInlineNext(cardInputValue);
+                      }
                     }
                   }}
+                  autoFocus
                 />
-                {cardInputValue.trim() ? (
-                  <button
-                    type="button"
-                    onClick={() => onInlineOptionSelect(cardInputValue.trim())}
-                    className="shrink-0 rounded-lg bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-all"
-                  >
-                    Select
-                  </button>
-                ) : (
+
+                {/* Suggestions */}
+                {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => setCardInputValue(sug)}
+                        className="text-[11px] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 px-2.5 py-1 rounded-full transition-all cursor-pointer truncate max-w-[200px]"
+                        title={sug}
+                      >
+                        {sug}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Skip + Next */}
+                <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
                     onClick={onInlineSkip}
-                    className="shrink-0 rounded-lg bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 text-[11px] font-semibold text-zinc-300 hover:text-white transition-all"
+                    className="rounded-xl border border-zinc-800 px-4 py-2 text-[12px] font-medium text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer"
                   >
                     Skip
                   </button>
-                )}
-              </div>
-
-              {/* Suggestions for custom field */}
-              {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).length > 0 && cardInputValue === "" && (
-                <div className="flex flex-wrap gap-1.5 px-5 pb-4 pt-0">
-                  {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry][inlineEnhanceStep].field, inlineEnhanceIndustry).map((sug) => (
-                    <button
-                      key={sug}
-                      type="button"
-                      onClick={() => setCardInputValue(sug)}
-                      className="text-[11px] bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 px-2.5 py-1 rounded-full transition-all cursor-pointer truncate max-w-[180px]"
-                      title={sug}
-                    >
-                      {sug}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => onInlineNext(cardInputValue)}
+                    disabled={!cardInputValue.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
+                    className={cn(
+                      "rounded-xl px-4 py-2 text-[12px] font-medium transition-all cursor-pointer",
+                      (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional)
+                        ? "bg-zinc-700 text-white hover:bg-zinc-600"
+                        : "bg-zinc-800/40 text-zinc-600 cursor-not-allowed"
+                    )}
+                  >
+                    {inlineEnhanceStep + 1 >= (QUESTIONS[inlineEnhanceIndustry]?.length || QUESTIONS.general.length)
+                      ? "Build Website →"
+                      : "Next →"}
+                  </button>
                 </div>
-              )}
-            </div>
-          ) : (
-            /* Text question mode */
-            <div className="px-5 pb-5 space-y-3">
-              <input
-                type="text"
-                value={cardInputValue}
-                onChange={(e) => setCardInputValue(e.target.value)}
-                placeholder={QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.placeholder || "Type your answer..."}
-                className="w-full bg-transparent border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors text-[13px]"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional) {
-                      onInlineNext(cardInputValue);
-                    }
-                  }
-                }}
-                autoFocus
-              />
-
-              {/* Suggestions */}
-              {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {getSuggestionsForField(QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.field || "", inlineEnhanceIndustry).map((sug) => (
-                    <button
-                      key={sug}
-                      type="button"
-                      onClick={() => setCardInputValue(sug)}
-                      className="text-[11px] bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 px-2.5 py-1 rounded-full transition-all cursor-pointer truncate max-w-[180px]"
-                      title={sug}
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Skip + Next row */}
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={onInlineSkip}
-                  className="rounded-xl border border-zinc-800 bg-transparent hover:bg-zinc-800/60 px-4 py-2 text-[12px] font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer"
-                >
-                  Skip
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onInlineNext(cardInputValue)}
-                  disabled={!cardInputValue.trim() && !QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional}
-                  className={cn(
-                    "rounded-xl px-4 py-2 text-[12px] font-semibold transition-all cursor-pointer",
-                    (cardInputValue.trim() || QUESTIONS[inlineEnhanceIndustry]?.[inlineEnhanceStep]?.optional)
-                      ? "bg-zinc-700 text-white hover:bg-zinc-600"
-                      : "bg-zinc-800/40 text-zinc-600 cursor-not-allowed"
-                  )}
-                >
-                  {inlineEnhanceStep + 1 >= (QUESTIONS[inlineEnhanceIndustry]?.length || QUESTIONS.general.length)
-                    ? "Build Website →"
-                    : "Next →"}
-                </button>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      <div className="shrink-0 bg-surface px-5 pb-5 pt-2">
         <div className={cn("w-full", !hasWebsite && "max-w-3xl mx-auto")}>
           <ChatComposer
             inlineEnhanceActive={inlineEnhanceActive}
@@ -4193,6 +4196,7 @@ function ChatPanel({
             imageInputRef={imageInputRef}
             onValueChange={onValueChange}
             onKeyDown={onKeyDown}
+
             onPaste={onPaste}
             onSend={onSend}
             onDrop={onDrop}
