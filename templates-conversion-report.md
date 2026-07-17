@@ -40,8 +40,8 @@
 | Monolith-B | **SUCCESS** | services, contact, footer | - |
 | Nexus | **SUCCESS** | features, services, footer | - |
 | Nexus 2.0 | **SUCCESS** | hero, contact, footer | - |
-| Northstar | **PENDING** | - | - |
-| NOVUM | **PENDING** | - | - |
+| Northstar | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
+| NOVUM | **FAIL** | - | spawnSync C:\windows\system32\cmd.exe ETIMEDOUT |
 | Orbital | **PENDING** | - | - |
 | premium-gym-website-design | **PENDING** | - | - |
 | Pulse | **PENDING** | - | - |

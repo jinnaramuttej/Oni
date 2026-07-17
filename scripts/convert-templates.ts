@@ -223,13 +223,13 @@ async function processTemplate(folder: string) {
     if (hasPackageJson) {
       // 1. Build React/Vite project
       console.log(`  Building bundle...`);
-      execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
-      execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+      execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
+      execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
       try {
-        execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+        execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
       } catch (e) {
         console.warn("  npm run build failed, attempting direct node vite build...");
-        execSync(`node node_modules/vite/bin/vite.js build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+        execSync(`node node_modules/vite/bin/vite.js build`, { cwd: folderPath, stdio: "ignore", timeout: 180000 });
       }
     } else if (hasIndexHtml) {
       console.log(`  Static template detected. Skipping build step.`);
