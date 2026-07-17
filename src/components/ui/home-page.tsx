@@ -8,7 +8,7 @@ import { AppShell } from "./app-shell";
 import { OniChat, EnhanceModal } from "./v0-ai-chat";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { TEMPLATE_PROMPTS, TEMPLATE_KEYWORDS } from "@/lib/template-prompts";
 
 const MAX_FILE_TEXT_CHARS = 24000;
