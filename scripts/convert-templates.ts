@@ -195,34 +195,69 @@ function extractSectionsFromHtml(htmlContent: string, templateName: string): { e
 }
 
 async function processTemplate(folder: string) {
-  const folderPath = path.join(TEMPLATES_DIR, folder);
+  let folderPath = path.join(TEMPLATES_DIR, folder);
   console.log(`Processing: ${folder}...`);
+
+  // Handle nested folders (e.g. AURELIA containing just a "bakery" subproject)
+  if (!fs.existsSync(path.join(folderPath, "package.json")) && !fs.existsSync(path.join(folderPath, "index.html"))) {
+    const subDirs = fs.readdirSync(folderPath).filter(d => fs.statSync(path.join(folderPath, d)).isDirectory());
+    if (subDirs.length > 0) {
+      // Pick first subdirectory that has index.html or package.json
+      for (const sd of subDirs) {
+        const testPath = path.join(folderPath, sd);
+        if (fs.existsSync(path.join(testPath, "package.json")) || fs.existsSync(path.join(testPath, "index.html"))) {
+          folderPath = testPath;
+          break;
+        }
+      }
+    }
+  }
+
+  const hasPackageJson = fs.existsSync(path.join(folderPath, "package.json"));
+  const hasIndexHtml = fs.existsSync(path.join(folderPath, "index.html"));
 
   let server: { kill: () => void } | null = null;
   let browser: any = null;
 
   try {
-    // 1. Build
-    console.log(`  Building bundle...`);
-    // On Windows, package runner execution might split on '&' characters in directory paths if run inside cmd.exe.
-    // We execute npm install commands via absolute paths or run them programmatically, or escape the ampersand in the script cwd.
-    execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
-    execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
-    try {
-      execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
-    } catch (e) {
-      console.warn("  npm run build failed, attempting direct node vite build...");
-      execSync(`node node_modules/vite/bin/vite.js build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+    if (hasPackageJson) {
+      // 1. Build React/Vite project
+      console.log(`  Building bundle...`);
+      execSync(`npm install lucide-react@0.475.0`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+      execSync(`npm install`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+      try {
+        execSync(`npm run build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+      } catch (e) {
+        console.warn("  npm run build failed, attempting direct node vite build...");
+        execSync(`node node_modules/vite/bin/vite.js build`, { cwd: folderPath, stdio: "ignore", timeout: 60000 });
+      }
+    } else if (hasIndexHtml) {
+      console.log(`  Static template detected. Skipping build step.`);
+    } else {
+      throw new Error("No buildable or renderable assets found in template directory");
     }
 
     // 2. Start dynamic preview server
     const port = 4900 + Math.floor(Math.random() * 100);
-    server = await startPreviewServer(folderPath, port);
+    if (hasPackageJson) {
+      server = await startPreviewServer(folderPath, port);
+    } else {
+      // Static server preview fallback (using npx serve)
+      console.log(`  Serving static site on port ${port}...`);
+      const child = spawn("npx", ["serve", "-p", String(port), "-l", "127.0.0.1", folderPath], { shell: true });
+      server = {
+        kill: () => {
+          child.kill();
+        }
+      };
+      // Wait briefly for serve to start
+      await new Promise(r => setTimeout(r, 2000));
+    }
 
     // 3. Launch headless Playwright Chromium and extract rendered DOM
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle", timeout: 15000 });
+    await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle", timeout: 30000 });
     
     // Quick wait for animations/mounting to settle down
     await page.waitForTimeout(2000);

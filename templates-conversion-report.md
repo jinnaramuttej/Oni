@@ -7,19 +7,16 @@
 | Alex Morgan | **SUCCESS** | hero, services, contact, footer | - |
 | Amritham | **SUCCESS** | services, contact, footer | - |
 | Apex.Academy | **SUCCESS** | hero, testimonials, contact, footer | - |
-| Ascend&Associates | **FAIL** | - | page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4908/
-Call log:
-[2m  - navigating to "http://127.0.0.1:4908/", waiting until "networkidle"[22m
- |
-| Ashcroft & Vale | **FAIL** | - | page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4942/
-Call log:
-[2m  - navigating to "http://127.0.0.1:4942/", waiting until "networkidle"[22m
- |
+| Ascend&Associates | **SUCCESS** | navbar, services, testimonials, contact | - |
+| Ashcroft & Vale | **SUCCESS** | navbar, contact, footer | - |
 | Atelier Lumière | **SUCCESS** | navbar, hero, features, services, testimonials, contact, footer | - |
 | Aura Academy | **SUCCESS** | footer | - |
 | AURELIA | **FAIL** | - | Command failed: node node_modules/vite/bin/vite.js build |
-| Aurelia-Spa | **PENDING** | - | - |
-| ClarityHealth | **PENDING** | - | - |
+| Aurelia-Spa | **SUCCESS** | footer | - |
+| ClarityHealth | **FAIL** | - | page.goto: Timeout 15000ms exceeded.
+Call log:
+[2m  - navigating to "http://127.0.0.1:4967/", waiting until "networkidle"[22m
+ |
 | Crumb & Crust | **PENDING** | - | - |
 | Elevare | **PENDING** | - | - |
 | ELEVATION | **PENDING** | - | - |
