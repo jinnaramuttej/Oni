@@ -1234,7 +1234,7 @@ Improve the design, make it more premium and modern.`;
       const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
       let templateRef = "";
       if (matchingTemplate !== null) {
-        const templateVal: { name: string; html: string } = matchingTemplate;
+        const templateVal = matchingTemplate as { name: string; html: string };
         templateRef = `\n\n<TEMPLATE_REFERENCE name="${templateVal.name}">\n${getCompactHtml(templateVal.html)}\n</TEMPLATE_REFERENCE>\n\nStudy the class names, grid structures, and component patterns in this template. Reuse and adapt them (not copy-paste) to match the design plan.`;
       }
 
