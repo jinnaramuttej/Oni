@@ -1653,7 +1653,12 @@ ${htmlContent}
 
     const fullResponse = await collectSseStream(successStream);
     const oniCodeMatch = fullResponse.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
-    const extractedHtml = oniCodeMatch?.[1]?.trim() ?? "";
+    let extractedHtml = oniCodeMatch?.[1]?.trim() ?? "";
+
+    // Safety net: strip any custom uppercase wrapper tags (e.g. </TEMPLATE_ADAPTED_HTML>) leaking into extracted HTML
+    if (extractedHtml) {
+      extractedHtml = extractedHtml.replace(/<\/?(?:[A-Z_]+_HTML|TEMPLATE_ADAPTED_HTML)>/gi, "").trim();
+    }
 
     if (extractedHtml) {
       const validation = validateGeneratedHtml(extractedHtml);

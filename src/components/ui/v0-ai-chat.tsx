@@ -950,13 +950,17 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
       .replace(new RegExp(openRegex.source + "[\\s\\S]*?" + closeRegex.source, "gi"), "")
       .replace(new RegExp(openRegex.source + "[\\s\\S]*", "gi"), "")
       .trim();
+    // Safety net: strip any remaining custom wrapper tags matching pattern </?[A-Z_]+_HTML> or custom uppercase closing tags
+    html = html.replace(/<\/?(?:[A-Z_]+_HTML|TEMPLATE_ADAPTED_HTML)>/gi, "").trim();
+
     return { html, cleanText };
   }
 
   // 2. Markdown html code blocks fallback (```html ... ```)
   const mdMatch = content.match(/```html([\s\S]*?)(?:```|$)/i);
   if (mdMatch) {
-    const html = mdMatch[1].trim();
+    let html = mdMatch[1].trim();
+    html = html.replace(/<\/?(?:[A-Z_]+_HTML|TEMPLATE_ADAPTED_HTML)>/gi, "").trim();
     const cleanText = content.replace(/```html[\s\S]*?(?:```|$)/gi, '').trim();
     return { html, cleanText };
   }
@@ -964,9 +968,10 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
   // 3. Generic markdown code block fallback if it contains HTML structure
   const genericMdMatch = content.match(/```([\s\S]*?)(?:```|$)/);
   if (genericMdMatch) {
-    const codeContent = genericMdMatch[1].trim();
+    let codeContent = genericMdMatch[1].trim();
     const lowerCode = codeContent.toLowerCase();
     if (lowerCode.includes("<!doctype html") || lowerCode.includes("<html")) {
+      codeContent = codeContent.replace(/<\/?(?:[A-Z_]+_HTML|TEMPLATE_ADAPTED_HTML)>/gi, "").trim();
       const cleanText = content.replace(/```[\s\S]*?(?:```|$)/g, '').trim();
       return { html: codeContent, cleanText };
     }
@@ -977,7 +982,8 @@ function extractHtmlFromContent(content: string): { html: string; cleanText: str
   // echoed reference templates injected into the system prompt which are much larger).
   const rawHtmlMatch = content.match(/<!DOCTYPE\s+html[\s\S]*/i);
   if (rawHtmlMatch && rawHtmlMatch[0].length < 120000) {
-    const html = rawHtmlMatch[0].trim();
+    let html = rawHtmlMatch[0].trim();
+    html = html.replace(/<\/?(?:[A-Z_]+_HTML|TEMPLATE_ADAPTED_HTML)>/gi, "").trim();
     const cleanText = content.slice(0, rawHtmlMatch.index ?? 0).trim();
     return { html, cleanText };
   }
