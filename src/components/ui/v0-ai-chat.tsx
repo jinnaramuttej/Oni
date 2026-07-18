@@ -3046,6 +3046,8 @@ ${prompt}`;
                   id: assistantId,
                   role: 'assistant',
                   content: fullText
+                    .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*?<\/TEMPLATE_SAMPLE_CODE>/gi, '')
+                    .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*/gi, '')
                     .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                     .replace(/<ONI_CODE>[\s\S]*/g, '')
                     .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
@@ -3089,6 +3091,8 @@ ${prompt}`;
                     id: assistantId,
                     role: 'assistant',
                     content: fullText
+                      .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*?<\/TEMPLATE_SAMPLE_CODE>/gi, '')
+                      .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*/gi, '')
                       .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                       .replace(/<ONI_CODE>[\s\S]*/g, '')
                       .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
