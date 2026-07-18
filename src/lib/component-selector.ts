@@ -228,27 +228,27 @@ function extractTemplateVars(html: string): string[] {
 
 // ── Core: read + score all files for one section ──────────────────────────────
 
-function resolveSection(
+function resolveSectionMultiple(
   section: Section,
   industry: string,
   prompt: string
-): SelectedComponent | null {
+): SelectedComponent[] {
   const sectionDir = path.join(COMPONENTS_ROOT, section);
 
   if (!fs.existsSync(sectionDir)) {
-    return null;
+    return [];
   }
 
   let files: string[];
   try {
     files = fs.readdirSync(sectionDir).filter((f) => f.endsWith(".html"));
   } catch {
-    return null;
+    return [];
   }
 
-  if (files.length === 0) return null;
+  if (files.length === 0) return [];
 
-  let best: { filename: string; score: number; html: string } | null = null;
+  const candidates: { filename: string; score: number; html: string }[] = [];
 
   for (const filename of files) {
     const filePath = path.join(sectionDir, filename);
@@ -260,32 +260,58 @@ function resolveSection(
     }
 
     const score = scoreComponent(filename, html, industry, prompt);
+    candidates.push({ filename, score, html });
+  }
 
-    if (!best || score > best.score) {
-      best = { filename, score, html };
+  // Sort candidates by score descending
+  candidates.sort((a, b) => b.score - a.score);
+
+  if (candidates.length === 0) return [];
+
+  const bestScore = candidates[0].score;
+  const selected: SelectedComponent[] = [];
+
+  // Pick top candidate
+  const first = candidates[0];
+  const snippet1 =
+    first.html.length > MAX_SNIPPET_CHARS
+      ? first.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated -->"
+      : first.html;
+
+  selected.push({
+    section,
+    filename: first.filename,
+    score: first.score,
+    snippet: snippet1,
+    templateVarsFound: extractTemplateVars(first.html),
+  });
+
+  // Pick secondary candidate if it's within 15 points of the best score
+  if (candidates.length > 1) {
+    const second = candidates[1];
+    if (bestScore - second.score <= 15) {
+      const snippet2 =
+        second.html.length > MAX_SNIPPET_CHARS
+          ? second.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated -->"
+          : second.html;
+
+      selected.push({
+        section,
+        filename: second.filename,
+        score: second.score,
+        snippet: snippet2,
+        templateVarsFound: extractTemplateVars(second.html),
+      });
     }
   }
 
-  if (!best) return null;
-
-  const snippet =
-    best.html.length > MAX_SNIPPET_CHARS
-      ? best.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated -->"
-      : best.html;
-
-  return {
-    section,
-    filename: best.filename,
-    score: best.score,
-    snippet,
-    templateVarsFound: extractTemplateVars(best.html),
-  };
+  return selected;
 }
 
 // ── Public API — selectComponents ─────────────────────────────────────────────
 
 /**
- * Selects the best-matching HTML component for each section.
+ * Selects the best-matching HTML components (allowing up to 2 candidates if scores are close) for each section.
  * Safe to call at request time — I/O is fast for this library size.
  */
 export function selectComponents(input: ComponentSelectorInput): ComponentSelectorResult {
@@ -308,8 +334,8 @@ export function selectComponents(input: ComponentSelectorInput): ComponentSelect
   let totalChars = 0;
 
   for (const section of SECTIONS) {
-    const resolved = resolveSection(section, industryKey, enrichedPrompt);
-    if (resolved) {
+    const resolvedList = resolveSectionMultiple(section, industryKey, enrichedPrompt);
+    for (const resolved of resolvedList) {
       components.push(resolved);
       totalChars += resolved.snippet.length;
     }
@@ -332,23 +358,13 @@ export function selectComponents(input: ComponentSelectorInput): ComponentSelect
 /**
  * Converts a ComponentSelectorResult into a plain-text string that can be
  * appended to the AI system prompt.
- *
- * Format:
- *   COMPONENT DESIGN REFERENCES:
- *   === HERO ===
- *   <!-- source: restaurant-cinematic.html | score: 75 -->
- *   <section ...> … </section>
- *   [Adapt this HERO for {industry}. Use primary: #D4AF37, secondary: #8B1E1E.
- *    Display font: Cormorant Garamond. Body font: Jost.
- *    Replace {{BUSINESS_NAME}}, {{PRIMARY_COLOR}} etc. with real values.]
- *   ...
  */
 export function buildComponentContext(result: ComponentSelectorResult): string {
   if (result.components.length === 0) return "";
 
   const { industry, palette, fonts } = result;
   const lines: string[] = [
-    "COMPONENT DESIGN REFERENCES:",
+    "COMPONENT DESIGN REFERENCES (REFERENCE ONLY — do not copy structure/classes/IDs verbatim, extract only the visual/layout IDEA and rebuild it fresh for this business):",
     `(Industry: ${industry} | Primary: ${palette.primary} | Secondary: ${palette.secondary} | Display font: ${fonts.display} | Body font: ${fonts.body})`,
     "Study each section snippet below. Borrow the grid structures, hover effects, and class patterns. Do NOT copy them verbatim — adapt and elevate them for the user's specific brand.",
     "",
@@ -357,16 +373,17 @@ export function buildComponentContext(result: ComponentSelectorResult): string {
   for (const comp of result.components) {
     const sectionLabel = comp.section.toUpperCase();
     lines.push(`=== ${sectionLabel} ===`);
+    lines.push(`<!-- REFERENCE ONLY — do not copy class names, structures, or IDs verbatim. Extract visual/layout layout idea. -->`);
     lines.push(`<!-- source: ${comp.filename} | match score: ${comp.score}/100 -->`);
     lines.push(comp.snippet);
     lines.push(
-      `[→ Adapt this ${sectionLabel} for a ${industry} business. ` +
+      `[→ REFERENCE ONLY: Adapt this ${sectionLabel} for a ${industry} business. ` +
         `Primary color: ${palette.primary}, Secondary: ${palette.secondary}. ` +
         `Display font: "${fonts.display}", Body font: "${fonts.body}". ` +
         (comp.templateVarsFound.length > 0
           ? `Replace template vars: ${comp.templateVarsFound.join(", ")} with real business values. `
           : "") +
-        `Make it significantly more premium and animated than this reference snippet.]`
+        `Make it significantly more premium and animated than this reference snippet. Build fresh structures, never reuse class names/IDs verbatim.]`
     );
     lines.push("");
   }
