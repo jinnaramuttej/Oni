@@ -1206,13 +1206,46 @@ export async function POST(req: Request) {
     console.log(`[DIAG][component-lib] ❌ OFF — USE_COMPONENT_LIBRARY is false → component-selector.ts NOT called, componentContext=""`);
   }
 
+  // ── Curated Image Sourcing System ──────────────────────────────────────────
+  let imageSourcingInstruction = "";
+  if (brandAnswers && brandAnswers.contentSourcing) {
+    const sourcingDecision = (brandAnswers.contentSourcing as string).toLowerCase();
+    
+    // Check if user selected real stock photos
+    if (sourcingDecision.includes("stock") || sourcingDecision.includes("real")) {
+      const { IMAGE_LIBRARY } = require("@/lib/image-library");
+      let categoryKeys: string[] = [];
+      if (industry === "restaurant" || industry === "cafe") {
+        categoryKeys = ["restaurant-food", "restaurant-interior"];
+      } else if (industry === "salon" || industry === "spa") {
+        categoryKeys = ["salon-interior", "salon-service"];
+      } else if (industry === "saas" || industry === "portfolio" || industry === "legal") {
+        categoryKeys = ["office-professional"];
+      } else {
+        categoryKeys = ["retail-product"];
+      }
+
+      const availableImages = categoryKeys.flatMap(key => IMAGE_LIBRARY[key] || []);
+      if (availableImages.length > 0) {
+        imageSourcingInstruction = `\n\nVERIFIED IMAGE LIBRARY (You MUST choose your images exclusively from this list. Do NOT invent or use other Unsplash URLs):\n`;
+        availableImages.forEach(img => {
+          imageSourcingInstruction += `- Description: "${img.description}" | URL: "${img.url}"\n`;
+        });
+      }
+    } else if (sourcingDecision.includes("ai")) {
+      // User selected AI-generated images
+      imageSourcingInstruction = `\n\nIMAGE STYLING INSTRUCTION:\nSince the user chose AI-generated images, when placing images.unsplash.com URLs, choose photos that look highly stylized, futuristic, hyper-realistic, or illustrative rather than candid/ordinary stock photography.`;
+    }
+  }
+
   let systemPrompt =
     ONI_SYSTEM_PROMPT +
     "\n\n" + templateInjection +
     "\n\n" + componentContext +
     "\n\n" + ONI_QUALITY_RULES +
     "\n\n" + PREMIUM_COMPONENTS_REFERENCE +
-    templateReferencePromptSection;
+    templateReferencePromptSection +
+    imageSourcingInstruction;
 
   if (body.competitorReference && typeof body.competitorReference === "object") {
     const { title, content } = body.competitorReference;
