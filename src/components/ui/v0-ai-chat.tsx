@@ -428,6 +428,62 @@ function generateAdaptiveQuestions(
     result.push(LOGO_QUESTION)
   }
 
+  // 3.5. Content sourcing — ask about stock images, AI images, menu catalogs based on industry
+  const hasMenuCatalog = ['restaurant', 'salon', 'medical', 'fitness', 'saas', 'education', 'portfolio'].includes(industry);
+  const statedContentSourcing = /\b(photos|stock|ai-generated|own photos|images|illustration|prices|menu|items|portfolio items)\b/i.test(prompt);
+  if (!statedContentSourcing && result.length < maxQuestions) {
+    if (industry === 'restaurant') {
+      result.push({
+        field: 'contentSourcing',
+        question: "Should we use real stock photos of dishes, or AI-generated food imagery?",
+        placeholder: "Choose image sourcing approach",
+        optional: true,
+        options: [
+          "Real stock photos",
+          "AI-generated images",
+          "Mix of both",
+          "No food images, focus on ambience"
+        ]
+      });
+    } else if (industry === 'salon') {
+      result.push({
+        field: 'contentSourcing',
+        question: "Would you prefer real photos of a salon interior/services, or illustrated icons?",
+        placeholder: "Choose visual styling approach",
+        optional: true,
+        options: [
+          "Real photos of interior/services",
+          "Clean illustrated icons",
+          "Mix of photos and icons"
+        ]
+      });
+    } else if (hasMenuCatalog) {
+      result.push({
+        field: 'contentSourcing',
+        question: "Do you have your own menu/price list details, or should I generate realistic sample items?",
+        placeholder: "Choose content catalog approach",
+        optional: true,
+        options: [
+          "Generate realistic sample items",
+          "I will provide menu/pricing details in prompt",
+          "Use a minimal placeholder layout"
+        ]
+      });
+    } else {
+      result.push({
+        field: 'contentSourcing',
+        question: "Do you have your own photos to reference, or should I source generic professional stock images?",
+        placeholder: "Choose photography approach",
+        optional: true,
+        options: [
+          "Source professional stock images",
+          "I will upload/reference my own photos",
+          "Clean illustrated minimalist layouts"
+        ]
+      });
+    }
+  }
+
   // 4. Colors — with dynamic options, only if not stated
   if (!stated.colors && result.length < maxQuestions) {
     const colQ = allQuestions.find(q => q.field === 'colors')
@@ -506,6 +562,8 @@ function buildEnhancedPrompt(
     parts.push(`Tone: ${answers.tone}`)
   if (answers.logo && !answers.logo.toLowerCase().includes('skip'))
     parts.push(`Logo treatment: ${answers.logo}`)
+  if (answers.contentSourcing)
+    parts.push(`Content sourcing decision: ${answers.contentSourcing}`)
 
   parts.push(
     `Industry: ${industry}`,
