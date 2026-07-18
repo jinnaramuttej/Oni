@@ -1429,14 +1429,15 @@ ${htmlContent}
   // ── Build Unified Cascading Fallback Retries Pipeline ─────────────────────────
   const isLocal = process.env.NODE_ENV === 'development' || process.env.USE_LOCAL_MODEL === 'true';
 
-  // FIX 2: Estimate token size (4 characters ~ 1 token rule-of-thumb)
+  // Estimate token size (4 characters ~ 1 token rule-of-thumb)
   const totalMessageChars = messagesToSend.reduce((acc, m) => acc + (m.content || "").length, 0);
   const estimatedTokens = Math.ceil(totalMessageChars / 4.0);
   console.log(`[DIAG][Token-Estimate] Total message characters: ${totalMessageChars}, Estimated tokens: ${estimatedTokens}`);
 
-  const skipGroqDueToSize = estimatedTokens > 10000;
+  // Skip Groq if the request is close to or exceeds the 12,000 TPM limit (leaving headroom for generation)
+  const skipGroqDueToSize = estimatedTokens > 6500;
   if (skipGroqDueToSize) {
-    console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 10000 limit) to prevent 413 error`);
+    console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 6500 threshold) to prevent 413 error`);
   }
 
   const MODEL_CHAIN = [
@@ -1452,14 +1453,14 @@ ${htmlContent}
       url: "https://api.groq.com/openai/v1/chat/completions",
       key: process.env.GROQ_API_KEY?.trim(),
       model: "llama-3.3-70b-versatile",
-      max_tokens: 16000,
+      max_tokens: 5000,      // Reduced max output tokens to stay under Groq TPM limit
       timeoutMs: 15000
     }] : []),
     {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: process.env.OPENROUTER_API_KEY?.trim(),
       model: "deepseek/deepseek-chat",
-      max_tokens: 16000,
+      max_tokens: 8000,      // Lowered max_tokens to prevent 402 payment threshold errors
       timeoutMs: 30000
     }
   ];
