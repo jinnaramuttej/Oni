@@ -584,7 +584,7 @@ export function EnhanceModal({
   isOpen: boolean
   onClose: () => void
   originalPrompt: string
-  onEnhanced: (enhancedPrompt: string) => void
+  onEnhanced: (enhancedPrompt: string, answers: Record<string, string>, industry: string) => void
 }) {
   const industry = detectIndustryForEnhance(originalPrompt)
 
@@ -820,7 +820,7 @@ export function EnhanceModal({
               <button
                 className="enhance-next"
                 onClick={() => {
-                  onEnhanced(enhancedPrompt)
+                  onEnhanced(enhancedPrompt, answers, industry)
                   onClose()
                 }}
               >
@@ -1720,17 +1720,18 @@ Use ALL of this brand context. Generate real content specific to this exact busi
 
 function extractBrandFields(
   industry: BrandIndustry | '',
-  answers: Record<number, string>,
+  answers: any,
   extractedInfo?: { name: string; location: string; colors: string[] },
   logoBase64?: string
 ) {
-  const businessName = extractedInfo?.name || answers[0] || '';
-  const location = extractedInfo?.location || answers[4] || answers[3] || answers[2] || '';
-  const primaryColor = (extractedInfo?.colors && extractedInfo.colors[0]) || answers[3] || answers[2] || '';
-  const secondaryColor = (extractedInfo?.colors && extractedInfo.colors[1]) || '';
-  const tone = answers[1] || 'Professional';
+  const ans = answers || {};
+  const businessName = extractedInfo?.name || ans.businessName || ans[0] || '';
+  const location = extractedInfo?.location || ans.location || ans[4] || ans[3] || ans[2] || '';
+  const primaryColor = (extractedInfo?.colors && extractedInfo.colors[0]) || ans.colors || ans[3] || ans[2] || '';
+  const secondaryColor = (extractedInfo?.colors && extractedInfo.colors[1]) || ans.secondaryColor || '';
+  const tone = ans.tone || ans[1] || 'Professional';
 
-  const services = answers[1] || '';
+  const services = ans.services || ans.specialItems || ans.cuisine || ans[1] || '';
 
   return {
     businessName,
@@ -1747,6 +1748,38 @@ function extractBrandFields(
 function extractUrl(text: string): string | null {
   const match = text.match(/(https?:\/\/[^\s]+)/i);
   return match ? match[1] : null;
+}
+
+function parseEnhancedPromptAnswers(prompt: string): { answers: Record<string, string>; industry: string } {
+  const answers: Record<string, string> = {};
+  let industry = "";
+
+  const businessNameMatch = prompt.match(/Business name:\s*([^.]+)/i);
+  if (businessNameMatch) answers.businessName = businessNameMatch[1].trim();
+
+  const cuisineMatch = prompt.match(/Cuisine and vibe:\s*([^.]+)/i);
+  if (cuisineMatch) answers.cuisine = cuisineMatch[1].trim();
+
+  const servicesMatch = prompt.match(/Services:\s*([^.]+)/i);
+  if (servicesMatch) answers.services = servicesMatch[1].trim();
+
+  const descriptionMatch = prompt.match(/About:\s*([^.]+)/i);
+  if (descriptionMatch) answers.description = descriptionMatch[1].trim();
+
+  const locationMatch = prompt.match(/Location:\s*([^.]+)/i);
+  if (locationMatch) answers.location = locationMatch[1].trim();
+
+  const colorsMatch = prompt.match(/Brand colors:\s*([^.]+)/i);
+  if (colorsMatch) answers.colors = colorsMatch[1].trim();
+  if (colorsMatch) answers.primaryColor = colorsMatch[1].trim(); // map colors also to primaryColor for template selector match checks
+
+  const toneMatch = prompt.match(/Tone:\s*([^.]+)/i);
+  if (toneMatch) answers.tone = toneMatch[1].trim();
+
+  const industryMatch = prompt.match(/Industry:\s*([^.]+)/i);
+  if (industryMatch) industry = industryMatch[1].trim();
+
+  return { answers, industry };
 }
 
 function hasCompetitorKeywords(text: string): boolean {
@@ -1877,14 +1910,30 @@ export function OniChat({
   const isShowingSample = useRef(!initialPrompt);
   const [toast, setToast] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
-  const [brandContext, setBrandContext] = useState<BrandContext>({
-    isCollecting: false,
-    industry: '',
-    currentQuestionIndex: 0,
-    answers: {},
-    originalPrompt: '',
-    competitorContent: '',
-    competitorTitle: '',
+  const [brandContext, setBrandContext] = useState<BrandContext>(() => {
+    if (initialPrompt) {
+      const parsed = parseEnhancedPromptAnswers(initialPrompt);
+      if (parsed.industry && Object.keys(parsed.answers).length > 0) {
+        return {
+          isCollecting: false,
+          industry: parsed.industry as any,
+          currentQuestionIndex: 0,
+          answers: parsed.answers,
+          originalPrompt: initialPrompt,
+          competitorContent: '',
+          competitorTitle: '',
+        };
+      }
+    }
+    return {
+      isCollecting: false,
+      industry: '',
+      currentQuestionIndex: 0,
+      answers: {},
+      originalPrompt: '',
+      competitorContent: '',
+      competitorTitle: '',
+    };
   });
   const [oniSettings, setOniSettings] = useState({
     displayName: "Oni User",
@@ -2601,6 +2650,13 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
+      setBrandContext({
+        isCollecting: false,
+        industry: inlineEnhanceIndustry as any,
+        currentQuestionIndex: 0,
+        answers: newAnswers,
+        originalPrompt: inlineEnhancePrompt,
+      });
       void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
@@ -2618,6 +2674,13 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
+      setBrandContext({
+        isCollecting: false,
+        industry: inlineEnhanceIndustry as any,
+        currentQuestionIndex: 0,
+        answers: newAnswers,
+        originalPrompt: inlineEnhancePrompt,
+      });
       void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
@@ -2634,6 +2697,13 @@ export function OniChat({
     if (inlineEnhanceStep + 1 >= questions.length) {
       const enhanced = buildEnhancedPrompt(inlineEnhancePrompt, inlineEnhanceIndustry, newAnswers);
       setInlineEnhanceActive(false);
+      setBrandContext({
+        isCollecting: false,
+        industry: inlineEnhanceIndustry as any,
+        currentQuestionIndex: 0,
+        answers: newAnswers,
+        originalPrompt: inlineEnhancePrompt,
+      });
       void handleSendToAIRef.current(enhanced, null, [], true); // silent=true: original prompt already in chat
     } else {
       setInlineEnhanceStep(prev => prev + 1);
@@ -3983,10 +4053,18 @@ ${basePrompt}`;
         isOpen={enhanceOpen}
         onClose={() => setEnhanceOpen(false)}
         originalPrompt={input}
-        onEnhanced={(enhanced) => {
+        onEnhanced={(enhanced, answers, industry) => {
+          console.log('Enhanced prompt:', enhanced);
           setInput(enhanced);
           setEnhanceOpen(false);
           window.requestAnimationFrame(() => adjustHeight());
+          setBrandContext({
+            isCollecting: false,
+            industry: industry as any,
+            currentQuestionIndex: 0,
+            answers: answers,
+            originalPrompt: input,
+          });
         }}
       />
     </div>

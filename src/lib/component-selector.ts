@@ -299,3 +299,66 @@ export function buildComponentContext(result: ComponentSelectorResult): string {
 
   return lines.join("\n");
 }
+
+export interface MatchedTemplate {
+  name: string;
+  html: string;
+  score: number;
+}
+
+export function selectBestTemplate(
+  brandAnswers: any,
+  originalPrompt: string
+): MatchedTemplate | null {
+  const ans = brandAnswers || {};
+  const industry = ans.industry || "general";
+  const industryKey = industry in INDUSTRY_SIGNALS ? industry : "general";
+
+  const queryParts = [
+    originalPrompt,
+    ans.industry ?? "",
+    ans.tone ?? "",
+    ans.primaryColor ?? ans.colors ?? "",
+    ans.secondaryColor ?? "",
+    ans.services ?? ans.cuisine ?? "",
+  ];
+  const query = queryParts.filter(Boolean).join(" ").trim();
+
+  if (!fs.existsSync(TEMPLATES_ROOT)) {
+    return null;
+  }
+
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(TEMPLATES_ROOT).filter((f) => f.endsWith(".html"));
+  } catch {
+    return null;
+  }
+
+  let bestMatch: { filename: string; html: string; score: number } | null = null;
+
+  for (const filename of files) {
+    const filePath = path.join(TEMPLATES_ROOT, filename);
+    let html = "";
+    try {
+      html = fs.readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+    const score = scoreComponent(filename, html, industryKey, query);
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = { filename, html, score };
+    }
+  }
+
+  if (bestMatch && bestMatch.score >= 60) {
+    const cleanName = bestMatch.filename.replace(".html", "");
+    return {
+      name: cleanName,
+      html: bestMatch.html,
+      score: bestMatch.score,
+    };
+  }
+
+  return null;
+}

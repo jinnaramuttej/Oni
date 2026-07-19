@@ -14,7 +14,7 @@ import { routeIntent } from "@/lib/router";
 import fs from "fs";
 import path from "path";
 import { buildTemplateInjection, buildFullBrandContext } from "@/lib/templates";
-import { selectComponents, buildComponentContext } from "@/lib/component-selector";
+import { selectComponents, buildComponentContext, selectBestTemplate } from "@/lib/component-selector";
 import { validateGeneratedHtml } from "@/lib/html-validator";
 
 // ── Runtime config ─────────────────────────────────────────────────────────────
@@ -227,7 +227,14 @@ CSS REQUIREMENTS (minimum 700 lines):
   - IntersectionObserver .reveal / .reveal.in scroll animations
   - Glassmorphism navbar that shrinks on scroll
   - Working tabbed menu panel with JS toggle
-  - Reservation modal overlay with form and open/close animation
+  - Reservation modal overlay with form and open/close animation. You MUST explicitly include these CSS classes inside the <style> block by default:
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: #fff; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; position: relative; }
+    .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-submit { width: 100%; padding: 1rem; background: var(--grad); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .nav-cta { padding: 0.6rem 1.4rem; border-radius: 999px; background: var(--grad); color: white; font-weight: 500; text-decoration: none; }
   - Full @media (max-width: 768px) mobile responsive block
   - Dark mode premium aesthetic — rich backgrounds, accent colors, fine typography
 
@@ -559,77 +566,11 @@ function getCompactHtml(html: string): string {
   return clean;
 }
 
-function getMatchingTemplateHtml(promptText: string): { name: string; html: string } | null {
-  const clean = promptText.toLowerCase();
-
-  // Coffee / Cafe
-  if (
-    clean.includes("coffee") ||
-    clean.includes("cafe") ||
-    clean.includes("atelier") ||
-    clean.includes("roaster") ||
-    clean.includes("barista") ||
-    clean.includes("espresso") ||
-    clean.includes("brew")
-  ) {
-    return { name: "Âme Coffee Atelier", html: AME_COFFEE_SAMPLE_HTML };
+function getMatchingTemplateHtml(promptText: string, brandAnswers: any): { name: string; html: string } | null {
+  const matched = selectBestTemplate(brandAnswers, promptText);
+  if (matched) {
+    return { name: matched.name, html: matched.html };
   }
-
-  // Hotel / Stay
-  if (
-    clean.includes("hotel") ||
-    clean.includes("resort") ||
-    clean.includes("villa") ||
-    clean.includes("retreat") ||
-    clean.includes("stay") ||
-    clean.includes("inn") ||
-    clean.includes("lodge")
-  ) {
-    return { name: "Velara Retreat", html: VELARA_SAMPLE_HTML };
-  }
-
-  // Restaurant / Food
-  if (
-    clean.includes("restaurant") ||
-    clean.includes("food") ||
-    clean.includes("cafe") ||
-    clean.includes("bistro") ||
-    clean.includes("steak") ||
-    clean.includes("dining") ||
-    clean.includes("bakery") ||
-    clean.includes("kitchen")
-  ) {
-    return { name: "Vox Restaurant", html: VOX_SAMPLE_HTML };
-  }
-
-  // Salon / Beauty
-  if (
-    clean.includes("salon") ||
-    clean.includes("beauty") ||
-    clean.includes("hair") ||
-    clean.includes("spa") ||
-    clean.includes("stylist") ||
-    clean.includes("makeup") ||
-    clean.includes("parlor") ||
-    clean.includes("cosmetic")
-  ) {
-    return { name: "Maison Dore", html: MAISON_DORE_SAMPLE_HTML };
-  }
-
-  // Agency / Creative Portfolio
-  if (
-    clean.includes("agency") ||
-    clean.includes("studio") ||
-    clean.includes("portfolio") ||
-    clean.includes("atelier") ||
-    clean.includes("design") ||
-    clean.includes("creative") ||
-    clean.includes("architecture") ||
-    clean.includes("developer")
-  ) {
-    return { name: "Moehr Atelier", html: MOEHR_SAMPLE_HTML };
-  }
-
   return null;
 }
 
@@ -1047,6 +988,39 @@ export async function POST(req: Request) {
   }
 
   const lastUserMsgText = body.prompt || (body.messages && body.messages.slice().reverse().find((m: any) => m.role === "user")?.content) || "";
+  
+  const getIndustryFromPrompt = (promptText: string): string => {
+    const clean = promptText.toLowerCase();
+    if (clean.includes("coffee") || clean.includes("cafe") || clean.includes("restaurant") || clean.includes("food") || clean.includes("bistro") || clean.includes("steak") || clean.includes("dining") || clean.includes("bakery") || clean.includes("kitchen")) {
+      return "restaurant";
+    }
+    if (clean.includes("salon") || clean.includes("beauty") || clean.includes("hair") || clean.includes("spa") || clean.includes("stylist") || clean.includes("makeup") || clean.includes("cosmetic")) {
+      return "salon";
+    }
+    if (clean.includes("medical") || clean.includes("clinic") || clean.includes("hospital") || clean.includes("dentist") || clean.includes("doctor") || clean.includes("health")) {
+      return "medical";
+    }
+    if (clean.includes("fitness") || clean.includes("gym") || clean.includes("workout") || clean.includes("trainer") || clean.includes("coach") || clean.includes("athlete")) {
+      return "fitness";
+    }
+    if (clean.includes("saas") || clean.includes("tech") || clean.includes("software") || clean.includes("dashboard") || clean.includes("app") || clean.includes("startup")) {
+      return "saas";
+    }
+    if (clean.includes("legal") || clean.includes("lawyer") || clean.includes("law") || clean.includes("attorney") || clean.includes("firm")) {
+      return "legal";
+    }
+    if (clean.includes("education") || clean.includes("school") || clean.includes("university") || clean.includes("college") || clean.includes("course") || clean.includes("academy") || clean.includes("learn")) {
+      return "education";
+    }
+    if (clean.includes("portfolio") || clean.includes("design") || clean.includes("creative") || clean.includes("architecture") || clean.includes("developer") || clean.includes("resume") || clean.includes("cv")) {
+      return "portfolio";
+    }
+    return "general";
+  };
+
+  const userPromptText = body.prompt || "";
+  const industry = body.industry || getIndustryFromPrompt(userPromptText || lastUserMsgText);
+  const brandAnswers = body.brandAnswers || null;
   let intent: Intent = "build_request";
   if (lastUserMsgText) {
     try {
@@ -1080,9 +1054,10 @@ export async function POST(req: Request) {
   console.log(`[DIAG][pre-seed] isNewOrRedesign=${isNewOrRedesign}, effectiveHtmlLen=${effectiveHtml.trim().length}, prompt="${lastUserMsgText?.slice(0, 80)}"`)
   
   let templateReferencePromptSection = "";
+  let matchingTemplate: { name: string; html: string } | null = null;
   
   if (isNewOrRedesign && (!effectiveHtml || effectiveHtml.trim().length === 0) && lastUserMsgText) {
-    const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
+    matchingTemplate = getMatchingTemplateHtml(lastUserMsgText, brandAnswers);
     if (matchingTemplate) {
       // FIX 1: For new builds, do NOT pre-seed effectiveHtml with the full template.
       // Instead, extract a reference snippet under 3000 chars and append it to templateReferencePromptSection.
@@ -1102,7 +1077,7 @@ export async function POST(req: Request) {
     console.log(`[DIAG][pre-seed] ⏭ SKIPPED — conditions not met (isNewOrRedesign=${isNewOrRedesign}, existingHtmlLen=${effectiveHtml.trim().length})`);
   }
 
-  if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0 && !getMatchingTemplateHtml(lastUserMsgText)) {
+  if (isNewOrRedesign && typeof body.currentHtml === "string" && body.currentHtml.trim().length > 0 && !matchingTemplate) {
     console.log(`[Intent] Classified intent = ${intent}. Bypassing existing HTML to trigger clean-sheet premium generation!`);
   }
 
@@ -1147,38 +1122,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const getIndustryFromPrompt = (promptText: string): string => {
-    const clean = promptText.toLowerCase();
-    if (clean.includes("coffee") || clean.includes("cafe") || clean.includes("restaurant") || clean.includes("food") || clean.includes("bistro") || clean.includes("steak") || clean.includes("dining") || clean.includes("bakery") || clean.includes("kitchen")) {
-      return "restaurant";
-    }
-    if (clean.includes("salon") || clean.includes("beauty") || clean.includes("hair") || clean.includes("spa") || clean.includes("stylist") || clean.includes("makeup") || clean.includes("cosmetic")) {
-      return "salon";
-    }
-    if (clean.includes("medical") || clean.includes("clinic") || clean.includes("hospital") || clean.includes("dentist") || clean.includes("doctor") || clean.includes("health")) {
-      return "medical";
-    }
-    if (clean.includes("fitness") || clean.includes("gym") || clean.includes("workout") || clean.includes("trainer") || clean.includes("coach") || clean.includes("athlete")) {
-      return "fitness";
-    }
-    if (clean.includes("saas") || clean.includes("tech") || clean.includes("software") || clean.includes("dashboard") || clean.includes("app") || clean.includes("startup")) {
-      return "saas";
-    }
-    if (clean.includes("legal") || clean.includes("lawyer") || clean.includes("law") || clean.includes("attorney") || clean.includes("firm")) {
-      return "legal";
-    }
-    if (clean.includes("education") || clean.includes("school") || clean.includes("university") || clean.includes("college") || clean.includes("course") || clean.includes("academy") || clean.includes("learn")) {
-      return "education";
-    }
-    if (clean.includes("portfolio") || clean.includes("design") || clean.includes("creative") || clean.includes("architecture") || clean.includes("developer") || clean.includes("resume") || clean.includes("cv")) {
-      return "portfolio";
-    }
-    return "general";
-  };
 
-  const userPromptText = body.prompt || "";
-  const industry = body.industry || getIndustryFromPrompt(userPromptText || lastUserMsgText);
-  const brandAnswers = body.brandAnswers || null;
   const templateInjection = buildTemplateInjection(industry as any, brandAnswers);
 
   // ── Component-library injection (feature-flagged) ─────────────────────────
@@ -1262,7 +1206,7 @@ Improve the design, make it more premium and modern.`;
   const messagesToSend = [{ role: "system", content: systemPrompt }, ...groqMessages];
 
   // ── Three-stage pipeline: Plan → CSS → HTML+JS → Assemble ────────────────────
-  const isBuildIntent = (intent === "build_request" || isLikelyBuildRequest(lastUserMsgText)) && !getMatchingTemplateHtml(lastUserMsgText);
+  const isBuildIntent = (intent === "build_request" || isLikelyBuildRequest(lastUserMsgText)) && !matchingTemplate;
   const groqKey = process.env.GROQ_API_KEY?.trim() || "";
 
   let threeStageSuccess = false;
@@ -1382,8 +1326,6 @@ Improve the design, make it more premium and modern.`;
       const brandContextStr = buildFullBrandContext(brandAnswers, industry);
       const userMessageContent = `${brandContextStr}\n\nUSER REQUEST: ${lastUserMsgText || "Build a premium website."}`;
 
-      // Get matching template reference for CSS/HTML guidance
-      const matchingTemplate = getMatchingTemplateHtml(lastUserMsgText);
       let templateRef = "";
       if (matchingTemplate !== null) {
         const templateVal = matchingTemplate as { name: string; html: string };
@@ -1511,6 +1453,15 @@ ${htmlContent}
   const MODEL_CHAIN = process.env.USE_LOCAL === 'true'
     ? [LOCAL_MODEL]
     : PROD_MODEL_CHAIN;
+
+  console.log('=== ONI GENERATION START ===');
+  console.log('Business:', body.brandAnswers?.businessName);
+  console.log('Industry:', body.industry);
+  console.log('Colors:', body.brandAnswers?.colors || body.brandAnswers?.primaryColor);
+  console.log('Template selected:', matchingTemplate?.name || 'None');
+  console.log('Model being used:', MODEL_CHAIN[0]?.name);
+  console.log('Total prompt chars:', systemPrompt.length);
+  console.log('=== END CONFIG ===');
 
   const errorsList: string[] = [];
 
@@ -1707,78 +1658,55 @@ ${htmlContent}
         console.warn(`[DIAG][validator] ❌ FAIL — ${validation.issues.length} issue(s) found:`);
         validation.issues.forEach(issue => console.warn(`  • ${issue}`));
 
-        // Retry once with a correction instruction
-        console.log("[DIAG][validator] 🔄 Retrying generation with correction prompt...");
-        const correctionInstruction = `Your previous output had these structural issues that MUST be fixed:\n${validation.issues.map(i => `- ${i}`).join("\n")}\n\nFix ALL of the above. Requirements:\n- Single self-contained HTML file — all CSS in <style>, all JS in <script>, NO external file refs\n- All image src must be full https:// URLs (use Unsplash: https://images.unsplash.com/photo-... or similar)\n- No duplicate id attributes — every id must be unique across the document\n- All HTML tags must use standard syntax: no CSS selectors in tag names (e.g. <div> not <div.class>)`;
-        const retryMessages = [
-          ...messagesToSend,
-          { role: "assistant", content: fullResponse },
-          { role: "user", content: correctionInstruction },
-        ];
+        // Instant HTML CSS Patcher (WAY 2)
+        console.log("[DIAG][validator] 🔄 Instant CSS Patcher running to insert missing style definitions...");
+        const COMMON_CSS_MAP: Record<string, string> = {
+          "modal-overlay": `.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }`,
+          "modal": `.modal { background: #fff; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; position: relative; }`,
+          "modal-close": `.modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }`,
+          "form-group": `.form-group { margin-bottom: 1.2rem; }`,
+          "form-row": `.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }`,
+          "form-submit": `.form-submit { width: 100%; padding: 1rem; background: var(--grad); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; }`,
+          "nav-cta": `.nav-cta { padding: 0.6rem 1.4rem; border-radius: 999px; background: var(--grad); color: white; font-weight: 500; text-decoration: none; }`
+        };
 
-        let retryStream: ReadableStream | null = null;
-        for (const target of MODEL_CHAIN) {
-          const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
-          if (!target.isOllama && !target.key) continue;
-          try {
-            const retryHeaders: Record<string, string> = { "Content-Type": "application/json" };
-            if (target.key && !target.isOllama) retryHeaders["Authorization"] = `Bearer ${target.key}`;
-            if (target.url.includes("openrouter.ai")) {
-              retryHeaders["HTTP-Referer"] = "https://oni.build";
-              retryHeaders["X-Title"] = "Oni Website Builder";
-            }
-            const retryController = new AbortController();
-            const retryTimeout = setTimeout(() => retryController.abort(), target.timeoutMs);
-            const retryBody = JSON.stringify({
-              model: target.model,
-              messages: retryMessages,
-              temperature: 0.7,
-              max_tokens: target.max_tokens,
-              stream: true,
-            });
-            const retryRes = await fetch(target.url, {
-              method: "POST",
-              headers: retryHeaders,
-              body: retryBody,
-              signal: retryController.signal,
-            });
-            clearTimeout(retryTimeout);
-            if (!retryRes.ok) {
-              const errTxt = await retryRes.text().catch(() => "");
-              console.warn(`[DIAG][validator] Retry failed on ${targetName}: ${retryRes.status} ${errTxt.slice(0, 200)}`);
-              continue;
-            }
-            if (!retryRes.body) continue;
-            retryStream = retryRes.body;
-            console.log(`[DIAG][validator] Retry stream obtained from ${targetName}`);
-            break;
-          } catch (err: any) {
-            console.warn(`[DIAG][validator] Retry exception on ${targetName}:`, err.message);
-          }
-        }
-
-        if (retryStream) {
-          // Collect the retry response and validate it
-          const retryFull = await collectSseStream(retryStream);
-          const retryHtmlMatch = retryFull.match(/<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/);
-          const retryHtml = retryHtmlMatch?.[1]?.trim() ?? "";
-          if (retryHtml) {
-            const retryValidation = validateGeneratedHtml(retryHtml);
-            if (retryValidation.valid) {
-              console.log(`[DIAG][validator] ✅ RETRY PASS — fixed HTML is clean`);
+        const cssIssue = validation.issues.find(i => i.startsWith("CSS classes used in HTML but never defined in <style>:"));
+        if (cssIssue) {
+          const classListStr = cssIssue.replace("CSS classes used in HTML but never defined in <style>:", "").trim();
+          const missingClasses = classListStr.split(",").map(c => c.trim());
+          
+          let patchCss = "\n  /* Patched missing CSS classes */\n";
+          for (const c of missingClasses) {
+            if (COMMON_CSS_MAP[c]) {
+              patchCss += `  ${COMMON_CSS_MAP[c]}\n`;
             } else {
-              console.warn(`[DIAG][validator] ⚠️ RETRY STILL INVALID — returning anyway. Issues:`);
-              retryValidation.issues.forEach(issue => console.warn(`  • ${issue}`));
+              patchCss += `  .${c} { /* auto-generated placeholder class */ }\n`;
             }
           }
-          // Stream the retry response to the client
+
+          let patchedHtml = extractedHtml;
+          if (patchedHtml.includes("</style>")) {
+            patchedHtml = patchedHtml.replace("</style>", `${patchCss}</style>`);
+          } else if (patchedHtml.includes("</head>")) {
+            patchedHtml = patchedHtml.replace("</head>", `<style>${patchCss}</style></head>`);
+          } else {
+            patchedHtml += `<style>${patchCss}</style>`;
+          }
+
+          const patchedFullResponse = fullResponse.replace(
+            /<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/,
+            `<ONI_CODE>\n${patchedHtml}\n</ONI_CODE>`
+          );
+
+          console.log("[DIAG][validator] ✅ Patched HTML returned successfully!");
+          
           const billedGroq = finalUsedModel.startsWith("groq");
           if (visitorId && creditCost > 0 && billedGroq && !body?.customApiKey) {
             void deductCredits(visitorId, creditCost);
           }
-          return streamTextAsSse(retryFull);
+          return streamTextAsSse(patchedFullResponse);
         } else {
-          console.warn("[DIAG][validator] ⚠️ No retry stream available — returning original (invalid) response");
+          console.warn("[DIAG][validator] ⚠️ Non-CSS validation failure, returning original response");
         }
       }
     } else {

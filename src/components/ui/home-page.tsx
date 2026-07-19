@@ -679,7 +679,7 @@ export function HomePage() {
         isOpen={enhanceOpen}
         onClose={() => setEnhanceOpen(false)}
         originalPrompt={promptText}
-        onEnhanced={(enhanced) => {
+        onEnhanced={(enhanced, answers, industry) => {
           setPromptText(enhanced);
           setEnhanceOpen(false);
           window.requestAnimationFrame(() => adjustTextareaHeight());
