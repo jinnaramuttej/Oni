@@ -1477,8 +1477,19 @@ ${htmlContent}
     console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 25000 threshold) to prevent 413 error`);
   }
 
-  const MODEL_CHAIN = [
+  const LOCAL_MODEL = {
+    name: 'ollama',
+    url: 'http://127.0.0.1:11434/v1/chat/completions',
+    key: 'ollama',
+    model: 'qwen2.5-coder:latest',
+    max_tokens: 16000,
+    isOllama: true,
+    timeoutMs: 90000
+  };
+
+  const PROD_MODEL_CHAIN = [
     ...(!skipGroqDueToSize ? [{
+      name: 'groq',
       url: "https://api.groq.com/openai/v1/chat/completions",
       key: process.env.GROQ_API_KEY?.trim(),
       model: "llama-3.3-70b-versatile",
@@ -1487,6 +1498,7 @@ ${htmlContent}
       isOllama: false
     }] : []),
     {
+      name: 'openrouter',
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: process.env.OPENROUTER_API_KEY?.trim(),
       model: "deepseek/deepseek-chat",
@@ -1496,13 +1508,17 @@ ${htmlContent}
     }
   ];
 
+  const MODEL_CHAIN = process.env.USE_LOCAL === 'true'
+    ? [LOCAL_MODEL]
+    : PROD_MODEL_CHAIN;
+
   const errorsList: string[] = [];
 
   for (const target of MODEL_CHAIN) {
-    const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
+    const targetName = target.name;
 
     // If key is needed but missing/empty, skip
-    if (!target.key) {
+    if (!target.isOllama && !target.key) {
       const skipMsg = `[Pipeline] Skipping ${targetName} because API key is missing.`;
       console.warn(skipMsg);
       errorsList.push(`${targetName}: Skipped (API key is missing)`);
@@ -1516,7 +1532,7 @@ ${htmlContent}
         "Content-Type": "application/json",
       };
 
-      if (target.key) {
+      if (target.key && !target.isOllama) {
         headers["Authorization"] = `Bearer ${target.key}`;
       }
 
@@ -1554,7 +1570,75 @@ ${htmlContent}
         throw new Error("Response body is null");
       }
 
-      successStream = response.body;
+      if (target.isOllama) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+
+        successStream = new ReadableStream({
+          async start(controller) {
+            let buffer = "";
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+
+                for (const line of lines) {
+                  let trimmed = line.trim();
+                  if (!trimmed) continue;
+                  
+                  if (trimmed.startsWith("data: ")) {
+                    const dataPayload = trimmed.slice(6).trim();
+                    if (dataPayload === "[DONE]") {
+                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                      continue;
+                    }
+                    try {
+                      const parsed = JSON.parse(dataPayload);
+                      const content = parsed.choices?.[0]?.delta?.content || "";
+                      if (content) {
+                        const sseLine = `data: ${JSON.stringify({
+                          choices: [{ delta: { content } }],
+                        })}\n\n`;
+                        controller.enqueue(encoder.encode(sseLine));
+                      }
+                    } catch (e) {
+                      console.error("Error parsing OpenAI-style Ollama line:", e);
+                    }
+                    continue;
+                  }
+
+                  try {
+                    const parsed = JSON.parse(trimmed);
+                    const content = parsed.message?.content || "";
+                    if (content) {
+                      const sseLine = `data: ${JSON.stringify({
+                        choices: [{ delta: { content } }],
+                      })}\n\n`;
+                      controller.enqueue(encoder.encode(sseLine));
+                    }
+                    if (parsed.done) {
+                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                    }
+                  } catch (e) {
+                    console.error("Error parsing Ollama line:", e);
+                  }
+                }
+              }
+            } catch (err) {
+              controller.error(err);
+            } finally {
+              controller.close();
+            }
+          }
+        });
+      } else {
+        successStream = response.body;
+      }
 
       finalUsedModel = `${targetName}/${target.model}`;
       break;
