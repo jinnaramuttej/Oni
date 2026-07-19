@@ -1,32 +1,12 @@
 /**
  * component-selector.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Reads HTML snippet files from /oni-components/{section}/*.html at request
- * time, scores each file against the current build context using lightweight
- * keyword matching, and returns a `componentContext` string ready to be
- * injected into the AI system prompt.
- *
- * DESIGN DECISION — runtime reads vs. build-time index:
- *
- *   Runtime reads (current approach):
- *     + Zero build step — add a new .html file and it's picked up immediately.
- *     + No stale-cache risk.
- *     - Tiny fs.readdirSync + fs.readFileSync overhead on every request.
- *       In practice this is negligible (<2 ms for ~20 files of 1-5 KB each).
- *
- *   Build-time index (future option when the library grows large):
- *     + Zero I/O per request — everything is a JS object baked at build time.
- *     - Must re-build after every snippet change.
- *     - More infrastructure (a codegen script or a Next.js generateStaticParams step).
- *
- *   For the current library size (~20 files, <80 KB total) runtime reads are
- *   the right call. If the library ever grows beyond ~200 files, switch to a
- *   build-time index.
- *
- * EXPORTED API:
- *   selectComponents(input: ComponentSelectorInput): ComponentSelectorResult
- *   buildComponentContext(result: ComponentSelectorResult): string
- *
+ * Reads full-page HTML template files from /oni-components/full-templates/*.html,
+ * scores each template against the current build context using keyword matching,
+ * and returns a `componentContext` string containing the top 1-2 matched templates.
+ * 
+ * Extracts the first 3500 characters of the selected templates (which includes
+ * the critical <style> rules and layout grids) to guide the LLM's design.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -41,25 +21,23 @@ export interface BrandAnswers {
   location?: string;
   primaryColor?: string;
   secondaryColor?: string;
-  tone?: string;         // e.g. "luxury", "friendly", "minimal", "bold"
+  tone?: string;
   services?: string;
+  contentSourcing?: string;
 }
 
 export interface ComponentSelectorInput {
-  /** Detected industry key (restaurant, salon, saas, medical, fitness, legal, education, portfolio, general) */
   industry: string;
-  /** Raw prompt from the user */
   originalPrompt: string;
-  /** Brand answers collected from the enhance modal */
   brandAnswers?: BrandAnswers | null;
 }
 
 export interface SelectedComponent {
-  section: string;      // e.g. "hero"
-  filename: string;     // e.g. "restaurant-cinematic.html"
+  section: string;      // e.g. "full-template"
+  filename: string;     // e.g. "AURELIA.html"
   score: number;        // 0–100 match confidence
-  snippet: string;      // raw HTML, potentially truncated to MAX_SNIPPET_CHARS
-  templateVarsFound: string[]; // which {{VARS}} are present in this snippet
+  snippet: string;      // raw HTML excerpt
+  templateVarsFound: string[];
 }
 
 export interface ComponentSelectorResult {
@@ -72,106 +50,73 @@ export interface ComponentSelectorResult {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** Max characters to include per section snippet in the final context string */
-const MAX_SNIPPET_CHARS = 600;
+const MAX_SNIPPET_CHARS = 3500;
+const TEMPLATES_ROOT = path.join(process.cwd(), "oni-components", "full-templates");
 
-/** Root directory of the component library */
-const COMPONENTS_ROOT = path.join(process.cwd(), "oni-components");
-
-/**
- * All sections we attempt to resolve.
- * Order matters — it becomes the order sections appear in componentContext.
- */
-const SECTIONS = [
-  "navbar",
-  "hero",
-  "features",
-  "services",
-  "testimonials",
-  "cta",
-  "contact",
-  "footer",
-] as const;
-
-type Section = (typeof SECTIONS)[number];
-
-// ── Industry → scoring signals ────────────────────────────────────────────────
-/**
- * For each industry, a list of keywords that should BOOST a file's score when
- * found in its filename or HTML content. Negative keywords (prefixed with "!")
- * subtract from the score.
- */
 const INDUSTRY_SIGNALS: Record<string, string[]> = {
-  restaurant: ["restaurant", "cinematic", "dining", "food", "menu", "reservation", "!saas", "!light"],
-  cafe: ["restaurant", "cinematic", "coffee", "cafe", "!saas"],
-  salon:  ["salon", "beauty", "light", "booking", "!dark", "!saas"],
-  spa:    ["spa", "light", "booking", "luxury", "!saas"],
-  medical:["light", "clean", "numbered", "!dark", "!restaurant"],
-  fitness:["dark", "bold", "!light", "!restaurant"],
-  saas:   ["saas", "light", "numbered", "tech", "!restaurant", "!cinematic"],
-  legal:  ["dark", "list", "clean", "!light", "!restaurant"],
-  education: ["light", "numbered", "!dark", "!restaurant"],
-  portfolio: ["dark", "fullscreen", "!light", "!restaurant"],
-  general:   [],
+  restaurant: ["restaurant", "cinematic", "dining", "food", "menu", "bakery", "croissant", "cafe", "!saas", "!light"],
+  cafe: ["restaurant", "coffee", "cafe", "bakery", "bistro", "!saas"],
+  salon: ["salon", "beauty", "light", "booking", "spa", "hair", "!dark", "!saas"],
+  spa: ["spa", "light", "booking", "luxury", "massage", "!saas"],
+  medical: ["light", "clean", "health", "clinic", "medcare", "!dark", "!restaurant"],
+  fitness: ["dark", "bold", "gym", "fitness", "workout", "!light", "!restaurant"],
+  saas: ["saas", "light", "tech", "software", "nexus", "!restaurant"],
+  legal: ["dark", "prestige", "law", "firm", "attorney", "!light", "!restaurant"],
+  education: ["light", "academy", "school", "course", "!dark", "!restaurant"],
+  portfolio: ["dark", "fullscreen", "creative", "agency", "portfolio", "!light", "!restaurant"],
+  general: [],
 };
 
-/** Dark vs light preference per industry (used to break ties) */
 const PREFERS_DARK: Record<string, boolean> = {
   restaurant: true,
-  cafe:       true,
-  salon:      false,
-  spa:        false,
-  medical:    false,
-  fitness:    true,
-  saas:       false,
-  legal:      true,
-  education:  false,
-  portfolio:  true,
-  general:    true,
+  cafe: true,
+  salon: false,
+  spa: false,
+  medical: false,
+  fitness: true,
+  saas: false,
+  legal: true,
+  education: false,
+  portfolio: true,
+  general: true,
 };
 
-/** Industry → palette colors */
 const INDUSTRY_PALETTES: Record<string, { primary: string; secondary: string }> = {
   restaurant: { primary: "#D4AF37", secondary: "#8B1E1E" },
-  cafe:       { primary: "#C4834A", secondary: "#14100D" },
-  salon:      { primary: "#E29578", secondary: "#FFDDD2" },
-  spa:        { primary: "#B5844A", secondary: "#D4A96A" },
-  medical:    { primary: "#0E86D4", secondary: "#055C9D" },
-  fitness:    { primary: "#39FF14", secondary: "#1F8A0D" },
-  saas:       { primary: "#6366F1", secondary: "#06B6D4" },
-  legal:      { primary: "#C5A880", secondary: "#535E71" },
-  education:  { primary: "#3B82F6", secondary: "#10B981" },
-  portfolio:  { primary: "#A855F7", secondary: "#EC4899" },
-  general:    { primary: "#3B82F6", secondary: "#6366F1" },
+  cafe: { primary: "#C4834A", secondary: "#14100D" },
+  salon: { primary: "#E29578", secondary: "#FFDDD2" },
+  spa: { primary: "#B5844A", secondary: "#D4A96A" },
+  medical: { primary: "#0E86D4", secondary: "#055C9D" },
+  fitness: { primary: "#39FF14", secondary: "#1F8A0D" },
+  saas: { primary: "#6366F1", secondary: "#06B6D4" },
+  legal: { primary: "#C5A880", secondary: "#535E71" },
+  education: { primary: "#3B82F6", secondary: "#10B981" },
+  portfolio: { primary: "#A855F7", secondary: "#EC4899" },
+  general: { primary: "#3B82F6", secondary: "#6366F1" },
 };
 
-/** Industry → font pairing */
 const INDUSTRY_FONTS: Record<string, { display: string; body: string }> = {
   restaurant: { display: "Cormorant Garamond", body: "Jost" },
-  cafe:       { display: "Fraunces", body: "Instrument Sans" },
-  salon:      { display: "Playfair Display", body: "Plus Jakarta Sans" },
-  spa:        { display: "Cormorant Garamond", body: "DM Sans" },
-  medical:    { display: "Inter", body: "Inter" },
-  fitness:    { display: "Oswald", body: "Montserrat" },
-  saas:       { display: "Plus Jakarta Sans", body: "Inter" },
-  legal:      { display: "Cinzel", body: "Montserrat" },
-  education:  { display: "Outfit", body: "Plus Jakarta Sans" },
-  portfolio:  { display: "Syne", body: "Space Grotesk" },
-  general:    { display: "Plus Jakarta Sans", body: "Plus Jakarta Sans" },
+  cafe: { display: "Fraunces", body: "Instrument Sans" },
+  salon: { display: "Playfair Display", body: "Plus Jakarta Sans" },
+  spa: { display: "Cormorant Garamond", body: "DM Sans" },
+  medical: { display: "Inter", body: "Inter" },
+  fitness: { display: "Oswald", body: "Montserrat" },
+  saas: { display: "Plus Jakarta Sans", body: "Inter" },
+  legal: { display: "Cinzel", body: "Montserrat" },
+  education: { display: "Outfit", body: "Plus Jakarta Sans" },
+  portfolio: { display: "Syne", body: "Space Grotesk" },
+  general: { display: "Plus Jakarta Sans", body: "Plus Jakarta Sans" },
 };
+
+const STOP_WORDS = new Set([
+  "make", "build", "create", "design", "generate", "want", "need",
+  "website", "site", "page", "with", "that", "this", "have", "will",
+  "for", "and", "the", "our", "your", "please", "just", "like",
+]);
 
 // ── Scoring helpers ───────────────────────────────────────────────────────────
 
-/**
- * Compute a 0–100 score for a single component file.
- *
- * Scoring breakdown:
- *   - Each positive keyword found in filename OR html content: +20 pts
- *   - Each negative keyword (prefixed "!") found:             -25 pts
- *   - Prompt keyword match in filename or html:               +10 pts per hit
- *   - Dark/light preference alignment:                        +15 pts
- * Score is clamped to [0, 100].
- */
 function scoreComponent(
   filename: string,
   htmlContent: string,
@@ -194,13 +139,11 @@ function scoreComponent(
     }
   }
 
-  // Dark/light preference
-  const isDark = combined.includes("dark");
-  const isLight = combined.includes("light");
+  const isDark = combined.includes("dark") || combined.includes("bg-background") || combined.includes("background: #0");
+  const isLight = combined.includes("light") || combined.includes("background: #fff");
   if (prefersDark && isDark) score += 15;
   if (!prefersDark && isLight) score += 15;
 
-  // Prompt keyword bonus (strip common stop words first)
   const promptWords = prompt
     .toLowerCase()
     .split(/\W+/)
@@ -212,115 +155,17 @@ function scoreComponent(
   return Math.max(0, Math.min(100, score));
 }
 
-const STOP_WORDS = new Set([
-  "make", "build", "create", "design", "generate", "want", "need",
-  "website", "site", "page", "with", "that", "this", "have", "will",
-  "for", "and", "the", "our", "your", "please", "just", "like",
-]);
-
-// ── Template variable extraction ──────────────────────────────────────────────
-
-/** Find all {{VARIABLE_NAME}} placeholders present in the HTML snippet */
 function extractTemplateVars(html: string): string[] {
   const matches = html.match(/\{\{[A-Z_]+\}\}/g) ?? [];
   return [...new Set(matches)];
 }
 
-// ── Core: read + score all files for one section ──────────────────────────────
-
-function resolveSectionMultiple(
-  section: Section,
-  industry: string,
-  prompt: string
-): SelectedComponent[] {
-  const sectionDir = path.join(COMPONENTS_ROOT, section);
-
-  if (!fs.existsSync(sectionDir)) {
-    return [];
-  }
-
-  let files: string[];
-  try {
-    files = fs.readdirSync(sectionDir).filter((f) => f.endsWith(".html"));
-  } catch {
-    return [];
-  }
-
-  if (files.length === 0) return [];
-
-  const candidates: { filename: string; score: number; html: string }[] = [];
-
-  for (const filename of files) {
-    const filePath = path.join(sectionDir, filename);
-    let html = "";
-    try {
-      html = fs.readFileSync(filePath, "utf8");
-    } catch {
-      continue;
-    }
-
-    const score = scoreComponent(filename, html, industry, prompt);
-    candidates.push({ filename, score, html });
-  }
-
-  // Sort candidates by score descending
-  candidates.sort((a, b) => b.score - a.score);
-
-  if (candidates.length === 0) return [];
-
-  const bestScore = candidates[0].score;
-  const selected: SelectedComponent[] = [];
-
-  // Pick top candidate
-  const first = candidates[0];
-  const snippet1 =
-    first.html.length > MAX_SNIPPET_CHARS
-      ? first.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated -->"
-      : first.html;
-
-  selected.push({
-    section,
-    filename: first.filename,
-    score: first.score,
-    snippet: snippet1,
-    templateVarsFound: extractTemplateVars(first.html),
-  });
-
-  // Pick secondary candidate if it's within 15 points of the best score
-  if (candidates.length > 1) {
-    const second = candidates[1];
-    if (bestScore - second.score <= 15) {
-      const snippet2 =
-        second.html.length > MAX_SNIPPET_CHARS
-          ? second.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated -->"
-          : second.html;
-
-      selected.push({
-        section,
-        filename: second.filename,
-        score: second.score,
-        snippet: snippet2,
-        templateVarsFound: extractTemplateVars(second.html),
-      });
-    }
-  }
-
-  return selected;
-}
-
 // ── Public API — selectComponents ─────────────────────────────────────────────
 
-/**
- * Selects the best-matching HTML components (allowing up to 2 candidates if scores are close) for each section.
- * Safe to call at request time — I/O is fast for this library size.
- */
 export function selectComponents(input: ComponentSelectorInput): ComponentSelectorResult {
   const { industry, originalPrompt, brandAnswers } = input;
-
-  // Normalise industry key
   const industryKey = industry in INDUSTRY_SIGNALS ? industry : "general";
 
-  // Enrich the prompt with brand signals for scoring
   const enrichedPrompt = [
     originalPrompt,
     brandAnswers?.businessName ?? "",
@@ -330,60 +175,84 @@ export function selectComponents(input: ComponentSelectorInput): ComponentSelect
     .join(" ")
     .trim();
 
-  const components: SelectedComponent[] = [];
-  let totalChars = 0;
-
-  for (const section of SECTIONS) {
-    const resolvedList = resolveSectionMultiple(section, industryKey, enrichedPrompt);
-    for (const resolved of resolvedList) {
-      components.push(resolved);
-      totalChars += resolved.snippet.length;
-    }
+  if (!fs.existsSync(TEMPLATES_ROOT)) {
+    return { components: [], industry: industryKey, palette: { ...INDUSTRY_PALETTES[industryKey] }, fonts: { ...INDUSTRY_FONTS[industryKey] }, totalChars: 0 };
   }
 
-  const palette =
-    INDUSTRY_PALETTES[industryKey] ?? INDUSTRY_PALETTES["general"];
-  const fonts =
-    INDUSTRY_FONTS[industryKey] ?? INDUSTRY_FONTS["general"];
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(TEMPLATES_ROOT).filter((f) => f.endsWith(".html"));
+  } catch {
+    return { components: [], industry: industryKey, palette: { ...INDUSTRY_PALETTES[industryKey] }, fonts: { ...INDUSTRY_FONTS[industryKey] }, totalChars: 0 };
+  }
 
-  // If brandAnswers contains colour overrides, use them
+  const candidates: { filename: string; score: number; html: string }[] = [];
+
+  for (const filename of files) {
+    const filePath = path.join(TEMPLATES_ROOT, filename);
+    let html = "";
+    try {
+      html = fs.readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+    const score = scoreComponent(filename, html, industryKey, enrichedPrompt);
+    candidates.push({ filename, score, html });
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+
+  const selected: SelectedComponent[] = [];
+  let totalChars = 0;
+
+  // Pick top 1-2 templates
+  const countToPick = Math.min(candidates.length, 2);
+  for (let i = 0; i < countToPick; i++) {
+    const item = candidates[i];
+    const excerpt = item.html.length > MAX_SNIPPET_CHARS
+      ? item.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated template structure -->"
+      : item.html;
+
+    selected.push({
+      section: `Reference Template ${i === 0 ? 'A' : 'B'}`,
+      filename: item.filename,
+      score: item.score,
+      snippet: excerpt,
+      templateVarsFound: extractTemplateVars(item.html),
+    });
+    totalChars += excerpt.length;
+  }
+
+  const palette = { ... (INDUSTRY_PALETTES[industryKey] ?? INDUSTRY_PALETTES["general"]) };
+  const fonts = { ... (INDUSTRY_FONTS[industryKey] ?? INDUSTRY_FONTS["general"]) };
+
   if (brandAnswers?.primaryColor) palette.primary = brandAnswers.primaryColor;
   if (brandAnswers?.secondaryColor) palette.secondary = brandAnswers.secondaryColor;
 
-  return { components, industry: industryKey, palette, fonts, totalChars };
+  return { components: selected, industry: industryKey, palette, fonts, totalChars };
 }
 
 // ── Public API — buildComponentContext ────────────────────────────────────────
 
-/**
- * Converts a ComponentSelectorResult into a plain-text string that can be
- * appended to the AI system prompt.
- */
 export function buildComponentContext(result: ComponentSelectorResult): string {
   if (result.components.length === 0) return "";
 
   const { industry, palette, fonts } = result;
   const lines: string[] = [
-    "COMPONENT DESIGN REFERENCES (REFERENCE ONLY — do not copy structure/classes/IDs verbatim, extract only the visual/layout IDEA and rebuild it fresh for this business):",
+    "FULL TEMPLATE DESIGN REFERENCES (REFERENCE ONLY — study the layout system, typography scale, CSS classes, responsive grids, and variables. NEVER copy exact blocks or class names verbatim. Extract and synthesize visual/layout ideas):",
     `(Industry: ${industry} | Primary: ${palette.primary} | Secondary: ${palette.secondary} | Display font: ${fonts.display} | Body font: ${fonts.body})`,
-    "Study each section snippet below. Borrow the grid structures, hover effects, and class patterns. Do NOT copy them verbatim — adapt and elevate them for the user's specific brand.",
+    "Adapt the design styles of the references below into your generation. Write a custom premium structure matching the user's specific branding guidelines.",
     "",
   ];
 
   for (const comp of result.components) {
-    const sectionLabel = comp.section.toUpperCase();
-    lines.push(`=== ${sectionLabel} ===`);
-    lines.push(`<!-- REFERENCE ONLY — do not copy class names, structures, or IDs verbatim. Extract visual/layout layout idea. -->`);
-    lines.push(`<!-- source: ${comp.filename} | match score: ${comp.score}/100 -->`);
+    lines.push(`=== ${comp.section.toUpperCase()} ===`);
+    lines.push(`<!-- Source Template: ${comp.filename} | Match Score: ${comp.score}/100 -->`);
     lines.push(comp.snippet);
     lines.push(
-      `[→ REFERENCE ONLY: Adapt this ${sectionLabel} for a ${industry} business. ` +
-        `Primary color: ${palette.primary}, Secondary: ${palette.secondary}. ` +
+      `[→ Adapt the aesthetic and structure of ${comp.filename}. ` +
         `Display font: "${fonts.display}", Body font: "${fonts.body}". ` +
-        (comp.templateVarsFound.length > 0
-          ? `Replace template vars: ${comp.templateVarsFound.join(", ")} with real business values. `
-          : "") +
-        `Make it significantly more premium and animated than this reference snippet. Build fresh structures, never reuse class names/IDs verbatim.]`
+        `Build a clean custom layout inspired by this look and feel, but write fresh and customized code.]`
     );
     lines.push("");
   }
