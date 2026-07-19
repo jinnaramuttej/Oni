@@ -262,6 +262,8 @@ STRICT RULES:
   - NO markdown code fences inside <ONI_CODE>
   - NO mention of Oni or AI in the output HTML
   - ALWAYS wrap the complete HTML in <ONI_CODE>...</ONI_CODE>
+  - ABSOLUTE RULE: ALL website HTML must be inside <ONI_CODE>...</ONI_CODE> tags. Never write HTML code directly in the chat response. The chat response must only contain 1-2 sentences of plain text. Code goes in ONI_CODE tags only.
+  - CRITICAL CSS RULE: Every CSS class used in HTML must be defined in the <style> block. Never use a class without defining its styles.
   - NEVER stop generating mid-HTML — complete the full </html> closing tag`;
 
 const ONI_QUALITY_RULES = ``;
@@ -1469,34 +1471,28 @@ ${htmlContent}
   const estimatedTokens = Math.ceil(totalMessageChars / 4.0);
   console.log(`[DIAG][Token-Estimate] Total message characters: ${totalMessageChars}, Estimated tokens: ${estimatedTokens}`);
 
-  // Skip Groq if the request is close to or exceeds the 12,000 TPM limit (leaving headroom for generation)
-  const skipGroqDueToSize = estimatedTokens > 6500;
+  // Skip Groq if the request is close to or exceeds the 25,000 TPM limit (leaving headroom for generation)
+  const skipGroqDueToSize = estimatedTokens > 25000;
   if (skipGroqDueToSize) {
-    console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 6500 threshold) to prevent 413 error`);
+    console.log(`[DIAG][Token-Estimate] ⚠️ SKIPPING Groq due to token limit (estimated: ${estimatedTokens} > 25000 threshold) to prevent 413 error`);
   }
 
   const MODEL_CHAIN = [
-    ...(isLocal ? [{
-      url: OLLAMA_CHAT_URL,  // http://127.0.0.1:11434/v1/chat/completions
-      key: null,
-      model: OLLAMA_MODEL,   // qwen2.5-coder from env
-      max_tokens: 16000,
-      isOllama: true,
-      timeoutMs: 90000       // FIX 3: Increased Ollama-specific timeout to 90 seconds
-    }] : []),
     ...(!skipGroqDueToSize ? [{
       url: "https://api.groq.com/openai/v1/chat/completions",
       key: process.env.GROQ_API_KEY?.trim(),
       model: "llama-3.3-70b-versatile",
-      max_tokens: 5000,      // Reduced max output tokens to stay under Groq TPM limit
-      timeoutMs: 15000
+      max_tokens: 16000,
+      timeoutMs: 15000,
+      isOllama: false
     }] : []),
     {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: process.env.OPENROUTER_API_KEY?.trim(),
       model: "deepseek/deepseek-chat",
-      max_tokens: 8000,      // Lowered max_tokens to prevent 402 payment threshold errors
-      timeoutMs: 30000
+      max_tokens: 16000,
+      timeoutMs: 30000,
+      isOllama: false
     }
   ];
 
@@ -1506,7 +1502,7 @@ ${htmlContent}
     const targetName = target.isOllama ? "ollama" : target.url.includes("groq") ? "groq" : "openrouter";
 
     // If key is needed but missing/empty, skip
-    if (!target.isOllama && !target.key) {
+    if (!target.key) {
       const skipMsg = `[Pipeline] Skipping ${targetName} because API key is missing.`;
       console.warn(skipMsg);
       errorsList.push(`${targetName}: Skipped (API key is missing)`);
@@ -1520,7 +1516,7 @@ ${htmlContent}
         "Content-Type": "application/json",
       };
 
-      if (target.key && !target.isOllama) {
+      if (target.key) {
         headers["Authorization"] = `Bearer ${target.key}`;
       }
 
@@ -1529,20 +1525,13 @@ ${htmlContent}
         headers["X-Title"] = "Oni Website Builder";
       }
 
-      const requestBody = target.isOllama
-        ? JSON.stringify({
-            model: target.model,
-            messages: messagesToSend, // Use normal messages with role/content objects
-            stream: true,
-            max_tokens: 16000,
-          })
-        : JSON.stringify({
-            model: target.model,
-            messages: messagesToSend,
-            temperature: 0.7,
-            max_tokens: target.max_tokens,
-            stream: true,
-          });
+      const requestBody = JSON.stringify({
+        model: target.model,
+        messages: messagesToSend,
+        temperature: 0.7,
+        max_tokens: target.max_tokens,
+        stream: true,
+      });
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), target.timeoutMs);
@@ -1565,77 +1554,7 @@ ${htmlContent}
         throw new Error("Response body is null");
       }
 
-      if (target.isOllama) {
-        // Handle Ollama native stream format and transform to OpenAI compatible format
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        const encoder = new TextEncoder();
-
-        successStream = new ReadableStream({
-          async start(controller) {
-            let buffer = "";
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-
-                for (const line of lines) {
-                  let trimmed = line.trim();
-                  if (!trimmed) continue;
-                  
-                  // If the stream is already in OpenAI/SSE format (e.g. starting with "data: "), strip the prefix.
-                  if (trimmed.startsWith("data: ")) {
-                    const dataPayload = trimmed.slice(6).trim();
-                    if (dataPayload === "[DONE]") {
-                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                      continue;
-                    }
-                    try {
-                      const parsed = JSON.parse(dataPayload);
-                      const content = parsed.choices?.[0]?.delta?.content || "";
-                      if (content) {
-                        const sseLine = `data: ${JSON.stringify({
-                          choices: [{ delta: { content } }],
-                        })}\n\n`;
-                        controller.enqueue(encoder.encode(sseLine));
-                      }
-                    } catch (e) {
-                      console.error("Error parsing OpenAI-style Ollama line:", e);
-                    }
-                    continue;
-                  }
-
-                  try {
-                    const parsed = JSON.parse(trimmed);
-                    const content = parsed.message?.content || "";
-                    if (content) {
-                      const sseLine = `data: ${JSON.stringify({
-                        choices: [{ delta: { content } }],
-                      })}\n\n`;
-                      controller.enqueue(encoder.encode(sseLine));
-                    }
-                    if (parsed.done) {
-                      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                    }
-                  } catch (e) {
-                    console.error("Error parsing Ollama line:", e);
-                  }
-                }
-              }
-            } catch (err) {
-              controller.error(err);
-            } finally {
-              controller.close();
-            }
-          }
-        });
-      } else {
-        successStream = response.body;
-      }
+      successStream = response.body;
 
       finalUsedModel = `${targetName}/${target.model}`;
       break;

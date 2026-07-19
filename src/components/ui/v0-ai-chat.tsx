@@ -3109,6 +3109,9 @@ ${prompt}`;
                     .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*/gi, '')
                     .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                     .replace(/<ONI_CODE>[\s\S]*/g, '')
+                    .replace(/<!DOCTYPE[\s\S]*/gi, '')
+                    .replace(/```html[\s\S]*/gi, '')
+                    .replace(/```[\s\S]*/gi, '')
                     .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
                     .replace(/\s*ONI_CODE\s*$/gm, '') // trailing bare ONI_CODE marker
                     .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')
@@ -3154,6 +3157,9 @@ ${prompt}`;
                       .replace(/<TEMPLATE_SAMPLE_CODE>[\s\S]*/gi, '')
                       .replace(/<ONI_CODE>[\s\S]*?<\/ONI_CODE>/g, '')
                       .replace(/<ONI_CODE>[\s\S]*/g, '')
+                      .replace(/<!DOCTYPE[\s\S]*/gi, '')
+                      .replace(/```html[\s\S]*/gi, '')
+                      .replace(/```[\s\S]*/gi, '')
                       .replace(/^ONI_CODE\s*/gm, '')   // bare ONI_CODE without angle brackets (model quirk)
                       .replace(/\s*ONI_CODE\s*$/gm, '') // trailing bare ONI_CODE marker
                       .replace(/<ONI_THOUGHT>[\s\S]*?<\/ONI_THOUGHT>/g, '')

@@ -160,7 +160,49 @@ function extractTemplateVars(html: string): string[] {
   return [...new Set(matches)];
 }
 
-// ── Public API — selectComponents ─────────────────────────────────────────────
+
+function generateTemplateDescription(html: string, filename: string): string {
+  const colors: string[] = [];
+  const colorMatches = html.match(/--[\w-]+:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/g) || [];
+  for (const m of colorMatches) {
+    const cleanColor = m.trim();
+    if (!colors.includes(cleanColor) && colors.length < 5) {
+      colors.push(cleanColor);
+    }
+  }
+
+  const fonts: string[] = [];
+  const fontMatches = html.match(/font-family:\s*([^;}\n]+)/g) || [];
+  for (const m of fontMatches) {
+    const f = m.replace("font-family:", "").replace(/['"]/g, "").trim();
+    if (!fonts.includes(f) && fonts.length < 3) {
+      fonts.push(f);
+    }
+  }
+
+  const keyframes: string[] = [];
+  const keyframeMatches = html.match(/@keyframes\s+(\w+)/g) || [];
+  for (const m of keyframeMatches) {
+    const name = m.replace(/@keyframes\s+/, "").trim();
+    if (!keyframes.includes(name) && keyframes.length < 4) {
+      keyframes.push(name);
+    }
+  }
+
+  const sections: string[] = [];
+  const htmlLower = html.toLowerCase();
+  if (htmlLower.includes("navbar") || htmlLower.includes("<nav")) sections.push("Glassmorphism Navbar");
+  if (htmlLower.includes("hero")) sections.push("Full-page Parallax Hero");
+  if (htmlLower.includes("modal-card") || htmlLower.includes("modal-overlay")) sections.push("Interactive Popup Reservation Modal");
+  if (htmlLower.includes("grid") || htmlLower.includes("cards")) sections.push("Responsive Service Showcase Grid");
+  if (htmlLower.includes("testimonial") || htmlLower.includes("review")) sections.push("Customer Testimonials Grid");
+
+  return `DESIGN REFERENCES FOR TEMPLATE: ${filename}
+- Palette Colors: ${colors.join(", ") || "E.g. dark charcoal, warm copper, clean light ivory"}
+- Fonts: ${fonts.join(", ") || "E.g. Cormorant Garamond display, Jost clean body"}
+- Animations: ${keyframes.join(", ") || "fadeInUp, float, scaleUp"}
+- Layout & Sections: ${sections.join(", ") || "Hero with double CTA buttons, 3-card services grid, contact form with label transitions"}`;
+}
 
 export function selectComponents(input: ComponentSelectorInput): ComponentSelectorResult {
   const { industry, originalPrompt, brandAnswers } = input;
@@ -209,18 +251,16 @@ export function selectComponents(input: ComponentSelectorInput): ComponentSelect
   const countToPick = Math.min(candidates.length, 2);
   for (let i = 0; i < countToPick; i++) {
     const item = candidates[i];
-    const excerpt = item.html.length > MAX_SNIPPET_CHARS
-      ? item.html.slice(0, MAX_SNIPPET_CHARS) + "\n  <!-- ...truncated template structure -->"
-      : item.html;
+    const description = generateTemplateDescription(item.html, item.filename);
 
     selected.push({
       section: `Reference Template ${i === 0 ? 'A' : 'B'}`,
       filename: item.filename,
       score: item.score,
-      snippet: excerpt,
-      templateVarsFound: extractTemplateVars(item.html),
+      snippet: description,
+      templateVarsFound: [],
     });
-    totalChars += excerpt.length;
+    totalChars += description.length;
   }
 
   const palette = { ... (INDUSTRY_PALETTES[industryKey] ?? INDUSTRY_PALETTES["general"]) };
