@@ -269,12 +269,17 @@ if (form) {
 }
 `;
 
-export function buildFullBrandContext(answers: any): string {
-  if (!answers) return "";
+export function buildFullBrandContext(answers: any, industry?: string): string {
+  if (!answers || Object.keys(answers).length === 0) {
+    const ind = industry || "general";
+    return `=== USER BRAND PROFILE ===
+No brand details provided — invent a plausible, realistic business name, tagline, and details appropriate for a ${ind} business, never use placeholder text (like "Your Business Name", "Your Tagline", "Your Location", etc.).
+==========================\n`;
+  }
   const parts = [];
-  if (answers.businessName) parts.push(`Business Name: ${answers.businessName}`);
+  if (answers.businessName && !answers.businessName.toLowerCase().includes("your business name")) parts.push(`Business Name: ${answers.businessName}`);
   if (answers.industry) parts.push(`Industry Category: ${answers.industry}`);
-  if (answers.location) parts.push(`Location: ${answers.location}`);
+  if (answers.location && !answers.location.toLowerCase().includes("your location")) parts.push(`Location: ${answers.location}`);
   if (answers.primaryColor) parts.push(`Primary Brand Color: ${answers.primaryColor}`);
   if (answers.secondaryColor) parts.push(`Secondary Brand Color: ${answers.secondaryColor}`);
   if (answers.tone) parts.push(`Brand Tone: ${answers.tone}`);
@@ -286,7 +291,12 @@ export function buildFullBrandContext(answers: any): string {
     parts.push(`Logo Selection: Generate an inline, gorgeous, modern, vector SVG logo using the business name (${answers.businessName || 'Brand'}) and brand colors. The SVG logo must look high-end, geometric, and professional, containing the brand name or initials styled beautifully with the brand colors.`);
   }
 
-  if (parts.length === 0) return "";
+  if (parts.length === 0) {
+    const ind = industry || "general";
+    return `=== USER BRAND PROFILE ===
+No brand details provided — invent a plausible, realistic business name, tagline, and details appropriate for a ${ind} business, never use placeholder text (like "Your Business Name", "Your Tagline", "Your Location", etc.).
+==========================\n`;
+  }
   return `=== USER BRAND PROFILE ===\n${parts.join("\n")}\n==========================\n`;
 }
 
@@ -307,7 +317,7 @@ export function buildTemplateInjection(industry: keyof typeof PALETTES, brandAns
 }
   `.trim();
 
-  const brandContext = buildFullBrandContext(brandAnswers);
+  const brandContext = buildFullBrandContext(brandAnswers, selectedIndustry);
 
   return `
 ${brandContext}

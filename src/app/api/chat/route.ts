@@ -1377,7 +1377,7 @@ Improve the design, make it more premium and modern.`;
     };
 
     try {
-      const brandContextStr = buildFullBrandContext(brandAnswers);
+      const brandContextStr = buildFullBrandContext(brandAnswers, industry);
       const userMessageContent = `${brandContextStr}\n\nUSER REQUEST: ${lastUserMsgText || "Build a premium website."}`;
 
       // Get matching template reference for CSS/HTML guidance
