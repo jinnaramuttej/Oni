@@ -1682,7 +1682,7 @@ function isFreshBuildRequest(prompt: string): boolean {
   const p = prompt.toLowerCase();
   const hasBuildWord = /\b(make|build|create|design|generate)\b/.test(p);
   const hasSiteWord = /\b(website|site|page|landing|portfolio)\b/.test(p);
-  return hasBuildWord && hasSiteWord;
+  return hasBuildWord || hasSiteWord || p.includes("restaurant") || p.includes("cafe") || p.includes("salon") || p.includes("spa") || p.includes("gym") || p.includes("dentist");
 }
 
 function buildBrandPrompt(
@@ -2650,7 +2650,8 @@ export function OniChat({
     }
 
     // Intercept fresh build requests to trigger inline intake questions flow
-    if (!generatedHtml && isFreshBuildRequest(prompt)) {
+    const hasBrandAnswers = brandContext.industry && Object.keys(brandContext.answers).length > 0;
+    if (!generatedHtml && !hasBrandAnswers && isFreshBuildRequest(prompt)) {
       const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
       setMessages(prev => [...prev, userMsg]);
       setInput('');
