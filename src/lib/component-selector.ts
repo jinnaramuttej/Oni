@@ -351,7 +351,7 @@ export function selectBestTemplate(
     }
   }
 
-  if (bestMatch && bestMatch.score >= 60) {
+  if (bestMatch && bestMatch.score >= 50) {
     const cleanName = bestMatch.filename.replace(".html", "");
     return {
       name: cleanName,

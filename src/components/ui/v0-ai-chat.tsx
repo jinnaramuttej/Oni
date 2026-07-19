@@ -584,7 +584,7 @@ export function EnhanceModal({
   isOpen: boolean
   onClose: () => void
   originalPrompt: string
-  onEnhanced: (enhancedPrompt: string, answers: Record<string, string>, industry: string) => void
+  onEnhanced: (enhancedPrompt: string, answers: Record<string, string>) => void
 }) {
   const industry = detectIndustryForEnhance(originalPrompt)
 
@@ -820,7 +820,10 @@ export function EnhanceModal({
               <button
                 className="enhance-next"
                 onClick={() => {
-                  onEnhanced(enhancedPrompt, answers, industry)
+                  onEnhanced(enhancedPrompt, {
+                    ...answers,
+                    industry: industry
+                  })
                   onClose()
                 }}
               >
@@ -1908,12 +1911,17 @@ export function OniChat({
   // Track whether the iframe is showing the preloaded Velara sample (not user-generated).
   // We use a ref so it never causes re-renders.
   const isShowingSample = useRef(!initialPrompt);
+  const brandAnswersRef = useRef<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [brandContext, setBrandContext] = useState<BrandContext>(() => {
     if (initialPrompt) {
       const parsed = parseEnhancedPromptAnswers(initialPrompt);
       if (parsed.industry && Object.keys(parsed.answers).length > 0) {
+        brandAnswersRef.current = {
+          ...parsed.answers,
+          industry: parsed.industry
+        };
         return {
           isCollecting: false,
           industry: parsed.industry as any,
@@ -3090,22 +3098,17 @@ ${prompt}`;
           "x-visitor-id": getOrCreateVisitorId(),
         },
         body: JSON.stringify({
-          prompt: promptForApi,
-          messages: messagesForApi.map(m => ({
+          messages: messagesForApi.slice(-4).map(m => ({
             role: m.role,
-            content: m.id === userMessage.id ? promptForApi : m.content
+            content: m.content  
           })),
-          // Only send currentHtml if the user has already generated something this session.
-          // Never send the preloaded Velara sample as context — it would make Groq modify
-          // Velara instead of building a fresh site.
-          currentHtml: isShowingSample.current ? "" : generatedHtml,
+          brandAnswers: brandAnswersRef.current,
+          industry: brandAnswersRef.current?.industry || detectIndustryForEnhance(prompt),
+          originalPrompt: prompt,
+          currentHtml: generatedHtml?.slice(0, 5000) || '',
           defaultModel: getActiveModel(),
           userImage: base64Image,
           customApiKey,
-          brandAnswers: brandContext.industry && !brandContext.isCollecting 
-            ? extractBrandFields(brandContext.industry, brandContext.answers, brandContext.extractedInfo, brandContext.logoBase64) 
-            : undefined,
-          industry: brandContext.industry || undefined,
         }),
       });
 
@@ -4053,18 +4056,10 @@ ${basePrompt}`;
         isOpen={enhanceOpen}
         onClose={() => setEnhanceOpen(false)}
         originalPrompt={input}
-        onEnhanced={(enhanced, answers, industry) => {
-          console.log('Enhanced prompt:', enhanced);
-          setInput(enhanced);
-          setEnhanceOpen(false);
-          window.requestAnimationFrame(() => adjustHeight());
-          setBrandContext({
-            isCollecting: false,
-            industry: industry as any,
-            currentQuestionIndex: 0,
-            answers: answers,
-            originalPrompt: input,
-          });
+        onEnhanced={(prompt, answers) => {
+          setInput(prompt)
+          brandAnswersRef.current = answers
+          setEnhanceOpen(false)
         }}
       />
     </div>

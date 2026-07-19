@@ -227,14 +227,14 @@ CSS REQUIREMENTS (minimum 700 lines):
   - IntersectionObserver .reveal / .reveal.in scroll animations
   - Glassmorphism navbar that shrinks on scroll
   - Working tabbed menu panel with JS toggle
-  - Reservation modal overlay with form and open/close animation. You MUST explicitly include these CSS classes inside the <style> block by default:
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal { background: #fff; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; position: relative; }
-    .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-    .form-group { margin-bottom: 1.2rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-submit { width: 100%; padding: 1rem; background: var(--grad); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; }
-    .nav-cta { padding: 0.6rem 1.4rem; border-radius: 999px; background: var(--grad); color: white; font-weight: 500; text-decoration: none; }
+  - Reservation modal overlay with form and open/close animation. Every generated website MUST include these CSS classes in the <style> block even if not used — they may be needed by forms and modals:
+    .modal-overlay{position:fixed;inset:0; background:rgba(0,0,0,.7);display:flex; align-items:center;justify-content:center; z-index:1000}
+    .modal{background:#fff;border-radius:12px; padding:2rem;max-width:520px;width:90%; position:relative}
+    .modal-close{position:absolute;top:1rem; right:1rem;background:none;border:none; font-size:1.5rem;cursor:pointer}
+    .form-group{margin-bottom:1.2rem}
+    .form-row{display:grid; grid-template-columns:1fr 1fr;gap:1rem}
+    .form-submit{width:100%;padding:1rem; background:var(--grad);border:none; border-radius:10px;color:#fff; font-size:1rem;font-weight:600;cursor:pointer}
+    .nav-cta{padding:.6rem 1.4rem; border-radius:999px;background:var(--grad); color:#fff;font-weight:500; text-decoration:none}
   - Full @media (max-width: 768px) mobile responsive block
   - Dark mode premium aesthetic — rich backgrounds, accent colors, fine typography
 
@@ -566,12 +566,46 @@ function getCompactHtml(html: string): string {
   return clean;
 }
 
-function getMatchingTemplateHtml(promptText: string, brandAnswers: any): { name: string; html: string } | null {
-  const matched = selectBestTemplate(brandAnswers, promptText);
+function getMatchingTemplateHtml(
+  promptText: string,
+  brandAnswers: any,
+  industry: string
+): { name: string; html: string; id: string; similarity: number } | null {
+  const searchQuery = [
+    industry || 'general',
+    brandAnswers?.tone || '',
+    brandAnswers?.colors || '',
+    brandAnswers?.cuisine || 
+      brandAnswers?.services || '',
+    brandAnswers?.style || ''
+  ].filter(Boolean).join(' ')
+
+  console.log('Template search query:', searchQuery)
+
+  const matched = selectBestTemplate(brandAnswers, searchQuery)
+  
   if (matched) {
-    return { name: matched.name, html: matched.html };
+    const similarity = matched.score / 100
+    console.log('Selected template:', matched.name)
+    console.log('Similarity score:', similarity)
+    
+    if (similarity >= 0.5) {
+      return { 
+        name: matched.name, 
+        html: matched.html, 
+        id: matched.name, 
+        similarity 
+      }
+    } else {
+      console.log('No good template match, generating fresh')
+      return null
+    }
   }
-  return null;
+
+  console.log('Selected template: None')
+  console.log('Similarity score: 0')
+  console.log('No good template match, generating fresh')
+  return null
 }
 
 function streamTextAsSse(content: string) {
@@ -916,6 +950,98 @@ function extractFontLinks(cssCode: string): { fontLinks: string; cleanedCss: str
   };
 }
 
+async function patchMissingCss(
+  html: string, 
+  missingClasses: string[]
+): Promise<string> {
+  
+  const cssPatches: Record<string, string> = {
+    'modal-overlay': `
+.modal-overlay {
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;align-items:center;
+  justify-content:center;z-index:1000;
+}`,
+    'modal': `
+.modal {
+  background:#fff;border-radius:12px;
+  padding:2rem;max-width:520px;width:90%;
+  position:relative;
+}`,
+    'modal-container': `
+.modal-container {
+  background:#fff;border-radius:16px;
+  padding:2.5rem;max-width:520px;width:90%;
+  position:relative;
+}`,
+    'modal-close': `
+.modal-close {
+  position:absolute;top:1rem;right:1rem;
+  background:none;border:none;
+  font-size:1.5rem;cursor:pointer;
+  color:#666;line-height:1;
+}`,
+    'form-group': `
+.form-group {
+  margin-bottom:1.2rem;position:relative;
+}`,
+    'form-row': `
+.form-row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
+}`,
+    'form-submit': `
+.form-submit {
+  width:100%;padding:1rem 2rem;
+  background:var(--grad,linear-gradient(135deg,#7C3AED,#06B6D4));
+  border:none;border-radius:10px;
+  color:white;font-size:1rem;
+  font-weight:600;cursor:pointer;
+  transition:opacity .2s,transform .2s;
+}
+.form-submit:hover {
+  opacity:.9;transform:translateY(-2px);
+}`,
+    'nav-cta': `
+.nav-cta {
+  padding:.6rem 1.4rem;border-radius:999px;
+  background:var(--grad,linear-gradient(135deg,#7C3AED,#06B6D4));
+  color:white;font-weight:500;
+  text-decoration:none;font-size:.85rem;
+  transition:opacity .2s,transform .2s;
+}
+.nav-cta:hover {
+  opacity:.9;transform:translateY(-2px);
+}`
+  }
+  
+  // Build patch CSS for all missing classes
+  const patchCss = missingClasses
+    .filter(cls => cssPatches[cls])
+    .map(cls => cssPatches[cls])
+    .join('\n')
+  
+  if (!patchCss) return html
+  
+  // Inject patch before closing </style> tag
+  // or before </head> if no style tag
+  if (html.includes('</style>')) {
+    return html.replace(
+      '</style>',
+      patchCss + '\n</style>'
+    )
+  } else if (html.includes('</head>')) {
+    return html.replace(
+      '</head>',
+      `<style>${patchCss}</style>\n</head>`
+    )
+  }
+  
+  return html
+}
+
 export async function POST(req: Request) {
   // Rate limiting — protect Groq credits
   const ip = getClientIp(req);
@@ -930,6 +1056,11 @@ export async function POST(req: Request) {
   if (!body) {
     return new NextResponse("Bad request", { status: 400 });
   }
+
+  console.log('=== ONI REQUEST ===')
+  console.log('Business:', body.brandAnswers?.businessName)
+  console.log('Industry:', body.industry)
+  console.log('Colors:', body.brandAnswers?.colors)
 
   // Check for exact template prompts to bypass AI generation and stream the template directly
   const userPromptTextForBypass = body.prompt || "";
@@ -1057,7 +1188,7 @@ export async function POST(req: Request) {
   let matchingTemplate: { name: string; html: string } | null = null;
   
   if (isNewOrRedesign && (!effectiveHtml || effectiveHtml.trim().length === 0) && lastUserMsgText) {
-    matchingTemplate = getMatchingTemplateHtml(lastUserMsgText, brandAnswers);
+    matchingTemplate = getMatchingTemplateHtml(lastUserMsgText, brandAnswers, industry);
     if (matchingTemplate) {
       // FIX 1: For new builds, do NOT pre-seed effectiveHtml with the full template.
       // Instead, extract a reference snippet under 3000 chars and append it to templateReferencePromptSection.
@@ -1184,9 +1315,31 @@ export async function POST(req: Request) {
     }
   }
 
+  const brandContext = body.brandAnswers?.businessName 
+  ? `
+BRAND CONTEXT — USE EVERY DETAIL:
+Business Name: ${body.brandAnswers.businessName}
+Industry: ${body.industry || 'general'}
+Cuisine/Services: ${body.brandAnswers.cuisine || 
+  body.brandAnswers.services || ''}
+Location: ${body.brandAnswers.location || ''}
+Brand Colors: ${body.brandAnswers.colors || 
+  'pick industry appropriate'}
+Tone: ${body.brandAnswers.tone || 'premium'}
+Signature Items: ${body.brandAnswers.specialItems || 
+  body.brandAnswers.keyFeatures || ''}
+Target Clients: ${body.brandAnswers.targetClient || ''}
+
+CRITICAL: Use "${body.brandAnswers.businessName}" 
+as the business name everywhere in the website.
+Never use a generic name like "Vox" or placeholder.
+Write real specific content for this exact business.
+` : '';
+
   let systemPrompt =
     ONI_SYSTEM_PROMPT +
     "\n\n" + templateInjection +
+    "\n\n" + brandContext +
     "\n\n" + componentContext +
     "\n\n" + ONI_QUALITY_RULES +
     "\n\n" + PREMIUM_COMPONENTS_REFERENCE +
@@ -1658,40 +1811,13 @@ ${htmlContent}
         console.warn(`[DIAG][validator] ❌ FAIL — ${validation.issues.length} issue(s) found:`);
         validation.issues.forEach(issue => console.warn(`  • ${issue}`));
 
-        // Instant HTML CSS Patcher (WAY 2)
-        console.log("[DIAG][validator] 🔄 Instant CSS Patcher running to insert missing style definitions...");
-        const COMMON_CSS_MAP: Record<string, string> = {
-          "modal-overlay": `.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }`,
-          "modal": `.modal { background: #fff; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; position: relative; }`,
-          "modal-close": `.modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; }`,
-          "form-group": `.form-group { margin-bottom: 1.2rem; }`,
-          "form-row": `.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }`,
-          "form-submit": `.form-submit { width: 100%; padding: 1rem; background: var(--grad); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; }`,
-          "nav-cta": `.nav-cta { padding: 0.6rem 1.4rem; border-radius: 999px; background: var(--grad); color: white; font-weight: 500; text-decoration: none; }`
-        };
-
         const cssIssue = validation.issues.find(i => i.startsWith("CSS classes used in HTML but never defined in <style>:"));
         if (cssIssue) {
           const classListStr = cssIssue.replace("CSS classes used in HTML but never defined in <style>:", "").trim();
           const missingClasses = classListStr.split(",").map(c => c.trim());
           
-          let patchCss = "\n  /* Patched missing CSS classes */\n";
-          for (const c of missingClasses) {
-            if (COMMON_CSS_MAP[c]) {
-              patchCss += `  ${COMMON_CSS_MAP[c]}\n`;
-            } else {
-              patchCss += `  .${c} { /* auto-generated placeholder class */ }\n`;
-            }
-          }
-
-          let patchedHtml = extractedHtml;
-          if (patchedHtml.includes("</style>")) {
-            patchedHtml = patchedHtml.replace("</style>", `${patchCss}</style>`);
-          } else if (patchedHtml.includes("</head>")) {
-            patchedHtml = patchedHtml.replace("</head>", `<style>${patchCss}</style></head>`);
-          } else {
-            patchedHtml += `<style>${patchCss}</style>`;
-          }
+          const patchedHtml = await patchMissingCss(extractedHtml, missingClasses);
+          console.log('CSS patched:', missingClasses);
 
           const patchedFullResponse = fullResponse.replace(
             /<ONI_CODE>([\s\S]*?)<\/ONI_CODE>/,
