@@ -2987,101 +2987,104 @@ export function OniChat({
       adjustHeight(true);
       if (!hasStarted) setHasStarted(true);
 
-      setIsLoading(true);
+      // Bypass intake questions for template or fully detailed prompts
+      if (!isTemplateOrDetailedPrompt(prompt)) {
+        setIsLoading(true);
 
-      try {
-        const history = messages.map(m => ({ role: m.role, content: m.content }));
-        const classifyRes = await fetch("/api/classify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: prompt, history })
-        });
-        
-        if (classifyRes.ok) {
-          const classification = await classifyRes.json();
-          console.log("[Client Classifier] Result:", classification);
+        try {
+          const history = messages.map(m => ({ role: m.role, content: m.content }));
+          const classifyRes = await fetch("/api/classify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: prompt, history })
+          });
+          
+          if (classifyRes.ok) {
+            const classification = await classifyRes.json();
+            console.log("[Client Classifier] Result:", classification);
 
-          if (classification.intent === "build_request") {
-            let industry = classification.industry || "general";
-            if (industry === "restaurant") {
-              const p = prompt.toLowerCase();
-              if (/south indian|andhra|telangana|dosa|idli/.test(p)) {
-                industry = "south_indian";
-              } else if (/pizza|burger|fast food|wrap/.test(p)) {
-                industry = "pizza_fast_food";
-              } else if (/coffee|cafe|espresso|barista/.test(p)) {
-                industry = "cafe_coffee";
-              } else if (/bakery|cake|dessert/.test(p)) {
-                industry = "bakery_desserts";
-              } else {
-                industry = "fine_dining";
+            if (classification.intent === "build_request") {
+              let industry = classification.industry || "general";
+              if (industry === "restaurant") {
+                const p = prompt.toLowerCase();
+                if (/south indian|andhra|telangana|dosa|idli/.test(p)) {
+                  industry = "south_indian";
+                } else if (/pizza|burger|fast food|wrap/.test(p)) {
+                  industry = "pizza_fast_food";
+                } else if (/coffee|cafe|espresso|barista/.test(p)) {
+                  industry = "cafe_coffee";
+                } else if (/bakery|cake|dessert/.test(p)) {
+                  industry = "bakery_desserts";
+                } else {
+                  industry = "fine_dining";
+                }
+              } else if (industry === "salon") {
+                industry = prompt.toLowerCase().includes("barber") ? "barbershop" : "hair_salon";
+              } else if (industry === "medical") {
+                industry = prompt.toLowerCase().includes("dent") ? "dental_practice" : "medical_clinic";
+              } else if (industry === "fitness") {
+                industry = /yoga|meditation/.test(prompt.toLowerCase()) ? "yoga_meditation" : "gym_fitness";
+              } else if (industry === "saas") {
+                industry = "saas_landing";
+              } else if (industry === "legal") {
+                industry = "law_firm";
+              } else if (industry === "education") {
+                industry = "coaching_tutoring";
               }
-            } else if (industry === "salon") {
-              industry = prompt.toLowerCase().includes("barber") ? "barbershop" : "hair_salon";
-            } else if (industry === "medical") {
-              industry = prompt.toLowerCase().includes("dent") ? "dental_practice" : "medical_clinic";
-            } else if (industry === "fitness") {
-              industry = /yoga|meditation/.test(prompt.toLowerCase()) ? "yoga_meditation" : "gym_fitness";
-            } else if (industry === "saas") {
-              industry = "saas_landing";
-            } else if (industry === "legal") {
-              industry = "law_firm";
-            } else if (industry === "education") {
-              industry = "coaching_tutoring";
-            }
 
-            const rawQuestions = BRAND_QUESTIONS[industry as BrandIndustry] || BRAND_QUESTIONS.general;
-            
-            // Filter out questions based on extractedInfo
-            const filteredQuestions: string[] = [];
-            const extName = classification.extractedInfo?.name || "";
-            const extLocation = classification.extractedInfo?.location || "";
-            
-            rawQuestions.forEach((q) => {
-              const qLower = q.toLowerCase();
+              const rawQuestions = BRAND_QUESTIONS[industry as BrandIndustry] || BRAND_QUESTIONS.general;
               
-              // Skip name question if name is extracted
-              const isNameQuestion = qLower.includes("name") || qLower.includes("called") || qLower.includes("name?");
-              if (isNameQuestion && extName) {
-                console.log(`[Intake] Skipping name question: "${q}" because name is already: "${extName}"`);
-                return;
-              }
+              // Filter out questions based on extractedInfo
+              const filteredQuestions: string[] = [];
+              const extName = classification.extractedInfo?.name || "";
+              const extLocation = classification.extractedInfo?.location || "";
               
-              // Skip location question if location is extracted
-              const isLocationQuestion = qLower.includes("located") || qLower.includes("location") || qLower.includes("address") || qLower.includes("where are you");
-              if (isLocationQuestion && extLocation) {
-                console.log(`[Intake] Skipping location question: "${q}" because location is already: "${extLocation}"`);
-                return;
-              }
-              
-              filteredQuestions.push(q);
-            });
-
-            const allQuestions = getIntakeQuestions(industry as BrandIndustry, filteredQuestions);
-            if (allQuestions.length > 0) {
-              const firstQ = allQuestions[0];
-              const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
-              setMessages(prev => [...prev, oniQ]);
-              setIsLoading(false);
-              
-              setBrandContext({
-                isCollecting: true,
-                industry,
-                currentQuestionIndex: 0,
-                answers: {},
-                originalPrompt: prompt,
-                questionsList: allQuestions,
-                extractedInfo: classification.extractedInfo,
+              rawQuestions.forEach((q) => {
+                const qLower = q.toLowerCase();
+                
+                // Skip name question if name is extracted
+                const isNameQuestion = qLower.includes("name") || qLower.includes("called") || qLower.includes("name?");
+                if (isNameQuestion && extName) {
+                  console.log(`[Intake] Skipping name question: "${q}" because name is already: "${extName}"`);
+                  return;
+                }
+                
+                // Skip location question if location is extracted
+                const isLocationQuestion = qLower.includes("located") || qLower.includes("location") || qLower.includes("address") || qLower.includes("where are you");
+                if (isLocationQuestion && extLocation) {
+                  console.log(`[Intake] Skipping location question: "${q}" because location is already: "${extLocation}"`);
+                  return;
+                }
+                
+                filteredQuestions.push(q);
               });
-              return;
+
+              const allQuestions = getIntakeQuestions(industry as BrandIndustry, filteredQuestions);
+              if (allQuestions.length > 0) {
+                const firstQ = allQuestions[0];
+                const oniQ: ChatMessage = { id: createId(), role: 'assistant', content: firstQ };
+                setMessages(prev => [...prev, oniQ]);
+                setIsLoading(false);
+                
+                setBrandContext({
+                  isCollecting: true,
+                  industry,
+                  currentQuestionIndex: 0,
+                  answers: {},
+                  originalPrompt: prompt,
+                  questionsList: allQuestions,
+                  extractedInfo: classification.extractedInfo,
+                });
+                return;
+              }
             }
           }
+        } catch (err) {
+          console.warn("Classification failed, falling through to direct AI dispatch:", err);
         }
-      } catch (err) {
-        console.warn("Classification failed, falling through to direct AI dispatch:", err);
-      }
 
-      setIsLoading(false);
+        setIsLoading(false);
+      }
     }
 
     void handleSendToAIRef.current(prompt, attachedImage, attachedFiles);
