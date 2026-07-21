@@ -141,6 +141,38 @@ export function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const handleTemplatesNav = () => {
+        if (window.location.hash === "#templates" || window.location.search.includes("templates")) {
+          setShowAllTemplates(true);
+          setTimeout(() => {
+            const el = document.getElementById("templates");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }, 50);
+        }
+      };
+
+      handleTemplatesNav();
+
+      const handleShowAll = () => {
+        setShowAllTemplates(true);
+        setTimeout(() => {
+          const el = document.getElementById("templates");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }, 50);
+      };
+
+      window.addEventListener("hashchange", handleTemplatesNav);
+      window.addEventListener("show-all-templates", handleShowAll);
+
+      return () => {
+        window.removeEventListener("hashchange", handleTemplatesNav);
+        window.removeEventListener("show-all-templates", handleShowAll);
+      };
+    }
+  }, []);
+
   const showToast = (message: string) => {
     setToast(message);
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -505,9 +537,17 @@ export function HomePage() {
 
             {/* Templates section */}
             <div id="templates" className="w-full mt-12 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
-              <div className="mb-3 flex items-center justify-between px-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
-                <p className="hidden text-xs text-text-tertiary sm:block">Pick a visual direction to start faster.</p>
+              <div 
+                className="mb-3 flex items-center justify-between px-1 cursor-pointer group select-none"
+                onClick={() => setShowAllTemplates((v) => !v)}
+              >
+                <div className="flex items-center gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary group-hover:text-white transition-colors">Templates</p>
+                  <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-medium">12 Available</span>
+                </div>
+                <p className="text-xs text-text-tertiary group-hover:text-text-secondary transition-colors">
+                  {showAllTemplates ? "Showing all 12 templates (click to collapse)" : "Click to view all 12 templates →"}
+                </p>
               </div>
 
               {/* Main templates (top 3 only) */}

@@ -427,6 +427,8 @@ export function AppShell({ children, activePage }: AppShellProps) {
                       if (window.location.pathname !== "/") {
                         window.location.href = "/#templates";
                       } else {
+                        window.location.hash = "templates";
+                        window.dispatchEvent(new CustomEvent("show-all-templates"));
                         const el = document.getElementById("templates");
                         if (el) {
                           el.scrollIntoView({ behavior: "smooth" });
