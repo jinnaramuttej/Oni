@@ -79,16 +79,79 @@ type Question = {
 
 // ─── Dynamic Prompt Parsing ─────────────────────────────────────────────────
 
+export function isTemplateOrDetailedPrompt(prompt: string): boolean {
+  if (!prompt || typeof prompt !== 'string') return false;
+  const lower = prompt.toLowerCase();
+  
+  // 1. Explicit TEMPLATE prefix or keyword
+  if (lower.startsWith('template:') || lower.includes('template:')) return true;
+
+  // 2. Matches any known template prompt in TEMPLATE_PROMPTS
+  const templateValues = Object.values(TEMPLATE_PROMPTS);
+  for (const tVal of templateValues) {
+    if (typeof tVal === 'string' && (prompt.includes(tVal) || tVal.includes(prompt) || lower.includes(tVal.toLowerCase().slice(0, 40)))) {
+      return true;
+    }
+  }
+
+  // 3. Known template brand/name markers
+  if (
+    lower.includes('vox restaurant') ||
+    lower.includes('velara retreat') ||
+    lower.includes('moehr atelier') ||
+    lower.includes('maison dore') ||
+    lower.includes('âme coffee') ||
+    lower.includes('foliant & sons') ||
+    lower.includes('studio portfolio') ||
+    lower.includes('bistro booking') ||
+    lower.includes('saas dashboard') ||
+    lower.includes('personal blog') ||
+    lower.includes('agency landing') ||
+    lower.includes('app promo') ||
+    lower.includes('original vox sample') ||
+    lower.includes('original velara sample') ||
+    lower.includes('original moehr sample') ||
+    lower.includes('original foliant sample')
+  ) {
+    return true;
+  }
+
+  // 4. Structured specifications check (has 2+ section labels like "Menu:", "Hero:", "Footer:", "Brand:", "Visual system:", etc.)
+  const sectionLabels = ['brand:', 'visual system:', 'hero:', 'intro:', 'story:', 'menu:', 'gallery:', 'chef:', 'testimonials:', 'reservations:', 'footer:', 'interactions:', 'overall:', 'projects:', 'services:', 'catalogue:', 'about:', 'contact:'];
+  const matchingLabels = sectionLabels.filter(label => lower.includes(label));
+  if (matchingLabels.length >= 2) return true;
+
+  // 5. High detail check: word count > 35 with clear structure/specs
+  if (prompt.split(/\s+/).length > 35 && (lower.includes('brand') || lower.includes('section') || lower.includes('palette') || lower.includes('typography'))) {
+    return true;
+  }
+
+  return false;
+}
+
 /** Extract details that the user has already stated in their original prompt */
 function parseAlreadyStated(prompt: string): Record<string, boolean> {
+  if (isTemplateOrDetailedPrompt(prompt)) {
+    return {
+      businessName: true,
+      colors: true,
+      tone: true,
+      location: true,
+      logo: true,
+      cuisine: true,
+      services: true,
+      description: true,
+    }
+  }
+
   const p = prompt.toLowerCase()
   return {
-    businessName: /\b(named|called|name is|brand is|my business|our (restaurant|cafe|salon|gym|clinic|studio|shop|store|firm|agency)|it's a|the )/i.test(prompt) && prompt.split(' ').length > 4,
+    businessName: /\b(named|called|name is|brand is|brand:|brand statement|my business|our (restaurant|cafe|salon|gym|clinic|studio|shop|store|firm|agency)|it's a|the |chef |doctor |advocate |studio )/i.test(prompt) && prompt.split(' ').length > 3,
     colors: /\b(color|colour|palette|theme|dark|light|black|white|gold|silver|blue|red|green|purple|pink|teal|navy|cream|beige|brown|orange|grey|gray|neon|pastel|vibrant|minimal|monochrome)/i.test(p),
     tone: /\b(luxury|premium|elegant|minimal|bold|modern|clean|professional|friendly|warm|playful|fun|serious|corporate|casual|edgy|chic|artisan|rustic|urban|sleek)/i.test(p),
-    location: /\b(in |at |located|city|area|district|street|road|nagar|hills|gachi|kondapur|madhapur|jubiilee|banjara|hyderabad|bengaluru|mumbai|delhi|chennai|kolkata|pune)/i.test(p),
+    location: /\b(in |at |located|city|area|district|street|road|nagar|hills|gachi|kondapur|madhapur|jubiilee|banjara|hyderabad|bengaluru|mumbai|delhi|chennai|kolkata|pune|new york|nyc|london|berlin|paris)/i.test(p),
     logo: /\b(logo|brand mark|icon|symbol|emblem|monogram|text.?logo|wordmark)/i.test(p),
-    cuisine: /\b(south indian|north indian|chinese|italian|continental|fusion|vegan|biryani|pizza|pasta|sushi|thai|mexican|kerala|punjabi|mughlai)/i.test(p),
+    cuisine: /\b(south indian|north indian|chinese|italian|continental|fusion|vegan|biryani|pizza|pasta|sushi|thai|mexican|kerala|punjabi|mughlai|fine-dining|fine dining|steak|cafe|coffee)/i.test(p),
     services: /\b(offer|provide|specialize|service|haircut|color|makeup|dental|yoga|training|coaching|develop|design|build)/i.test(p),
     description: prompt.split(' ').length > 8,
   }
@@ -389,6 +452,10 @@ function generateAdaptiveQuestions(
   industry: string,
   maxQuestions = 4
 ): Question[] {
+  if (isTemplateOrDetailedPrompt(prompt)) {
+    return []
+  }
+
   const stated = parseAlreadyStated(prompt)
   const allQuestions = QUESTIONS[industry] || QUESTIONS.general
   const result: Question[] = []
@@ -524,6 +591,10 @@ function buildEnhancedPrompt(
   industry: string,
   answers: Record<string, string>
 ): string {
+  if (isTemplateOrDetailedPrompt(original)) {
+    return original
+  }
+
   const parts = [original]
 
   if (answers.businessName)
