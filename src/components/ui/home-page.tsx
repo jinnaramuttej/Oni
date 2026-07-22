@@ -113,7 +113,7 @@ export function HomePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhanceOpen, setEnhanceOpen] = useState(false);
-  const [showAllTemplates, setShowAllTemplates] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -145,23 +145,13 @@ export function HomePage() {
     if (typeof window !== "undefined") {
       const handleTemplatesNav = () => {
         if (window.location.hash === "#templates" || window.location.search.includes("templates")) {
-          setShowAllTemplates(true);
-          setTimeout(() => {
-            const el = document.getElementById("templates");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }, 50);
+          setTemplatesModalOpen(true);
         }
       };
 
       handleTemplatesNav();
 
-      const handleShowAll = () => {
-        setShowAllTemplates(true);
-        setTimeout(() => {
-          const el = document.getElementById("templates");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-        }, 50);
-      };
+      const handleShowAll = () => setTemplatesModalOpen(true);
 
       window.addEventListener("hashchange", handleTemplatesNav);
       window.addEventListener("show-all-templates", handleShowAll);
@@ -510,17 +500,15 @@ export function HomePage() {
 
             {/* Templates section */}
             <div id="templates" className="w-full mt-12 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
-              <div 
-                className="mb-3 flex items-center justify-between px-1 cursor-pointer group select-none"
-                onClick={() => setShowAllTemplates((v) => !v)}
-              >
-                <div className="flex items-center gap-2">
+              <div className="mb-3 flex items-center justify-between px-1">
+                <button
+                  type="button"
+                  onClick={() => setTemplatesModalOpen(true)}
+                  className="flex items-center gap-2 group select-none cursor-pointer"
+                >
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary group-hover:text-white transition-colors">Templates</p>
                   <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-medium">12 Available</span>
-                </div>
-                <p className="text-xs text-text-tertiary group-hover:text-text-secondary transition-colors">
-                  {showAllTemplates ? "Showing all 12 templates (click to collapse)" : "Click to view all 12 templates →"}
-                </p>
+                </button>
               </div>
 
               {/* Main templates (top 3 only) */}
@@ -577,104 +565,19 @@ export function HomePage() {
                 ))}
               </div>
 
-              {/* See All expandable section */}
+              {/* See all button */}
               <div className="mt-4">
                 <button
                   type="button"
-                  onClick={() => setShowAllTemplates((v) => !v)}
+                  onClick={() => setTemplatesModalOpen(true)}
                   className="flex items-center gap-2 text-xs text-text-tertiary hover:text-text-secondary transition-colors px-1 py-1"
                 >
-                  <span>{showAllTemplates ? "Show less" : "See all templates"}</span>
-                  <svg
-                    width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                    className={`transition-transform duration-300 ${showAllTemplates ? "rotate-180" : ""}`}
-                  >
-                    <path d="M6 9l6 6 6-6" />
+                  <span>See all templates</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18l6-6-6-6" />
                   </svg>
                 </button>
-
-                {showAllTemplates && (
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 animate-[fadeSlideUp_300ms_ease]">
-                    {[
-                      {
-                        title: "Maison Doré",
-                        desc: "Hair atelier, couture hero, marquee services, and booking flow.",
-                        prompt: TEMPLATE_PROMPTS.maisonDore,
-                        image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Velara Retreat",
-                        desc: "Clifftop hotel, editorial rooms, deep navy and gold.",
-                        prompt: TEMPLATE_PROMPTS.velara,
-                        image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Foliant & Sons",
-                        desc: "Antiquarian bookshop, parchment palette, rare catalogue.",
-                        prompt: TEMPLATE_PROMPTS.foliantLibrary,
-                        image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Studio Portfolio",
-                        desc: "Dark portfolio, selected work grid, case studies.",
-                        prompt: TEMPLATE_PROMPTS.portfolio,
-                        image: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Bistro Booking",
-                        desc: "Warm restaurant, seasonal menu, and reservations.",
-                        prompt: TEMPLATE_PROMPTS.bistro,
-                        image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "SaaS Dashboard",
-                        desc: "Software landing, metrics panels, and pricing.",
-                        prompt: TEMPLATE_PROMPTS.saas,
-                        image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Personal Blog",
-                        desc: "Editorial hero, featured articles, and author bio.",
-                        prompt: TEMPLATE_PROMPTS.blog,
-                        image: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "Agency Landing",
-                        desc: "Bold hero, services grid, case studies, contact.",
-                        prompt: TEMPLATE_PROMPTS.agency,
-                        image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80&fit=crop",
-                      },
-                      {
-                        title: "App Promo",
-                        desc: "Sleek app marketing, features, store CTAs.",
-                        prompt: TEMPLATE_PROMPTS.app,
-                        image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&q=80&fit=crop",
-                      },
-                    ].map((card) => (
-                      <button
-                        key={card.title}
-                        type="button"
-                        onClick={() => handleQuickAction(card.prompt)}
-                        className="group relative h-36 overflow-hidden rounded-xl border border-surface-container-high/60 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:shadow-lg active:translate-y-0"
-                      >
-                        <Image
-                          src={card.image}
-                          alt={card.title}
-                          fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          unoptimized
-                          className="object-cover opacity-60 transition duration-500 group-hover:scale-105 group-hover:opacity-80"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
-                        <div className="absolute inset-x-0 bottom-0 p-3">
-                          <p className="text-sm font-semibold text-white">{card.title}</p>
-                          <p className="mt-0.5 text-[11px] leading-4 text-white/60">{card.desc}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              </div>
             </div>
           </div>
           </div>
@@ -687,6 +590,90 @@ export function HomePage() {
           {toast}
         </div>
       )}
+
+      {/* Templates Full-Screen Modal */}
+      <AnimatePresence>
+        {templatesModalOpen && (
+          <motion.div
+            key="templates-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex flex-col bg-[#0c0c0c]/95 backdrop-blur-xl overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
+              <div className="flex items-center gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
+                <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-medium">12 Available</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTemplatesModalOpen(false)}
+                aria-label="Close templates"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white/8 hover:bg-white/15 text-white/60 hover:text-white transition-all duration-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable grid */}
+            <div className="flex-1 overflow-y-auto px-6 py-8">
+              <div className="max-w-5xl mx-auto">
+                <h2 className="text-2xl font-semibold text-white mb-1">Choose a template</h2>
+                <p className="text-sm text-text-tertiary mb-8">Select any template to instantly load it into the prompt — then customize and generate.</p>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    { title: "Âme Coffee", desc: "Specialty coffee atelier, farm origins, copper editorial.", prompt: TEMPLATE_PROMPTS.ameCoffee, image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop", badge: "Featured" },
+                    { title: "Vox Restaurant", desc: "Fine dining, steak hero, menu tabs, and reservations.", prompt: TEMPLATE_PROMPTS.vox, image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop", badge: "New" },
+                    { title: "Moehr Atelier", desc: "Architecture studio, manifesto, project grid, and refined contact flow.", prompt: TEMPLATE_PROMPTS.moehr, image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop", badge: "New" },
+                    { title: "Maison Doré", desc: "Hair atelier, couture hero, marquee services, and booking flow.", prompt: TEMPLATE_PROMPTS.maisonDore, image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop" },
+                    { title: "Velara Retreat", desc: "Clifftop hotel, editorial rooms, deep navy and gold.", prompt: TEMPLATE_PROMPTS.velara, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop" },
+                    { title: "Foliant & Sons", desc: "Antiquarian bookshop, parchment palette, rare catalogue.", prompt: TEMPLATE_PROMPTS.foliantLibrary, image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80&fit=crop" },
+                    { title: "Studio Portfolio", desc: "Dark portfolio, selected work grid, case studies.", prompt: TEMPLATE_PROMPTS.portfolio, image: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=900&q=80&fit=crop" },
+                    { title: "Bistro Booking", desc: "Warm restaurant, seasonal menu, and reservations.", prompt: TEMPLATE_PROMPTS.bistro, image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&q=80&fit=crop" },
+                    { title: "SaaS Dashboard", desc: "Software landing, metrics panels, and pricing.", prompt: TEMPLATE_PROMPTS.saas, image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop" },
+                    { title: "Personal Blog", desc: "Editorial hero, featured articles, and author bio.", prompt: TEMPLATE_PROMPTS.blog, image: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=900&q=80&fit=crop" },
+                    { title: "Agency Landing", desc: "Bold hero, services grid, case studies, contact.", prompt: TEMPLATE_PROMPTS.agency, image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80&fit=crop" },
+                    { title: "App Promo", desc: "Sleek app marketing, features, store CTAs.", prompt: TEMPLATE_PROMPTS.app, image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&q=80&fit=crop" },
+                  ].map((card, index) => (
+                    <button
+                      key={card.title}
+                      type="button"
+                      onClick={() => {
+                        setTemplatesModalOpen(false);
+                        handleQuickAction(card.prompt);
+                      }}
+                      className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
+                    >
+                      <Image
+                        src={card.image}
+                        alt={card.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        priority={index < 6}
+                        unoptimized
+                        className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/5" />
+                      {card.badge && (
+                        <span className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/45 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
+                          {card.badge}
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <p className="text-sm font-semibold text-white">{card.title}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-white/65">{card.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <EnhanceModal
         isOpen={enhanceOpen}
