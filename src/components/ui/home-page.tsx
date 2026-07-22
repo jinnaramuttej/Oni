@@ -25,6 +25,143 @@ const TEMPLATE_SAMPLES: Record<string, string> = {
   [TEMPLATE_PROMPTS.maisonDore]: MAISON_DORE_SAMPLE_HTML,
 };
 
+export interface TemplateCardItem {
+  id: string;
+  fileId?: string;
+  title: string;
+  desc: string;
+  prompt: string;
+  image: string;
+  badge?: string;
+}
+
+const FEATURED_TEMPLATES: TemplateCardItem[] = [
+  {
+    id: "aurelia",
+    fileId: "AURELIA",
+    title: "Aurelia Bakehouse",
+    desc: "Handcrafted artisan pastries, leavened breads & luxury celebration cakes.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900&q=80&fit=crop",
+    badge: "Featured",
+  },
+  {
+    id: "flameslice",
+    fileId: "FlameSlice",
+    title: "FlameSlice Pizza",
+    desc: "Artisan wood-fired pizza & gourmet burgers landing.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=900&q=80&fit=crop",
+    badge: "New",
+  },
+  {
+    id: "elan",
+    fileId: "ÉLAN",
+    title: "ÉLAN Atelier",
+    desc: "High-fashion luxury atelier, editorial showcase & couture collections.",
+    prompt: TEMPLATE_PROMPTS.maisonDore,
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=80&fit=crop",
+    badge: "Popular",
+  },
+  {
+    id: "aurelia-spa",
+    fileId: "Aurelia-Spa",
+    title: "Aurelia Spa & Wellness",
+    desc: "Serene clifftop sanctuary, holistic wellness rituals & hydrotherapy.",
+    prompt: TEMPLATE_PROMPTS.velara,
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=80&fit=crop",
+    badge: "New",
+  },
+  {
+    id: "halden",
+    fileId: "HALDEN",
+    title: "HALDEN Architecture",
+    desc: "Nordic architectural studio, minimalist residential grid & contact flow.",
+    prompt: TEMPLATE_PROMPTS.moehr,
+    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop",
+  },
+  {
+    id: "vanguard",
+    fileId: "Vanguard-Barbar Shop",
+    title: "Vanguard Barber Shop",
+    desc: "Modern gentlemen's grooming, razor fades & leather lounge.",
+    prompt: TEMPLATE_PROMPTS.maisonDore,
+    image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=900&q=80&fit=crop",
+  },
+  {
+    id: "apex-gym",
+    fileId: "premium-gym-website-design",
+    title: "Apex Fitness Club",
+    desc: "High-intensity athletic training, personal coaching & membership tiers.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80&fit=crop",
+  },
+  {
+    id: "clarity-health",
+    fileId: "ClarityHealth",
+    title: "Clarity Medical Center",
+    desc: "Comprehensive health center, patient portal & specialist care.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=900&q=80&fit=crop",
+  },
+  {
+    id: "crumb-crust",
+    fileId: "Crumb & Crust",
+    title: "Crumb & Crust Bakery",
+    desc: "Sourdough bakery, morning espresso bar & pastry catalogue.",
+    prompt: TEMPLATE_PROMPTS.ameCoffee,
+    image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=900&q=80&fit=crop",
+  },
+  {
+    id: "pulse",
+    fileId: "Pulse",
+    title: "Pulse SaaS Metrics",
+    desc: "Real-time analytics platform, interactive pricing & live dashboard.",
+    prompt: TEMPLATE_PROMPTS.saas,
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop",
+  },
+  {
+    id: "sterling",
+    fileId: "Sterling",
+    title: "Sterling & Partners",
+    desc: "Private wealth management, corporate advisory & legal strategy.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80&fit=crop",
+  },
+  {
+    id: "aether",
+    fileId: "AETHER",
+    title: "AETHER Agency",
+    desc: "Creative digital studio, interactive case studies & design systems.",
+    prompt: TEMPLATE_PROMPTS.agency,
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80&fit=crop",
+  },
+  {
+    id: "apex-academy",
+    fileId: "Apex.Academy",
+    title: "Apex Academy",
+    desc: "Modern online learning platform, video courses & certification.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=900&q=80&fit=crop",
+  },
+  {
+    id: "ascend-law",
+    fileId: "Ascend&Associates",
+    title: "Ascend Law Firm",
+    desc: "Global corporate counsel, arbitration & boutique law firm.",
+    prompt: TEMPLATE_PROMPTS.vox,
+    image: "https://images.unsplash.com/photo-1450133064473-71024230f91b?w=900&q=80&fit=crop",
+  },
+  {
+    id: "lumina",
+    fileId: "Lumina",
+    title: "Lumina Studio",
+    desc: "Dark editorial portfolio, project gallery & contact form.",
+    prompt: TEMPLATE_PROMPTS.portfolio,
+    image: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=900&q=80&fit=crop",
+  },
+];
+
 const MAX_FILE_TEXT_CHARS = 24000;
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 const ACCEPTED_DOCUMENT_TYPES = [
@@ -278,30 +415,43 @@ export function HomePage() {
 
 
 
-  const handleQuickAction = (text: string) => {
-    const cleanedText = getCleanedTemplatePrompt(text);
-    // If a pre-built sample exists for this template, jump straight to preview
-    const sampleHtml = TEMPLATE_SAMPLES[text];
-    if (sampleHtml) {
+  const handleSelectTemplateCard = async (card: TemplateCardItem) => {
+    setTemplatesModalOpen(false);
+
+    // 1. In-memory sample HTML check
+    if (TEMPLATE_SAMPLES[card.prompt]) {
       try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
-      setChatInitialHtml(sampleHtml);
+      setChatInitialHtml(TEMPLATE_SAMPLES[card.prompt]);
       setChatPrompt("");
       setInitialImage(null);
       setInitialFiles([]);
       setChatStarted(true);
-      setTemplatesModalOpen(false);
       return;
     }
-    // Otherwise load the prompt text into the input for AI generation
-    setTemplatesModalOpen(false);
-    setPromptText(cleanedText);
-    window.setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.selectionStart = cleanedText.length;
-        textareaRef.current.selectionEnd = cleanedText.length;
+
+    // 2. Fetch full static HTML from oni-components/full-templates
+    if (card.fileId) {
+      try {
+        const res = await fetch(`/api/templates?name=${encodeURIComponent(card.fileId)}`);
+        if (res.ok) {
+          const html = await res.text();
+          if (html && html.trim().length > 0) {
+            try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
+            setChatInitialHtml(html);
+            setChatPrompt("");
+            setInitialImage(null);
+            setInitialFiles([]);
+            setChatStarted(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load template HTML", err);
       }
-    }, 50);
+    }
+
+    // 3. Fallback to quick action prompt
+    handleQuickAction(card.prompt);
   };
 
   const handleSend = () => {
@@ -537,39 +687,16 @@ export function HomePage() {
                   className="flex items-center gap-2 group select-none cursor-pointer"
                 >
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary group-hover:text-white transition-colors">Templates</p>
-                  <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-medium">12 Available</span>
                 </button>
               </div>
 
               {/* Main templates (top 3 only) */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  {
-                    title: "Âme Coffee",
-                    desc: "Specialty coffee atelier, farm origins, copper editorial.",
-                    prompt: TEMPLATE_PROMPTS.ameCoffee,
-                    image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop",
-                    badge: "Featured",
-                  },
-                  {
-                    title: "Vox Restaurant",
-                    desc: "Fine dining, steak hero, menu tabs, and reservations.",
-                    prompt: TEMPLATE_PROMPTS.vox,
-                    image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop",
-                    badge: "New",
-                  },
-                  {
-                    title: "Moehr Atelier",
-                    desc: "Architecture studio, manifesto, project grid, and refined contact flow.",
-                    prompt: TEMPLATE_PROMPTS.moehr,
-                    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop",
-                    badge: "New",
-                  },
-                ].map((card, index) => (
+                {FEATURED_TEMPLATES.slice(0, 3).map((card, index) => (
                   <button
-                    key={card.title}
+                    key={card.id}
                     type="button"
-                    onClick={() => handleQuickAction(card.prompt)}
+                    onClick={() => void handleSelectTemplateCard(card)}
                     className="group relative h-40 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
                   >
                     <Image
@@ -635,7 +762,6 @@ export function HomePage() {
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
               <div className="flex items-center gap-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
-                <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-medium">12 Available</span>
               </div>
               <button
                 type="button"
@@ -651,29 +777,13 @@ export function HomePage() {
             <div className="flex-1 overflow-y-auto px-6 py-8">
               <div className="max-w-5xl mx-auto">
                 <h2 className="text-2xl font-semibold text-white mb-1">Choose a template</h2>
-                <p className="text-sm text-text-tertiary mb-8">Select any template to instantly load it into the prompt — then customize and generate.</p>
+                <p className="text-sm text-text-tertiary mb-8">Select any template to instantly load it into the preview — then customize with AI in the chat.</p>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {[
-                    { title: "Âme Coffee", desc: "Specialty coffee atelier, farm origins, copper editorial.", prompt: TEMPLATE_PROMPTS.ameCoffee, image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=80&fit=crop", badge: "Featured" },
-                    { title: "Vox Restaurant", desc: "Fine dining, steak hero, menu tabs, and reservations.", prompt: TEMPLATE_PROMPTS.vox, image: "https://images.unsplash.com/photo-1558030006-450675393462?w=900&q=80&fit=crop", badge: "New" },
-                    { title: "Moehr Atelier", desc: "Architecture studio, manifesto, project grid, and refined contact flow.", prompt: TEMPLATE_PROMPTS.moehr, image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80&fit=crop", badge: "New" },
-                    { title: "Maison Doré", desc: "Hair atelier, couture hero, marquee services, and booking flow.", prompt: TEMPLATE_PROMPTS.maisonDore, image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=900&q=80&fit=crop" },
-                    { title: "Velara Retreat", desc: "Clifftop hotel, editorial rooms, deep navy and gold.", prompt: TEMPLATE_PROMPTS.velara, image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80&fit=crop" },
-                    { title: "Foliant & Sons", desc: "Antiquarian bookshop, parchment palette, rare catalogue.", prompt: TEMPLATE_PROMPTS.foliantLibrary, image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80&fit=crop" },
-                    { title: "Studio Portfolio", desc: "Dark portfolio, selected work grid, case studies.", prompt: TEMPLATE_PROMPTS.portfolio, image: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=900&q=80&fit=crop" },
-                    { title: "Bistro Booking", desc: "Warm restaurant, seasonal menu, and reservations.", prompt: TEMPLATE_PROMPTS.bistro, image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&q=80&fit=crop" },
-                    { title: "SaaS Dashboard", desc: "Software landing, metrics panels, and pricing.", prompt: TEMPLATE_PROMPTS.saas, image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80&fit=crop" },
-                    { title: "Personal Blog", desc: "Editorial hero, featured articles, and author bio.", prompt: TEMPLATE_PROMPTS.blog, image: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=900&q=80&fit=crop" },
-                    { title: "Agency Landing", desc: "Bold hero, services grid, case studies, contact.", prompt: TEMPLATE_PROMPTS.agency, image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80&fit=crop" },
-                    { title: "App Promo", desc: "Sleek app marketing, features, store CTAs.", prompt: TEMPLATE_PROMPTS.app, image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&q=80&fit=crop" },
-                  ].map((card, index) => (
+                  {FEATURED_TEMPLATES.map((card, index) => (
                     <button
-                      key={card.title}
+                      key={card.id}
                       type="button"
-                      onClick={() => {
-                        setTemplatesModalOpen(false);
-                        handleQuickAction(card.prompt);
-                      }}
+                      onClick={() => void handleSelectTemplateCard(card)}
                       className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
                     >
                       <Image
