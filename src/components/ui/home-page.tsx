@@ -450,8 +450,16 @@ export function HomePage() {
       }
     }
 
-    // 3. Fallback to quick action prompt
-    handleQuickAction(card.prompt);
+    // 3. Fallback to setting prompt text into input
+    const cleanedText = getCleanedTemplatePrompt(card.prompt);
+    setPromptText(cleanedText);
+    window.setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = cleanedText.length;
+        textareaRef.current.selectionEnd = cleanedText.length;
+      }
+    }, 50);
   };
 
   const handleSend = () => {
