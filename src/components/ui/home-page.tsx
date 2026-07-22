@@ -580,7 +580,6 @@ export function HomePage() {
               </div>
             </div>
           </div>
-          </div>
           </motion.div>
         )}
       </AnimatePresence>
