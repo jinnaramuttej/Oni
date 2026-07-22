@@ -2797,7 +2797,7 @@ export function OniChat({
 
     // Intercept fresh build requests to trigger inline intake questions flow
     const hasBrandAnswers = brandContext.industry && Object.keys(brandContext.answers).length > 0;
-    if (!generatedHtml && !hasBrandAnswers && isFreshBuildRequest(prompt)) {
+    if (!generatedHtml && !hasBrandAnswers && isFreshBuildRequest(prompt) && !isTemplateOrDetailedPrompt(prompt)) {
       const userMsg: ChatMessage = { id: createId(), role: 'user', content: prompt };
       setMessages(prev => [...prev, userMsg]);
       setInput('');
