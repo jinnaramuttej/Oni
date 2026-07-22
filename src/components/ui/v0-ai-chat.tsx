@@ -1863,6 +1863,7 @@ export function OniChat({
   initialPrompt = "",
   initialImage = null,
   initialFiles = [],
+  initialHtml = "",
   chatId,
   hideSidebar = false,
   forceNewSession = false,
@@ -1870,6 +1871,7 @@ export function OniChat({
   initialPrompt?: string;
   initialImage?: ImageAttachment | null;
   initialFiles?: FileAttachment[];
+  initialHtml?: string;
   chatId?: string;
   hideSidebar?: boolean;
   forceNewSession?: boolean;
@@ -1959,6 +1961,10 @@ export function OniChat({
       } catch { /* ignore */ }
       return "";
     }
+    // If initialHtml is given (template preview), use it directly
+    if (initialHtml) {
+      return initialHtml;
+    }
     // If we have an initial prompt, start with empty HTML preview (no Velara preview)
     if (initialPrompt) {
       return "";
@@ -1978,7 +1984,7 @@ export function OniChat({
   });
   // Track whether the iframe is showing the preloaded Velara sample (not user-generated).
   // We use a ref so it never causes re-renders.
-  const isShowingSample = useRef(!initialPrompt);
+  const isShowingSample = useRef(!initialPrompt && !initialHtml);
   const brandAnswersRef = useRef<Record<string, string>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
@@ -3516,10 +3522,27 @@ ${prompt}`;
     handleSendToAIRef.current = handleSendToAI;
   });
 
+  // If template HTML was injected directly, show welcome message and skip AI
+  useEffect(() => {
+    if (initialHtml && messages.length === 0) {
+      setMessages([
+        {
+          id: createId(),
+          role: 'assistant',
+          content: "Here's your template — fully loaded and ready. Describe any changes in the chat to customize it."
+        }
+      ]);
+      if (!hasStarted) setHasStarted(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialHtml]);
+
   // Auto-send the prompt that came from the home page (must be after handleSend is declared)
   // Guard: don't re-fire on refresh if session already has messages
   const didAutoSend = useRef(false);
   useEffect(() => {
+    // Skip auto-send if initialHtml was provided (template preview mode)
+    if (initialHtml) { didAutoSend.current = true; return; }
     // Fire immediately on forceNewSession (home page launch) or when chat is empty
     if (initialPrompt && !didAutoSend.current && (forceNewSession || messages.length === 0)) {
       didAutoSend.current = true;

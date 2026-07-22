@@ -10,6 +10,20 @@ import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEMPLATE_PROMPTS, TEMPLATE_KEYWORDS } from "@/lib/template-prompts";
+import { VOX_SAMPLE_HTML } from "@/lib/vox-sample";
+import { AME_COFFEE_SAMPLE_HTML } from "@/lib/ame-coffee-sample";
+import { VELARA_SAMPLE_HTML } from "@/lib/velara-sample";
+import { MOEHR_SAMPLE_HTML } from "@/lib/moehr-sample";
+import { MAISON_DORE_SAMPLE_HTML } from "@/lib/maison-dore-sample";
+
+// Map template prompts to their pre-built sample HTML (instant preview, no AI call)
+const TEMPLATE_SAMPLES: Record<string, string> = {
+  [TEMPLATE_PROMPTS.vox]: VOX_SAMPLE_HTML,
+  [TEMPLATE_PROMPTS.ameCoffee]: AME_COFFEE_SAMPLE_HTML,
+  [TEMPLATE_PROMPTS.velara]: VELARA_SAMPLE_HTML,
+  [TEMPLATE_PROMPTS.moehr]: MOEHR_SAMPLE_HTML,
+  [TEMPLATE_PROMPTS.maisonDore]: MAISON_DORE_SAMPLE_HTML,
+};
 
 const MAX_FILE_TEXT_CHARS = 24000;
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
@@ -104,6 +118,7 @@ export function HomePage() {
   const [promptText, setPromptText] = useState("");
   const [chatStarted, setChatStarted] = useState(false);
   const [chatPrompt, setChatPrompt] = useState("");
+  const [chatInitialHtml, setChatInitialHtml] = useState("");
   const [initialImage, setInitialImage] = useState<any | null>(null);
   const [initialFiles, setInitialFiles] = useState<any[]>([]);
 
@@ -265,6 +280,20 @@ export function HomePage() {
 
   const handleQuickAction = (text: string) => {
     const cleanedText = getCleanedTemplatePrompt(text);
+    // If a pre-built sample exists for this template, jump straight to preview
+    const sampleHtml = TEMPLATE_SAMPLES[text];
+    if (sampleHtml) {
+      try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
+      setChatInitialHtml(sampleHtml);
+      setChatPrompt("");
+      setInitialImage(null);
+      setInitialFiles([]);
+      setChatStarted(true);
+      setTemplatesModalOpen(false);
+      return;
+    }
+    // Otherwise load the prompt text into the input for AI generation
+    setTemplatesModalOpen(false);
     setPromptText(cleanedText);
     window.setTimeout(() => {
       if (textareaRef.current) {
@@ -335,6 +364,7 @@ export function HomePage() {
           >
             <OniChat
               initialPrompt={chatPrompt}
+              initialHtml={chatInitialHtml}
               initialImage={initialImage}
               initialFiles={initialFiles}
               hideSidebar
