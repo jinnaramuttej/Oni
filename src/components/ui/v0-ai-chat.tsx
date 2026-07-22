@@ -658,18 +658,19 @@ export function EnhanceModal({
   onEnhanced: (enhancedPrompt: string, answers: Record<string, string>) => void
 }) {
   const industry = detectIndustryForEnhance(originalPrompt)
+  const isTemplate = isTemplateOrDetailedPrompt(originalPrompt)
 
   // Generate adaptive questions — memoized per prompt change
   const questions = useMemo(
-    () => generateAdaptiveQuestions(originalPrompt, industry),
-    [originalPrompt, industry]
+    () => (isTemplate ? [] : generateAdaptiveQuestions(originalPrompt, industry)),
+    [originalPrompt, industry, isTemplate]
   )
 
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string,string>>({})
   const [currentInput, setCurrentInput] = useState('')
-  const [done, setDone] = useState(false)
-  const [enhancedPrompt, setEnhancedPrompt] = useState('')
+  const [done, setDone] = useState(() => isTemplate || questions.length === 0)
+  const [enhancedPrompt, setEnhancedPrompt] = useState(() => (isTemplate ? originalPrompt : ''))
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -677,19 +678,15 @@ export function EnhanceModal({
       setStep(0)
       setAnswers({})
       setCurrentInput('')
-      setDone(false)
-      setTimeout(() => inputRef.current?.focus(), 100)
+      const isTemplateOrEmpty = isTemplate || questions.length === 0
+      setDone(isTemplateOrEmpty)
+      if (isTemplateOrEmpty) {
+        setEnhancedPrompt(originalPrompt)
+      } else {
+        setTimeout(() => inputRef.current?.focus(), 100)
+      }
     }
-  }, [isOpen])
-
-  // If user gave everything already, skip straight to done
-  useEffect(() => {
-    if (isOpen && questions.length === 0) {
-      const enhanced = buildEnhancedPrompt(originalPrompt, industry, {})
-      setEnhancedPrompt(enhanced)
-      setDone(true)
-    }
-  }, [isOpen, questions.length, originalPrompt, industry])
+  }, [isOpen, originalPrompt, isTemplate, questions.length])
 
   function handleNext() {
     const currentQ = questions[step]

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, FileText, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppShell } from "./app-shell";
-import { OniChat, EnhanceModal } from "./v0-ai-chat";
+import { OniChat, EnhanceModal, isTemplateOrDetailedPrompt } from "./v0-ai-chat";
 import type { AuthUser } from "@/lib/auth";
 import { ProfileMenu } from "./profile-menu";
 import { motion, AnimatePresence } from "framer-motion";
@@ -298,36 +298,9 @@ export function HomePage() {
     setAttachedFiles([]);
   };
 
-  const handleEnhancePrompt = async () => {
-    if (isEnhancing || !promptText.trim() || promptText.trim().length < 3) return;
-    setIsEnhancing(true);
-    try {
-      const response = await fetch("/api/enhance-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: promptText,
-          defaultModel: "oni-pro",
-        }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.enhancedPrompt) {
-          setPromptText(data.enhancedPrompt);
-          showToast("Prompt enhanced!");
-          window.requestAnimationFrame(() => adjustTextareaHeight());
-        }
-      } else {
-        const errText = await response.text();
-        console.error("Enhancement failed:", errText);
-        showToast("Failed to enhance prompt");
-      }
-    } catch (err) {
-      console.error("Enhancement error:", err);
-      showToast("Error enhancing prompt");
-    } finally {
-      setIsEnhancing(false);
-    }
+  const handleEnhancePrompt = () => {
+    if (!promptText.trim() || promptText.trim().length < 3) return;
+    setEnhanceOpen(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
