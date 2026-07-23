@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Deep navy brand scale */
+  --color-navy-50: #f3f7fb;
+  --color-navy-100: #e3edf5;
+  --color-navy-200: #c4daeb;
+  --color-navy-300: #94bedc;
+  --color-navy-400: #5d94be;
+  --color-navy-500: #2e6492;
+  --color-navy-600: #163a5f;
+  --color-navy-700: #123050;
+  --color-navy-800: #0e2439;
+  --color-navy-900: #0a1b2c;
+  --color-navy-950: #061320;
+
+  /* Subtle gold accents */
+  --color-gold-300: #e9d69a;
+  --color-gold-400: #dcbc55;
+  --color-gold-500: #c9a227;
+  --color-gold-600: #a8861e;
+
+  /* Light gray surface */
+  --color-mist: #f5f7fa;
+
+  /* Unified shadow system */
+  --shadow-card: 0 1px 2px rgb(10 27 44 / 0.04), 0 8px 24px -12px rgb(10 27 44 / 0.1);
+  --shadow-soft: 0 1px 2px rgb(10 27 44 / 0.05), 0 16px 40px -16px rgb(10 27 44 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(10 27 44 / 0.06), 0 28px 56px -20px rgb(10 27 44 / 0.22);
+  --shadow-glow-emerald: 0 10px 30px -10px rgb(21 128 61 / 0.45);
+}
+
+/* ---------- Base ---------- */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+
+body {
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #15803d;
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f7fa;
+}
+::-webkit-scrollbar-thumb {
+  background: #b9c8d8;
+  border-radius: 8px;
+  border: 2px solid #f5f7fa;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #163a5f;
+}
+
+/* ---------- Shared layout utility ---------- */
+@utility container-x {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px) {
+  .container-x {
+    padding-inline: 2rem;
+  }
+}
+
+/* ---------- Scroll reveal ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Image loading skeleton ---------- */
+.skeleton-bg {
+  background: linear-gradient(110deg, #e7edf4 8%, #f6f9fc 18%, #e7edf4 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- Gentle floating decorative cards ---------- */
+.animate-floaty {
+  animation: floaty 7s ease-in-out infinite;
+}
+.animate-floaty-delayed {
+  animation: floaty 8s ease-in-out 1.2s infinite;
+}
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* ---------- Hero scroll hint ---------- */
+.scroll-hint-dot {
+  animation: scroll-hint 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(9px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+
+/* ---------- Soft pulsing ring for chart end-dot ---------- */
+.pulse-ring {
+  position: relative;
+}
+.pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 2px solid rgb(201 162 39 / 0.55);
+  animation: pulse-ring 2.4s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-floaty,
+  .animate-floaty-delayed,
+  .scroll-hint-dot,
+  .pulse-ring::after {
+    animation: none;
+  }
+}

@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  
+  --color-sage: #A8B5A2;
+  --color-eucalyptus: #7F9172;
+  --color-sand: #EDE5DA;
+  --color-ivory: #FAF8F5;
+  --color-clay: #C4AA92;
+  --color-charcoal: #404040;
+  --color-stone: #D7D2CA;
+  --color-moss: #8FA28B;
+}
+
+/* Custom Base Styles */
+html {
+  scroll-behavior: smooth;
+  background-color: #FAF8F5; /* ivory */
+  color: #404040; /* charcoal */
+  font-family: "Plus Jakarta Sans", sans-serif;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #FAF8F5;
+  color: #404040;
+}
+
+/* Custom Scrollbar for elegant feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D7D2CA;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C4AA92;
+}
+
+/* Custom Animations */
+@keyframes breathing {
+  0% {
+    transform: scale(0.9);
+    background-color: rgba(168, 181, 162, 0.2); /* sage with alpha */
+  }
+  45% {
+    transform: scale(1.15);
+    background-color: rgba(127, 145, 114, 0.4); /* eucalyptus with alpha */
+  }
+  55% {
+    transform: scale(1.15);
+    background-color: rgba(127, 145, 114, 0.4);
+  }
+  100% {
+    transform: scale(0.9);
+    background-color: rgba(168, 181, 162, 0.2);
+  }
+}
+
+@keyframes textBreathing {
+  0% {
+    opacity: 0.6;
+    content: "Inhale...";
+  }
+  45% {
+    opacity: 1;
+    content: "Hold...";
+  }
+  55% {
+    opacity: 1;
+    content: "Hold...";
+  }
+  100% {
+    opacity: 0.6;
+    content: "Exhale...";
+  }
+}
+
+.breathing-circle {
+  animation: breathing 8s ease-in-out infinite;
+}
+
+/* Smooth slow transition class */
+.transition-slow {
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Handmade paper texture effect */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.015;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}

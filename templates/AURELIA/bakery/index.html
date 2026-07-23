@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Aurelia Bakehouse creates artisan pastries, signature cakes, naturally leavened breads and celebration cakes in Hyderabad—freshly baked every day.">
+  <meta name="theme-color" content="#5A3A29">
+  <title>Aurelia Bakehouse — Handcrafted with a little wonder</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/italiana.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/fonts/dm-sans-400.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="assets/images/hero-croissant.webp" as="image" type="image/webp" fetchpriority="high">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" id="siteHeader">
+    <div class="nav-shell">
+      <a class="brand" href="#home" aria-label="Aurelia Bakehouse home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M24 42c-2.5-8.7-2.1-16 0-22M23.8 31c-5.5-1-8.7-4.2-9.7-9.5 5.6.7 9 4 9.7 9.5Zm.2-6.7c.4-5.6 3.3-9.2 8.6-10.7-.1 5.7-3 9.2-8.6 10.7Zm0-7.2c-4.6-2.5-6.5-6-5.8-10.6 4.9 2.3 6.8 5.8 5.8 10.6Z"/></svg>
+        </span>
+        <span class="brand-type"><b>AURELIA</b><small>BAKEHOUSE</small></span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#signature">The Menu</a>
+        <a href="#story">Our Story</a>
+        <a href="#celebrations">Celebrations</a>
+        <a href="#visit">Visit</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="icon-button search-trigger" type="button" aria-label="Search the menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        </button>
+        <button class="cart-button" type="button" aria-label="Open your basket, 0 items" aria-controls="cartDrawer">
+          <span>Basket</span>
+          <span class="cart-count" aria-live="polite">0</span>
+        </button>
+        <button class="menu-toggle icon-button" type="button" aria-label="Open menu" aria-controls="mobileMenu" aria-expanded="false">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <div class="mobile-menu-inner">
+      <p class="eyebrow">Explore Aurelia</p>
+      <nav aria-label="Mobile navigation">
+        <a href="#signature"><span>01</span>The Menu</a>
+        <a href="#story"><span>02</span>Our Story</a>
+        <a href="#celebrations"><span>03</span>Celebrations</a>
+        <a href="#visit"><span>04</span>Visit</a>
+      </nav>
+      <div class="mobile-menu-foot">
+        <span>Tue–Sun · 8:00 AM–8:00 PM</span>
+        <a href="tel:+914055501826">+91 40 5550 1826</a>
+      </div>
+    </div>
+  </div>
+
+  <main id="main">
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <img class="hero-image" src="assets/images/hero-croissant.webp" alt="Flaky butter croissants on a wooden board in soft morning light" width="1741" height="1300" fetchpriority="high">
+      <div class="hero-scrim"></div>
+      <div class="flour-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow light reveal">Made slowly · Savoured fully</p>
+          <h1 id="hero-title" class="reveal">A little luxury,<br><em>fresh from the oven.</em></h1>
+          <p class="hero-text reveal">Hand-laminated pastries, celebration cakes and slow-fermented loaves—baked in small batches with exceptional ingredients, every morning.</p>
+          <div class="hero-actions reveal">
+            <a class="button button-cream" href="#signature">Order now <span aria-hidden="true">↗</span></a>
+            <a class="text-link light-link" href="#menu">View the menu <span aria-hidden="true">→</span></a>
+          </div>
+          <ul class="hero-badges reveal" aria-label="Our promises">
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c5-3.3 8-7.2 8-12V5l-8-3-8 3v4c0 4.8 3 8.7 8 12Z"/><path d="m8.5 11.5 2.2 2.2 4.8-5"/></svg>Fresh daily</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c5.7 1 10.5-.7 14.5-5.2M7 16C5.5 9.5 8.8 5.2 18 3c1.2 8.6-2.8 12.7-11 13Z"/></svg>Handmade</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14l-1 11H6L5 9Z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Custom orders</li>
+          </ul>
+        </div>
+        <aside class="today-card reveal" aria-label="Today's bake information">
+          <span class="today-dot"></span>
+          <div><small>Ovens are warm</small><strong>Today’s first bake is ready</strong></div>
+          <span aria-hidden="true">08:00</span>
+        </aside>
+      </div>
+      <a class="scroll-cue" href="#story" aria-label="Scroll to our story"><span>Discover</span><i></i></a>
+    </section>
+
+    <section class="promise-strip" aria-label="Our bakery values">
+      <div class="promise-track">
+        <span>French butter</span><i>✦</i><span>Single-origin chocolate</span><i>✦</i><span>Seasonal fruit</span><i>✦</i><span>48-hour fermentation</span><i>✦</i><span>Baked in Hyderabad</span>
+      </div>
+    </section>
+
+    <section class="story section" id="story">
+      <div class="container story-grid">
+        <div class="story-visual reveal">
+          <div class="story-image-main image-frame">
+            <img src="assets/images/baker-flour.webp" alt="A baker dusting fresh dough with flour" width="800" height="449" loading="lazy">
+          </div>
+          <figure class="story-image-float image-frame">
+            <img src="assets/images/berry-cake.webp" alt="Berry-topped layer cake with fresh cream" width="500" height="750" loading="lazy">
+            <figcaption>Made by hand<br>since 2018</figcaption>
+          </figure>
+          <svg class="story-line" viewBox="0 0 160 120" aria-hidden="true"><path d="M8 98C48 12 98 8 152 38"/><path d="m141 30 11 8-13 4"/></svg>
+        </div>
+        <div class="story-copy reveal">
+          <p class="eyebrow">Our philosophy</p>
+          <h2>There is beauty in<br><em>taking the time.</em></h2>
+          <p class="lead">We believe the finest things begin simply: good flour, cultured butter, ripe fruit—and the patience to let each ingredient become its best self.</p>
+          <p>Every Aurelia bake is shaped, folded and finished by hand in our Banjara Hills kitchen. We work in small batches, source thoughtfully, and never rush the process.</p>
+          <div class="signature-note">
+            <span class="script-mark">A</span>
+            <div><strong>Anika Rao</strong><small>Founder & Head Baker</small></div>
+          </div>
+          <a class="text-link" href="#philosophy">Step inside our bakehouse <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="signature section" id="signature" aria-labelledby="signature-title">
+      <div class="container">
+        <header class="section-heading centered reveal">
+          <p class="eyebrow">The signature edit</p>
+          <h2 id="signature-title">Cakes worth <em>gathering for</em></h2>
+          <p>Whimsical in flavour, refined in finish, and always made to be remembered.</p>
+        </header>
+
+        <div class="filter-row reveal" role="group" aria-label="Filter the menu">
+          <button class="filter-chip active" data-filter="all" type="button" aria-pressed="true">All favourites</button>
+          <button class="filter-chip" data-filter="cakes" type="button" aria-pressed="false">Signature cakes</button>
+          <button class="filter-chip" data-filter="pastries" type="button" aria-pressed="false">Pastries</button>
+          <button class="filter-chip" data-filter="bread" type="button" aria-pressed="false">Artisan bread</button>
+          <button class="filter-chip" data-filter="desserts" type="button" aria-pressed="false">Desserts</button>
+        </div>
+
+        <div class="product-grid" id="productGrid">
+          <article class="product-card reveal" data-category="cakes" data-id="berry-cloud" data-name="Berry Cloud Gateau" data-price="2400" data-image="assets/images/berry-cake.webp">
+            <div class="product-image-wrap">
+              <img src="assets/images/berry-cake.webp" alt="Berry Cloud Gateau with vanilla cream and fresh berries" width="500" height="750" loading="lazy">
+              <span class="product-badge">Bestseller</span>
+              <button class="quick-add" type="button" aria-label="Add Berry Cloud Gateau to basket"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </div>
+            <div class="product-info">
+              <div class="product-meta"><span>Signature cake</span><span>1 kg · serves 8</span></div>
+              <h3>Berry Cloud Gateau</h3>
+              <p>Madagascan vanilla sponge, chantilly cream and a tumble of market berries.</p>
+              <div class="product-foot"><strong>₹2,400</strong><button class="order-link" type="button">Order now <span>→</span></button></div>
+            </div>
+          </article>
+
+          <article class="product-card reveal" data-category="cakes" data-id="vanilla-garden" data-name="Vanilla Garden" data-price="2200" data-image="assets/images/vanilla-berry-cake.webp">
+            <div class="product-image-wrap">
+              <img src="assets/images/vanilla-berry-cake.webp" alt="Vanilla Garden layer cake with raspberries" width="683" height="1024" loading="lazy">
+              <button class="quick-add" type="button" aria-label="Add Vanilla Garden to basket"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </div>
+            <div class="product-info">
+              <div class="product-meta"><span>Signature cake</span><span>1 kg · serves 8</span></div>
+              <h3>Vanilla Garden</h3>
+              <p>Vanilla bean chiffon, berry preserve and a delicate mascarpone crumb coat.</p>
+              <div class="product-foot"><strong>₹2,200</strong><button class="order-link" type="button">Order now <span>→</span></button></div>
+            </div>
+          </article>
+
+          <article class="product-card reveal" data-category="cakes" data-id="strawberry-sunrise" data-name="Strawberry Sunrise" data-price="2600" data-image="assets/images/fruit-layer-cake.webp">
+            <div class="product-image-wrap">
+              <img src="assets/images/fruit-layer-cake.webp" alt="Strawberry Sunrise celebration layer cake" width="1000" height="1250" loading="lazy">
+              <span class="product-badge seasonal">Seasonal</span>
+              <button class="quick-add" type="button" aria-label="Add Strawberry Sunrise to basket"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </div>
+            <div class="product-info">
+              <div class="product-meta"><span>Seasonal cake</span><span>1 kg · serves 8</span></div>
+              <h3>Strawberry Sunrise</h3>
+              <p>Almond sponge, ruby fruit compote, fresh cream and toasted pistachios.</p>
+              <div class="product-foot"><strong>₹2,600</strong><button class="order-link" type="button">Order now <span>→</span></button></div>
+            </div>
+          </article>
+
+          <article class="product-card menu-extra" data-category="pastries" data-id="butter-croissant-box" data-name="Butter Croissant Box" data-price="780" data-image="assets/images/croissant-tray.webp">
+            <div class="product-image-wrap"><img src="assets/images/croissant-tray.webp" alt="A box of flaky butter croissants" width="1012" height="1350" loading="lazy"><span class="product-badge">Morning bake</span><button class="quick-add" type="button" aria-label="Add Butter Croissant Box to basket"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+            <div class="product-info"><div class="product-meta"><span>Viennoiserie</span><span>Box of 4</span></div><h3>Butter Croissant Box</h3><p>Honeycombed layers, cultured butter and a burnished, shattering crust.</p><div class="product-foot"><strong>₹780</strong><button class="order-link" type="button">Order now <span>→</span></button></div></div>
+          </article>
+
+          <article class="product-card menu-extra" data-category="bread" data-id="country-sourdough" data-name="Country Sourdough" data-price="420" data-image="assets/images/sourdough.webp">
+            <div class="product-image-wrap"><img src="assets/images/sourdough.webp" alt="Country sourdough loaf on a wooden board" width="800" height="530" loading="lazy"><button class="quick-add" type="button" aria-label="Add Country Sourdough to basket"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+            <div class="product-info"><div class="product-meta"><span>Artisan bread</span><span>700 g loaf</span></div><h3>Country Sourdough</h3><p>48-hour fermented loaf with a caramelised crust and open, tender crumb.</p><div class="product-foot"><strong>₹420</strong><button class="order-link" type="button">Order now <span>→</span></button></div></div>
+          </article>
+
+          <article class="product-card menu-extra" data-category="desserts" data-id="caramel-macarons" data-name="Salted Caramel Macarons" data-price="900" data-image="assets/images/macarons.webp">
+            <div class="product-image-wrap"><img src="assets/images/macarons.webp" alt="Salted caramel macarons with a soft swirl" width="683" height="1024" loading="lazy"><span class="product-badge">Bestseller</span><button class="quick-add" type="button" aria-label="Add Salted Caramel Macarons to basket"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+            <div class="product-info"><div class="product-meta"><span>Petit fours</span><span>Box of 8</span></div><h3>Salted Caramel Macarons</h3><p>Almond shells, deep caramel buttercream and a whisper of sea salt.</p><div class="product-foot"><strong>₹900</strong><button class="order-link" type="button">Order now <span>→</span></button></div></div>
+          </article>
+        </div>
+        <div class="center-action reveal"><button class="button button-outline" id="viewFullMenu" type="button">View full menu <span aria-hidden="true">↓</span></button></div>
+      </div>
+    </section>
+
+    <section class="menu-journey section" id="menu">
+      <div class="container">
+        <header class="journey-heading reveal">
+          <div><p class="eyebrow">From the morning bake</p><h2>For every kind<br>of <em>craving.</em></h2></div>
+          <p>Come early for still-warm croissants, linger over something sweet, or take home a loaf for the table.</p>
+        </header>
+        <div class="journey-grid">
+          <article class="journey-card journey-large reveal" data-filter-target="pastries">
+            <img src="assets/images/pastry-coffee.webp" alt="Morning coffee served with artisan pastries" width="900" height="1350" loading="lazy">
+            <div class="journey-overlay"><span>01 · Morning</span><h3>Fresh pastries</h3><p>Croissants, cinnamon knots, danishes & more.</p><button type="button" class="circle-arrow" aria-label="Show fresh pastries">↗</button></div>
+          </article>
+          <article class="journey-card reveal" data-filter-target="bread">
+            <img src="assets/images/baker-bread.webp" alt="Baker holding a freshly baked artisan loaf" width="800" height="533" loading="lazy">
+            <div class="journey-overlay"><span>02 · The table</span><h3>Artisan breads</h3><p>Slow-fermented and baked for a generous crust.</p><button type="button" class="circle-arrow" aria-label="Show artisan breads">↗</button></div>
+          </article>
+          <article class="journey-card journey-blush reveal" data-filter-target="desserts">
+            <img src="assets/images/macaron-tray.webp" alt="A selection of caramel macarons" width="1000" height="1000" loading="lazy">
+            <div class="journey-overlay"><span>03 · All day</span><h3>Cookies & desserts</h3><p>Little luxuries for gifting—or keeping.</p><button type="button" class="circle-arrow" aria-label="Show cookies and desserts">↗</button></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="seasonal section" aria-labelledby="seasonal-title">
+      <div class="seasonal-blob" aria-hidden="true"></div>
+      <div class="container seasonal-grid">
+        <div class="seasonal-image reveal">
+          <img src="assets/images/croissant-tray.webp" alt="A curated tray of pastries in natural light" width="1012" height="1350" loading="lazy">
+          <span class="rotating-seal" aria-hidden="true"><svg viewBox="0 0 120 120"><defs><path id="sealPath" d="M60,60 m-43,0 a43,43 0 1,1 86,0 a43,43 0 1,1 -86,0"/></defs><text><textPath href="#sealPath">SEASONAL BAKE · JULY ONLY · </textPath></text><circle cx="60" cy="60" r="3"/><path d="M60 40v40M40 60h40"/></svg></span>
+        </div>
+        <div class="seasonal-copy reveal">
+          <p class="eyebrow">This month’s special</p>
+          <h2 id="seasonal-title">Monsoon plum<br><em>& almond danish</em></h2>
+          <p>Tart crimson plums, toasted almond cream and a honeyed vanilla glaze, folded into 27 delicate layers of pastry.</p>
+          <div class="seasonal-details"><span><small>Box of four</small><strong>₹920</strong></span><span><small>Available until</small><strong>31 July</strong></span></div>
+          <button class="button button-brown add-seasonal" type="button">Taste the season <span aria-hidden="true">↗</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="philosophy section" id="philosophy">
+      <div class="container philosophy-grid">
+        <div class="philosophy-copy reveal">
+          <p class="eyebrow">The Aurelia way</p>
+          <h2>Good things cannot<br><em>be hurried.</em></h2>
+          <div class="principles">
+            <article><span>01</span><div><h3>Thoughtful ingredients</h3><p>Traceable chocolate, cultured butter, real vanilla and fruit chosen at its peak.</p></div></article>
+            <article><span>02</span><div><h3>Made by hand</h3><p>Our bakers fold, shape, pipe and finish each piece with practiced care.</p></div></article>
+            <article><span>03</span><div><h3>Fresh, always</h3><p>We bake in small runs from dawn, so the counter changes beautifully through the day.</p></div></article>
+          </div>
+        </div>
+        <div class="philosophy-image reveal">
+          <img src="assets/images/baker-flour.webp" alt="Flour floating above dough in the Aurelia kitchen" width="800" height="449" loading="lazy">
+          <blockquote>“The ingredient you can always taste is care.”</blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="celebrations section" id="celebrations">
+      <div class="container">
+        <header class="section-heading split reveal">
+          <div><p class="eyebrow">Made for your moment</p><h2>Celebrations, made<br><em>entirely yours.</em></h2></div>
+          <p>From an intimate birthday to a many-tiered wedding centrepiece, our cake atelier brings your story to the table.</p>
+        </header>
+        <div class="celebration-grid">
+          <article class="celebration-card reveal">
+            <div class="celebration-img"><img src="assets/images/vanilla-berry-cake.webp" alt="Bespoke vanilla berry celebration cake" width="683" height="1024" loading="lazy"></div>
+            <div class="celebration-content"><span>Custom celebration cakes</span><h3>Your idea, translated in buttercream.</h3><p>Choose your flavour, palette, finish and size. We’ll guide every delicious detail.</p><button class="text-link consultation-trigger" type="button">Begin your cake <span>→</span></button></div>
+          </article>
+          <article class="celebration-card reverse reveal">
+            <div class="celebration-img"><img src="assets/images/wedding-cake.webp" alt="Elegant tiered wedding cake in a warm wood setting" width="866" height="1300" loading="lazy"></div>
+            <div class="celebration-content"><span>Wedding cake atelier</span><h3>A centrepiece for your forever.</h3><p>Private tastings, considered design and seamless delivery for celebrations across Hyderabad.</p><button class="text-link consultation-trigger" type="button">Book a tasting <span>→</span></button></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="testimonials section" aria-labelledby="testimonial-title">
+      <div class="grain" aria-hidden="true"></div>
+      <div class="container testimonial-wrap">
+        <p class="eyebrow light">Notes from our table</p>
+        <div class="quote-mark" aria-hidden="true">“</div>
+        <div class="testimonial-stage" id="testimonialStage">
+          <blockquote class="testimonial active">
+            <p id="testimonial-title">The cake was as beautiful as it was unforgettable—delicate, balanced, and somehow tasted like a celebration in itself.</p>
+            <footer><span>NR</span><div><strong>Naina & Rohan</strong><small>Wedding cake · Jubilee Hills</small></div></footer>
+          </blockquote>
+          <blockquote class="testimonial">
+            <p>Our Sunday ritual now begins with Aurelia’s croissants. The layers are impossibly light, and the whole house smells like butter.</p>
+            <footer><span>AS</span><div><strong>Arjun Shah</strong><small>Weekend regular</small></div></footer>
+          </blockquote>
+          <blockquote class="testimonial">
+            <p>Every detail felt considered—from the tasting to the tiny sugar flowers. They turned our family recipe into something extraordinary.</p>
+            <footer><span>MK</span><div><strong>Meera Kapoor</strong><small>Custom celebration cake</small></div></footer>
+          </blockquote>
+        </div>
+        <div class="testimonial-controls">
+          <button type="button" data-direction="prev" aria-label="Previous testimonial">←</button>
+          <div class="testimonial-progress" aria-label="Testimonial 1 of 3"><i></i></div>
+          <button type="button" data-direction="next" aria-label="Next testimonial">→</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="gallery section" aria-labelledby="gallery-title">
+      <div class="container">
+        <header class="section-heading centered reveal"><p class="eyebrow">From the kitchen</p><h2 id="gallery-title">A glimpse behind<br><em>the glass.</em></h2><p>Follow the morning bake and everyday moments <a href="#newsletter">@aureliabakehouse</a></p></header>
+        <div class="gallery-grid">
+          <button class="gallery-item tall reveal" type="button" data-full="assets/images/pastry-coffee.webp" aria-label="View coffee and pastries"><img src="assets/images/pastry-coffee.webp" alt="Coffee and pastries at the bakery" loading="lazy"><span>View</span></button>
+          <button class="gallery-item reveal" type="button" data-full="assets/images/baker-bread.webp" aria-label="View baker holding bread"><img src="assets/images/baker-bread.webp" alt="Baker holding a rustic loaf" loading="lazy"><span>View</span></button>
+          <button class="gallery-item reveal" type="button" data-full="assets/images/macaron-tray.webp" aria-label="View macaron collection"><img src="assets/images/macaron-tray.webp" alt="Caramel macarons arranged on a tray" loading="lazy"><span>View</span></button>
+          <button class="gallery-item wide reveal" type="button" data-full="assets/images/pastry-window.webp" aria-label="View the pastry window"><img src="assets/images/pastry-window.webp" alt="A warm pastry display by the street" loading="lazy"><span>View</span></button>
+          <button class="gallery-item reveal" type="button" data-full="assets/images/wedding-cakes.webp" aria-label="View wedding cake trio"><img src="assets/images/wedding-cakes.webp" alt="A trio of elegant wedding cakes" loading="lazy"><span>View</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="ordering section" id="order" aria-labelledby="order-title">
+      <div class="container order-shell">
+        <div class="order-intro reveal">
+          <p class="eyebrow">From our oven to your table</p>
+          <h2 id="order-title">However you’d like<br><em>your little luxury.</em></h2>
+        </div>
+        <div class="order-options">
+          <article class="order-option reveal"><span class="option-icon"><svg viewBox="0 0 24 24"><path d="M4 10h16v10H4zM3 10l2-6h14l2 6M8 14h3v6"/></svg></span><div><h3>Collect in store</h3><p>Order ahead and we’ll have everything boxed beautifully for you.</p><small>Ready in as little as 45 minutes</small></div><button class="circle-arrow shop-trigger" type="button" aria-label="Order for collection">↗</button></article>
+          <article class="order-option reveal"><span class="option-icon"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3zM14 10h4l3 4v3h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></span><div><h3>Local delivery</h3><p>Careful same-day delivery to selected Hyderabad neighbourhoods.</p><small>Free over ₹2,000 · order by 4 PM</small></div><button class="circle-arrow delivery-trigger" type="button" aria-label="Check delivery">↗</button></article>
+          <article class="order-option reveal"><span class="option-icon"><svg viewBox="0 0 24 24"><path d="M12 3v18M7 7h7.5a3 3 0 0 1 0 6H9.5a3 3 0 0 0 0 6H17"/></svg></span><div><h3>Custom order</h3><p>For larger gatherings, corporate gifting and one-of-a-kind cakes.</p><small>Please allow 3–7 days</small></div><button class="circle-arrow consultation-trigger" type="button" aria-label="Start a custom order">↗</button></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="visit section" id="visit" aria-labelledby="visit-title">
+      <div class="container visit-grid">
+        <div class="visit-photo reveal"><img src="assets/images/bakery-interior.webp" alt="Warm and inviting interior of Aurelia Bakehouse" width="720" height="900" loading="lazy"><div class="visit-label"><span>Our first home</span><strong>Banjara Hills</strong></div></div>
+        <div class="visit-details reveal">
+          <p class="eyebrow">Come say hello</p>
+          <h2 id="visit-title">The door is open,<br><em>the coffee is warm.</em></h2>
+          <p>Find a sunny corner, watch our bakers at work, and choose whatever catches your eye behind the glass.</p>
+          <div class="visit-info">
+            <div><span class="info-icon"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><small>Find us</small><strong>8–2–684, Road No. 12<br>Banjara Hills, Hyderabad</strong><a href="https://maps.google.com/?q=Banjara+Hills+Hyderabad" target="_blank" rel="noopener">Get directions ↗</a></div></div>
+            <div><span class="info-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><small>Opening hours</small><strong>Tuesday–Sunday<br>8:00 AM–8:00 PM</strong><span>Closed Mondays</span></div></div>
+          </div>
+          <div class="delivery-check">
+            <label for="postcode">See if we deliver to you</label>
+            <div><input id="postcode" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit PIN code" aria-describedby="deliveryResult"><button id="checkDelivery" type="button">Check <span>→</span></button></div>
+            <p id="deliveryResult" role="status"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="newsletter" id="newsletter">
+      <div class="container newsletter-inner reveal">
+        <span class="newsletter-flourish" aria-hidden="true">✦</span>
+        <div><p class="eyebrow">A note from the bakehouse</p><h2>Fresh from our oven<br><em>to your inbox.</em></h2><p>Seasonal bakes, early tasting invitations and the occasional sweet surprise.</p></div>
+        <form id="newsletterForm" novalidate><label class="sr-only" for="email">Email address</label><div><input id="email" type="email" placeholder="Your email address" required><button type="submit" aria-label="Subscribe">→</button></div><label class="consent"><input type="checkbox" required><span>I’m happy to receive occasional notes from Aurelia.</span></label><p class="form-status" role="status"></p></form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-top">
+      <div class="footer-brand"><a class="brand" href="#home"><span class="brand-mark"><svg viewBox="0 0 48 48"><path d="M24 42c-2.5-8.7-2.1-16 0-22M23.8 31c-5.5-1-8.7-4.2-9.7-9.5 5.6.7 9 4 9.7 9.5Zm.2-6.7c.4-5.6 3.3-9.2 8.6-10.7-.1 5.7-3 9.2-8.6 10.7Zm0-7.2c-4.6-2.5-6.5-6-5.8-10.6 4.9 2.3 6.8 5.8 5.8 10.6Z"/></svg></span><span class="brand-type"><b>AURELIA</b><small>BAKEHOUSE</small></span></a><p>Handcrafted pleasures for<br>ordinary days and extraordinary ones.</p></div>
+      <div class="footer-links"><div><h3>Explore</h3><a href="#signature">The menu</a><a href="#story">Our story</a><a href="#celebrations">Celebrations</a><a href="#gallery-title">Gallery</a></div><div><h3>Visit</h3><a href="#visit">Banjara Hills</a><a href="#visit">Opening hours</a><a href="#order">Delivery</a><a href="tel:+914055501826">+91 40 5550 1826</a></div><div><h3>Follow</h3><a href="#newsletter">Instagram ↗</a><a href="#newsletter">Pinterest ↗</a><a href="mailto:hello@aureliabakehouse.in">Email us ↗</a></div></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 Aurelia Bakehouse</span><div><a href="#">Privacy</a><a href="#">Allergens</a><a href="#">Terms</a></div><a href="#home">Back to top ↑</a></div>
+  </footer>
+
+  <div class="drawer-backdrop" data-close-drawer></div>
+  <aside class="cart-drawer" id="cartDrawer" aria-hidden="true" aria-labelledby="cartTitle">
+    <header><div><p class="eyebrow">Your selection</p><h2 id="cartTitle">A little something</h2></div><button class="drawer-close icon-button" type="button" aria-label="Close basket"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+    <div class="cart-body"><div class="cart-empty"><span class="empty-icon"><svg viewBox="0 0 48 48"><path d="M9 18h30l-2 23H11L9 18Z"/><path d="M16 18v-3a8 8 0 0 1 16 0v3"/></svg></span><h3>Your basket is waiting</h3><p>Perhaps a box of warm croissants is a lovely place to start.</p><button class="button button-brown drawer-shop" type="button">Explore the menu</button></div><div class="cart-items"></div></div>
+    <footer class="cart-footer"><div><span>Subtotal</span><strong class="cart-subtotal">₹0</strong></div><p>Delivery or pickup details are confirmed at checkout.</p><button class="button button-brown checkout-button" type="button">Continue to checkout <span>→</span></button></footer>
+  </aside>
+
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <section class="dialog" id="consultationDialog" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="consultationTitle">
+    <button class="dialog-close icon-button" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    <p class="eyebrow">The cake atelier</p><h2 id="consultationTitle">Tell us about<br><em>your celebration.</em></h2><p>Share a few details and our cake concierge will be in touch within one working day.</p>
+    <form id="consultationForm">
+      <div class="field-row"><label>Your name<input type="text" name="name" required placeholder="Name"></label><label>Phone<input type="tel" name="phone" required placeholder="+91"></label></div>
+      <div class="field-row"><label>Occasion<select name="occasion"><option>Birthday</option><option>Wedding</option><option>Anniversary</option><option>Corporate gifting</option><option>Something else</option></select></label><label>Celebration date<input type="date" name="date" required></label></div>
+      <label>What are you imagining?<textarea name="details" rows="3" placeholder="Flavours, colours, number of guests…"></textarea></label>
+      <button class="button button-brown" type="submit">Send my enquiry <span>→</span></button><p class="form-status" role="status"></p>
+    </form>
+  </section>
+
+  <section class="search-dialog" id="searchDialog" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="searchTitle">
+    <div class="search-top"><label for="menuSearch" id="searchTitle">What are you craving?</label><button class="search-close icon-button" type="button" aria-label="Close search"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="search-input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="menuSearch" type="search" placeholder="Try “croissant” or “berry cake”" autocomplete="off"></div>
+    <div class="search-results" aria-live="polite"><p class="search-hint">Popular: <button type="button">Croissants</button> <button type="button">Celebration cakes</button> <button type="button">Sourdough</button></p></div>
+  </section>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Gallery image"><button class="lightbox-close icon-button" type="button" aria-label="Close image"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button><img src="" alt=""></div>
+  <div class="toast" role="status" aria-live="polite"><span>✓</span><p>Added to your basket</p><button type="button">View</button></div>
+</body>
+</html>

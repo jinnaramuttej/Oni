@@ -1,0 +1,158 @@
+import { ArrowRight, Play, ChevronDown } from 'lucide-react';
+
+export default function Hero() {
+  return (
+    <section className="relative min-h-screen flex items-center overflow-hidden" aria-label="Hero">
+      {/* Background image with overlay */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80"
+          alt=""
+          className="w-full h-full object-cover"
+          loading="eager"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-deep/95 via-indigo-deep/85 to-blue-royal/80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-indigo-deep/60 via-transparent to-transparent" />
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
+      </div>
+
+      {/* Floating accent shapes */}
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-blue-royal/20 rounded-full blur-3xl" aria-hidden="true" />
+      <div className="absolute bottom-1/3 left-1/4 w-64 h-64 bg-amber-accent/10 rounded-full blur-3xl" aria-hidden="true" />
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-32">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left content */}
+          <div className="max-w-2xl">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-2 mb-8 animate-fade-in">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-success animate-pulse" />
+              <span className="text-sm font-medium text-white/90">Admissions Open — 2025 Batch</span>
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight mb-6" style={{ animation: 'fade-up 0.8s ease-out 0.1s forwards', opacity: 0 }}>
+              Unlock Your
+              <span className="relative inline-block">
+                <span className="relative z-10 bg-gradient-to-r from-amber-accent to-amber-400 bg-clip-text text-transparent">
+                  {' '}Academic
+                </span>
+                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" fill="none" aria-hidden="true">
+                  <path d="M1 5.5C40 2 80 2 100 4.5C120 7 160 3 199 5.5" stroke="rgba(245,158,11,0.4)" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </span>
+              <br />
+              Potential
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-lg sm:text-xl text-white/70 leading-relaxed mb-10 max-w-lg" style={{ animation: 'fade-up 0.8s ease-out 0.25s forwards', opacity: 0 }}>
+              Personalized mentorship from expert educators. Small batch sizes. Proven track record of transforming students into top performers.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-4 mb-12" style={{ animation: 'fade-up 0.8s ease-out 0.4s forwards', opacity: 0 }}>
+              <a
+                href="#enrollment"
+                className="group inline-flex items-center gap-2 rounded-[18px] bg-white px-8 py-4 text-base font-semibold text-indigo-deep shadow-premium hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300"
+              >
+                Enroll Now
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </a>
+              <a
+                href="#courses"
+                className="group inline-flex items-center gap-2 rounded-[18px] border border-white/25 bg-white/5 backdrop-blur-sm px-8 py-4 text-base font-semibold text-white hover:bg-white/10 transition-all duration-300"
+              >
+                <Play className="h-4 w-4" />
+                Explore Courses
+              </a>
+            </div>
+
+            {/* Stats row */}
+            <div className="flex flex-wrap gap-8 lg:gap-12" style={{ animation: 'fade-up 0.8s ease-out 0.55s forwards', opacity: 0 }}>
+              {[
+                { value: '15K+', label: 'Students Taught' },
+                { value: '96%', label: 'Pass Rate' },
+                { value: '4.9★', label: 'Parent Rating' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <div className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</div>
+                  <div className="text-sm text-white/50 font-medium">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right - floating card */}
+          <div className="hidden lg:block relative" style={{ animation: 'fade-up 0.8s ease-out 0.5s forwards', opacity: 0 }}>
+            <div className="relative">
+              {/* Main card */}
+              <div className="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/15 p-8 shadow-2xl animate-float">
+                <img
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=80"
+                  alt="Students collaborating in a modern learning space"
+                  className="w-full h-52 object-cover rounded-2xl mb-6"
+                  loading="eager"
+                />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex -space-x-2">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64&q=80" alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&q=80" alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=64&q=80" alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                  </div>
+                  <span className="text-sm text-white/70">+24 students joined today</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-white font-semibold">Live Sessions</div>
+                    <div className="text-white/50 text-sm">Next: Advanced Physics</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-emerald-success/20 text-emerald-300 text-sm font-medium rounded-full px-3 py-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-success animate-pulse" />
+                    Live
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating achievement card */}
+              <div className="absolute -top-6 -right-6 rounded-2xl bg-white shadow-premium p-4 animate-float" style={{ animationDelay: '1s' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-accent/10 flex items-center justify-center">
+                    <span className="text-xl">🏆</span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-indigo-deep">Top 1% Nationally</div>
+                    <div className="text-xs text-slate-text">2024 Batch Result</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating progress card */}
+              <div className="absolute -bottom-4 -left-8 rounded-2xl bg-white shadow-premium p-4 animate-float" style={{ animationDelay: '2s' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-success/10 flex items-center justify-center">
+                    <span className="text-xl">📈</span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-indigo-deep">+40% Score Improvement</div>
+                    <div className="text-xs text-slate-text">Average in 3 months</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40 animate-bounce" aria-hidden="true">
+          <span className="text-xs font-medium tracking-wider uppercase">Scroll</span>
+          <ChevronDown className="h-4 w-4" />
+        </div>
+      </div>
+    </section>
+  );
+}

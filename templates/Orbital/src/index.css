@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root { color-scheme: dark; font-synthesis: none; text-rendering: optimizeLegibility; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: #0b0b0c; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 700ms cubic-bezier(.22, 1, .36, 1), transform 700ms cubic-bezier(.22, 1, .36, 1); }
+.reveal.revealed { opacity: 1; transform: translateY(0); }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes dashboard-in { from { opacity: 0; transform: translateY(40px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes scroll { 0%, 100% { opacity: .2; transform: translateY(0); } 50% { opacity: 1; transform: translateY(12px); } }
+@keyframes grow-bar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.animate-fade-up { animation: fade-up .7s cubic-bezier(.22, 1, .36, 1) both; }
+.animate-fade-up-delay { animation: fade-up .8s .12s cubic-bezier(.22, 1, .36, 1) both; }
+.animate-fade-up-delay-2 { animation: fade-up .8s .24s cubic-bezier(.22, 1, .36, 1) both; }
+.animate-dashboard-in { animation: dashboard-in 1s .38s cubic-bezier(.16, 1, .3, 1) both; }
+.animate-scroll { animation: scroll 1.8s ease-in-out infinite; }
+.animate-grow-bar { animation: grow-bar .7s cubic-bezier(.22, 1, .36, 1) both; }
+.animate-draw { stroke-dasharray: 700; stroke-dashoffset: 700; animation: draw 2s .4s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

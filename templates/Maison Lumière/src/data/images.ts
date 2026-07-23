@@ -1,0 +1,35 @@
+export const IMG = {
+  hero: "https://images.pexels.com/photos/24186303/pexels-photo-24186303.jpeg?auto=compress&cs=tinysrgb&w=1920",
+  chefSaucing:
+    "https://images.pexels.com/photos/11118539/pexels-photo-11118539.jpeg?auto=compress&cs=tinysrgb&w=1100",
+  chefPlating:
+    "https://images.pexels.com/photos/36430150/pexels-photo-36430150.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  chefParmesan:
+    "https://images.pexels.com/photos/15671380/pexels-photo-15671380.jpeg?auto=compress&cs=tinysrgb&w=1200",
+  dishSeafood:
+    "https://images.pexels.com/photos/24289213/pexels-photo-24289213.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  dishQuail:
+    "https://images.pexels.com/photos/24246212/pexels-photo-24246212.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  dishDessert:
+    "https://images.pexels.com/photos/35708376/pexels-photo-35708376.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  dishEggs:
+    "https://images.pexels.com/photos/24186308/pexels-photo-24186308.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  winePourWhite:
+    "https://images.pexels.com/photos/30279443/pexels-photo-30279443.jpeg?auto=compress&cs=tinysrgb&w=1100",
+  winePourRed:
+    "https://images.pexels.com/photos/31094805/pexels-photo-31094805.jpeg?auto=compress&cs=tinysrgb&w=1100",
+  wineGlasses:
+    "https://images.pexels.com/photos/6536617/pexels-photo-6536617.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  interiorNight:
+    "https://images.pexels.com/photos/37968303/pexels-photo-37968303.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  interiorCandles:
+    "https://images.pexels.com/photos/8856502/pexels-photo-8856502.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  interiorHall:
+    "https://images.pexels.com/photos/16985200/pexels-photo-16985200.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  interiorTables:
+    "https://images.pexels.com/photos/17294762/pexels-photo-17294762.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  candleFlowers:
+    "https://images.pexels.com/photos/16120137/pexels-photo-16120137.jpeg?auto=compress&cs=tinysrgb&w=1400",
+  tableForTwo:
+    "https://images.pexels.com/photos/24433378/pexels-photo-24433378.jpeg?auto=compress&cs=tinysrgb&w=1600",
+};

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
@@ -418,18 +418,9 @@ export function HomePage() {
   const handleSelectTemplateCard = async (card: TemplateCardItem) => {
     setTemplatesModalOpen(false);
 
-    // 1. In-memory sample HTML check
-    if (TEMPLATE_SAMPLES[card.prompt]) {
-      try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
-      setChatInitialHtml(TEMPLATE_SAMPLES[card.prompt]);
-      setChatPrompt("");
-      setInitialImage(null);
-      setInitialFiles([]);
-      setChatStarted(true);
-      return;
-    }
-
-    // 2. Fetch full static HTML from oni-components/full-templates
+    // 1. Fetch full static HTML from oni-components/full-templates (fileId is unique per template)
+    // This must come BEFORE TEMPLATE_SAMPLES check because many cards share the same `prompt`
+    // key (e.g. TEMPLATE_PROMPTS.vox) which would cause them all to load the same sample HTML.
     if (card.fileId) {
       try {
         const res = await fetch(`/api/templates?name=${encodeURIComponent(card.fileId)}`);
@@ -450,7 +441,18 @@ export function HomePage() {
       }
     }
 
-    // 3. Fallback to setting prompt text into input
+    // 2. In-memory sample HTML fallback
+    if (TEMPLATE_SAMPLES[card.prompt]) {
+      try { sessionStorage.removeItem("oni_session"); } catch { /* ignore */ }
+      setChatInitialHtml(TEMPLATE_SAMPLES[card.prompt]);
+      setChatPrompt("");
+      setInitialImage(null);
+      setInitialFiles([]);
+      setChatStarted(true);
+      return;
+    }
+
+    // 3. Final fallback: set prompt text into input so user can send it
     const cleanedText = getCleanedTemplatePrompt(card.prompt);
     setPromptText(cleanedText);
     window.setTimeout(() => {
@@ -509,7 +511,7 @@ export function HomePage() {
   };
 
   return (
-    <AppShell activePage="chats">
+    <AppShell activePage={templatesModalOpen ? "templates" : chatStarted ? "chats" : "chats"}>
       <AnimatePresence mode="wait">
         {chatStarted ? (
           <motion.div
@@ -528,6 +530,72 @@ export function HomePage() {
               hideSidebar
               forceNewSession
             />
+          </motion.div>
+        ) : templatesModalOpen ? (
+          /* ── Inline Templates View (sidebar stays visible, no fullscreen overlay) ── */
+          <motion.div
+            key="templates-panel"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="flex-1 flex flex-col h-full overflow-hidden bg-surface"
+          >
+            {/* Templates header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-surface-container-high shrink-0">
+              <div className="flex items-center gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTemplatesModalOpen(false)}
+                aria-label="Back to home"
+                className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-surface-container"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+                Back
+              </button>
+            </div>
+
+            {/* Scrollable grid */}
+            <div className="flex-1 overflow-y-auto px-6 py-8">
+              <div className="max-w-5xl mx-auto">
+                <h2 className="text-2xl font-semibold text-text-primary mb-1">Choose a template</h2>
+                <p className="text-sm text-text-tertiary mb-8">Select any template to instantly load it into the preview — then customize with AI in the chat.</p>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {FEATURED_TEMPLATES.map((card, index) => (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => void handleSelectTemplateCard(card)}
+                      className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
+                    >
+                      <Image
+                        src={card.image}
+                        alt={card.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        priority={index < 6}
+                        unoptimized
+                        className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/5" />
+                      {card.badge && (
+                        <span className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/45 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
+                          {card.badge}
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 p-4">
+                        <p className="text-sm font-semibold text-white">{card.title}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-white/65">{card.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -686,7 +754,7 @@ export function HomePage() {
               </div>
             </motion.div>
 
-            {/* Templates section */}
+            {/* Templates preview section (top 3) */}
             <div id="templates" className="w-full mt-12 max-w-4xl relative z-10 animate-[fadeSlideUp_900ms_cubic-bezier(0.16,1,0.3,1)]">
               <div className="mb-3 flex items-center justify-between px-1">
                 <button
@@ -754,73 +822,6 @@ export function HomePage() {
           {toast}
         </div>
       )}
-
-      {/* Templates Full-Screen Modal */}
-      <AnimatePresence>
-        {templatesModalOpen && (
-          <motion.div
-            key="templates-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[200] flex flex-col bg-[#0c0c0c]/95 backdrop-blur-xl overflow-hidden"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
-              <div className="flex items-center gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-tertiary">Templates</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTemplatesModalOpen(false)}
-                aria-label="Close templates"
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-white/8 hover:bg-white/15 text-white/60 hover:text-white transition-all duration-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Scrollable grid */}
-            <div className="flex-1 overflow-y-auto px-6 py-8">
-              <div className="max-w-5xl mx-auto">
-                <h2 className="text-2xl font-semibold text-white mb-1">Choose a template</h2>
-                <p className="text-sm text-text-tertiary mb-8">Select any template to instantly load it into the preview — then customize with AI in the chat.</p>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {FEATURED_TEMPLATES.map((card, index) => (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => void handleSelectTemplateCard(card)}
-                      className="group relative h-44 overflow-hidden rounded-2xl border border-surface-container-high/70 bg-surface-container-low text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:shadow-xl active:translate-y-0"
-                    >
-                      <Image
-                        src={card.image}
-                        alt={card.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        priority={index < 6}
-                        unoptimized
-                        className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-90"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/5" />
-                      {card.badge && (
-                        <span className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/45 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/80 backdrop-blur">
-                          {card.badge}
-                        </span>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 p-4">
-                        <p className="text-sm font-semibold text-white">{card.title}</p>
-                        <p className="mt-1 text-[11px] leading-4 text-white/65">{card.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <EnhanceModal
         isOpen={enhanceOpen}

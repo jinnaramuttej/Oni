@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #F9F6F0;
+  --color-ivory-dark: #F0EBE1;
+  --color-terracotta: #B55A30;
+  --color-terracotta-light: #C9724D;
+  --color-terracotta-dark: #8E4525;
+  --color-turmeric: #D89A1D;
+  --color-turmeric-light: #E6B54A;
+  --color-turmeric-dark: #B07D15;
+  --color-leaf: #4E7A45;
+  --color-leaf-light: #6B9960;
+  --color-leaf-dark: #3A5C33;
+  --color-brown: #5C3B28;
+  --color-brown-light: #7A5540;
+  --color-brown-dark: #3D2718;
+  --color-brass: #B78A3F;
+  --color-brass-light: #D4A85C;
+  --color-warm-white: #FFFCF7;
+  --color-warm-gray: #8A7E72;
+  --color-warm-gray-light: #B5ADA3;
+  --color-warm-black: #2C2118;
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-warm-black);
+  background-color: var(--color-ivory);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ivory);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-brass);
+  border-radius: 4px;
+}
+
+/* Kolam divider pattern */
+.kolam-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.kolam-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-brass);
+  opacity: 0.6;
+}
+.kolam-dot-lg {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-terracotta);
+  opacity: 0.8;
+}
+.kolam-line {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-brass), transparent);
+}
+
+/* Fade up animation */
+.fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.stagger-children.visible > *:nth-child(1) { transition-delay: 0ms; opacity: 1; transform: translateY(0); }
+.stagger-children.visible > *:nth-child(2) { transition-delay: 100ms; opacity: 1; transform: translateY(0); }
+.stagger-children.visible > *:nth-child(3) { transition-delay: 200ms; opacity: 1; transform: translateY(0); }
+.stagger-children.visible > *:nth-child(4) { transition-delay: 300ms; opacity: 1; transform: translateY(0); }
+.stagger-children.visible > *:nth-child(5) { transition-delay: 400ms; opacity: 1; transform: translateY(0); }
+.stagger-children.visible > *:nth-child(6) { transition-delay: 500ms; opacity: 1; transform: translateY(0); }
+
+/* Image hover */
+.img-hover {
+  transition: transform 0.5s ease;
+}
+.img-hover:hover {
+  transform: scale(1.02);
+}
+
+/* Card hover */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(92, 59, 40, 0.12);
+}
+
+/* Subtle texture overlay */
+.texture-overlay {
+  position: relative;
+}
+.texture-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B78A3F' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Section heading styles */
+.section-subtitle {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-terracotta);
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--color-brown-dark);
+  line-height: 1.2;
+}
+
+/* Button styles */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background-color: var(--color-terracotta);
+  color: white;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(181, 90, 48, 0.25);
+}
+.btn-primary:hover {
+  background-color: var(--color-terracotta-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(181, 90, 48, 0.35);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background-color: transparent;
+  color: var(--color-brown);
+  border: 1.5px solid var(--color-brown);
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  transition: all 0.3s ease;
+}
+.btn-secondary:hover {
+  background-color: var(--color-brown);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-warm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background-color: var(--color-turmeric);
+  color: var(--color-brown-dark);
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(216, 154, 29, 0.25);
+}
+.btn-warm:hover {
+  background-color: var(--color-turmeric-dark);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(216, 154, 29, 0.35);
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(216, 154, 29, 0.25);
+  color: var(--color-brown-dark);
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth image loading - images are always visible */
+
+/* Responsive typography */
+@media (max-width: 640px) {
+  .section-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* Warm divider between sections */
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-brass-light), transparent);
+  opacity: 0.2;
+}

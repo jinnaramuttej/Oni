@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  /* Palette — warm, quiet, luminous */
+  --color-cream: #f8f5f1;
+  --color-ivory: #fcfbf8;
+  --color-gold: #c9a96e;
+  --color-gold-deep: #b6934e;
+  --color-sage: #a7b09e;
+  --color-sage-soft: #c2c9bc;
+  --color-stone: #d8d1c7;
+  --color-beige: #e9e1d6;
+  --color-charcoal: #3b3b3b;
+  --color-ink: #2a2926;
+
+  /* Typography */
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
+
+  /* Radius system */
+  --radius-card: 1.5rem;
+  --radius-btn: 1.25rem;
+  --radius-pill: 999px;
+
+  /* Shadow system */
+  --shadow-soft: 0 12px 40px -16px rgba(59, 59, 59, 0.14);
+  --shadow-card: 0 28px 70px -28px rgba(59, 59, 59, 0.22);
+  --shadow-lift: 0 22px 50px -24px rgba(59, 59, 59, 0.28);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Offset anchored sections so headings clear the fixed navbar */
+  section[id] {
+    scroll-margin-top: 5.5rem;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-cream);
+    color: var(--color-charcoal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-gold);
+    color: var(--color-ivory);
+  }
+
+  /* Refined, slim scrollbar to match the aesthetic */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-cream);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-stone);
+    border-radius: 999px;
+    border: 3px solid var(--color-cream);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-sage);
+  }
+}

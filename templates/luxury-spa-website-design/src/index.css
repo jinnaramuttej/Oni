@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #F8F5F1;
+  --ivory: #FCFBF8;
+  --gold: #C9A96E;
+  --sage: #A7B09E;
+  --stone: #D8D1C7;
+  --charcoal: #3B3B3B;
+  --beige: #E9E1D6;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: "tnum" 1, "kern" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, .serif {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-feature-settings: "kern" 1, "tnum" 1;
+}
+
+/* Elegant refined typography */
+.serif {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* Premium spacing & layout */
+.section {
+  padding-top: 7rem;
+  padding-bottom: 7rem;
+}
+
+@media (min-width: 1024px) {
+  .section {
+    padding-top: 9rem;
+    padding-bottom: 9rem;
+  }
+}
+
+/* Sophisticated card system */
+.lux-card {
+  transition: transform 400ms cubic-bezier(0.23, 1, 0.32, 1), 
+              box-shadow 400ms cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 300ms ease;
+  border-radius: 22px;
+}
+
+.lux-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 45px -12px rgb(0 0 0 / 0.08), 0 8px 16px -8px rgb(0 0 0 / 0.06);
+  border-color: #D8D1C7;
+}
+
+/* Image treatments */
+.img-zoom {
+  transition: transform 900ms cubic-bezier(0.23, 1.0, 0.32, 1);
+}
+
+.lux-card:hover .img-zoom,
+.group:hover .img-zoom {
+  transform: scale(1.015);
+}
+
+/* Navigation */
+.nav-transparent {
+  transition: background-color 400ms ease, backdrop-filter 400ms ease, box-shadow 400ms ease;
+}
+
+.nav-scrolled {
+  background-color: rgba(252, 251, 248, 0.92);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.04);
+}
+
+/* Premium button */
+.btn {
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  transition: all 280ms cubic-bezier(0.23, 1, 0.32, 1);
+  border-radius: 20px;
+}
+
+.btn-primary {
+  background-color: #C9A96E;
+  color: #FCFBF8;
+  border: 1px solid #C9A96E;
+}
+
+.btn-primary:hover {
+  background-color: #B38C4F;
+  border-color: #B38C4F;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -8px rgb(201 169 110 / 0.4);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #3B3B3B;
+  border: 1px solid #D8D1C7;
+}
+
+.btn-secondary:hover {
+  background-color: #F8F5F1;
+  border-color: #C9A96E;
+  color: #3B3B3B;
+}
+
+.btn-ghost {
+  color: #3B3B3B;
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+  border-color: #D8D1C7;
+  background-color: #F8F5F1;
+}
+
+/* Elegant subtle dividers */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #D8D1C7, transparent);
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  animation: gentleBounce 2.2s infinite cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+
+@keyframes gentleBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+/* Refined Modal */
+.modal {
+  animation: modalEnter 240ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Form styling */
+.input {
+  background-color: #FCFBF8;
+  border: 1px solid #D8D1C7;
+  border-radius: 14px;
+  transition: all 180ms ease;
+}
+
+.input:focus {
+  border-color: #C9A96E;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 169, 110, 0.08);
+}
+
+/* Testimonial card */
+.testimonial {
+  transition: all 300ms ease;
+}
+
+/* Product card refined */
+.product-card {
+  transition: all 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.product-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Elegant nav link */
+.nav-link {
+  position: relative;
+  transition: color 200ms ease;
+}
+
+.nav-link:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background-color: #C9A96E;
+  transition: width 280ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.nav-link:hover:after {
+  width: 100%;
+}
+
+/* Fade up reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 700ms cubic-bezier(0.23, 1, 0.32, 1), 
+              transform 700ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Soft asymmetry & editorial */
+.editorial-text {
+  max-width: 46ch;
+}
+
+/* Cart Drawer */
+.drawer {
+  animation: drawerSlide 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes drawerSlide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Luxury treatment list */
+.treatment-item {
+  transition: background-color 200ms ease;
+}
+
+.treatment-item:hover {
+  background-color: #F8F5F1;
+}
+
+/* Minimal icon styles */
+.icon {
+  stroke-width: 1.5;
+}

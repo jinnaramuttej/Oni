@@ -4026,11 +4026,11 @@ ${basePrompt}`;
         <section
           className={cn(
             "min-h-0 flex-col border-surface-container-high bg-surface lg:flex transition-all duration-300",
-            generatedHtml
+            (generatedHtml || generating || isLoading)
               ? "lg:w-[500px] lg:shrink-0 lg:border-r"
               : "lg:w-full lg:flex-1",
             mobilePanel === "chat" ? "flex flex-1" : "hidden lg:flex",
-            generatedHtml && !chatPanelOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
+            (generatedHtml || generating || isLoading) && !chatPanelOpen && "lg:!w-0 lg:!flex-none lg:!overflow-hidden lg:!border-0"
           )}
         >
           <ChatPanel
@@ -4093,7 +4093,7 @@ ${basePrompt}`;
           />
         </section>
 
-        {generatedHtml && (
+        {(generatedHtml || generating || isLoading) && (
           <section
             className={cn(
               "min-h-0 min-w-0 flex-1 flex-col bg-surface lg:flex",
@@ -4105,7 +4105,7 @@ ${basePrompt}`;
               previewSize={previewSize}
               previewHtml={previewHtml}
               previewRefreshKey={previewRefreshKey}
-              isGenerating={generating}
+              isGenerating={generating || isLoading}
               projectFiles={projectFiles}
               activeFile={activeFile}
               activeFilePath={activeFilePath}
@@ -4127,7 +4127,7 @@ ${basePrompt}`;
         )}
       </div>
 
-      {generatedHtml && (
+      {(generatedHtml || generating || isLoading) && (
         <MobilePanelTabs
           activePanel={mobilePanel}
           onPanelChange={(panel) => {

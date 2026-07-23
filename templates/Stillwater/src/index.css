@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@theme {
+  /* ——— Earth palette ——— */
+  --color-sage: #a8b5a2;
+  --color-eucalyptus: #7f9172;
+  --color-eucalyptus-deep: #68795d;
+  --color-sand: #ede5da;
+  --color-sand-deep: #e2d7c8;
+  --color-ivory: #faf8f5;
+  --color-clay: #c4aa92;
+  --color-charcoal: #404040;
+  --color-ink: #2e2e2a;
+  --color-pebble: #d7d2ca;
+  --color-moss: #8fa28b;
+  --color-mist: #dde3d8;
+  --color-deep: #34382f;
+
+  /* ——— Type ——— */
+  --font-serif: "Fraunces", "Georgia", serif;
+  --font-sans: "Jost", "system-ui", sans-serif;
+
+  /* ——— Elevation ——— */
+  --shadow-soft: 0 2px 6px rgb(64 64 64 / 0.04), 0 18px 40px -20px rgb(64 64 64 / 0.14);
+  --shadow-lift: 0 4px 10px rgb(64 64 64 / 0.05), 0 32px 64px -28px rgb(64 64 64 / 0.22);
+  --shadow-glow: 0 0 0 1px rgb(127 145 114 / 0.12), 0 24px 60px -24px rgb(127 145 114 / 0.35);
+
+  /* ——— Motion ——— */
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-ivory text-charcoal font-sans antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Lenis smooth-scroll keeps html un-locked */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+::selection {
+  background: #a8b5a2;
+  color: #2e2e2a;
+}
+
+:focus-visible {
+  outline: 2px solid #7f9172;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ——— Handmade paper grain ——— */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.055'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+
+/* ——— Gentle keyframes ——— */
+@keyframes breathe {
+  0%, 100% { transform: scale(0.82); }
+  45%, 55% { transform: scale(1); }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -14px, 0); }
+}
+
+@keyframes scroll-hint {
+  0% { transform: translateY(0); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(26px); opacity: 0; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-drift { animation: drift 9s ease-in-out infinite; }
+.animate-drift-slow { animation: drift 14s ease-in-out infinite; }
+
+.marquee-track {
+  animation: marquee 60s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* ——— Image treatment ——— */
+.img-frame {
+  position: relative;
+  overflow: hidden;
+}
+.img-frame img {
+  transition: transform 1.6s var(--ease-calm);
+  will-change: transform;
+}
+.img-frame:hover img {
+  transform: scale(1.03);
+}
+
+/* ——— Links with quiet underline ——— */
+.link-quiet {
+  position: relative;
+}
+.link-quiet::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.6s var(--ease-calm);
+}
+.link-quiet:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ——— Scrollbar, kept whisper quiet ——— */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #faf8f5; }
+::-webkit-scrollbar-thumb {
+  background: #d7d2ca;
+  border-radius: 8px;
+  border: 2px solid #faf8f5;
+}
+::-webkit-scrollbar-thumb:hover { background: #a8b5a2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift, .animate-drift-slow, .marquee-track { animation: none; }
+  html { scroll-behavior: auto; }
+}

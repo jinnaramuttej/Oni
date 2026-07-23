@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  --font-sans: 'DM Sans', 'Inter', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif;
+
+  --color-cream: #F8F5F1;
+  --color-ivory: #FCFBF8;
+  --color-champagne: #C9A96E;
+  --color-champagne-light: #DCCBA0;
+  --color-sage: #A7B09E;
+  --color-sage-dark: #8A917F;
+  --color-stone: #D8D1C7;
+  --color-stone-dark: #C4BCB1;
+  --color-charcoal: #3B3B3B;
+  --color-charcoal-soft: #5A5A5A;
+  --color-beige: #E9E1D6;
+  --color-beige-dark: #D8CEBF;
+  --color-linen: #F3EFEA;
+  --color-parchment: #F0EBE3;
+  --color-warm-white: #FDFCFA;
+  --color-rose-wood: #6D5C52;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background-color: #F8F5F1;
+  color: #3B3B3B;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background-color: rgba(201, 169, 110, 0.2);
+  color: #3B3B3B;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F8F5F1;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8D1C7;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C9A96E;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slowZoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1.2s ease-out forwards;
+}
+
+.animate-slow-zoom {
+  animation: slowZoom 12s ease-out forwards;
+}
+
+.gentle-float {
+  animation: gentleFloat 6s ease-in-out infinite;
+}
+
+/* Text balance */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+
+/* Image treatment */
+img {
+  display: block;
+  object-fit: cover;
+}
